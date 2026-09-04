@@ -1,0 +1,37 @@
+Package: uSDT
+Type: Package
+Title: Hierarchical Signal Detection Theory Models for Unconscious Processing
+Version: 0.1.0
+Authors@R: person("Ricardo", "Rey-Saez",
+                  email = "ricardoreysaez95@gmail.com",
+                  role  = c("aut", "cre"))
+Description: Fits hierarchical signal detection theory (SDT) models to paired
+    direct and indirect measures, the design used to test for unconscious
+    processing. Continuous indirect measures (typically response times) are
+    dichotomized with the within-subject median split of Meyen et al.
+    (2022) so that both tasks are placed on a common sensitivity scale. The
+    package estimates a binomial probit mixed model in which the two
+    sensitivities are correlated random effects, and tests the three
+    hypotheses of interest: the group-level difference between sensitivities,
+    their latent correlation, and the latent regression of the indirect on the
+    direct measure, whose intercept is the test for unconscious processing.
+    Frequentist estimation uses 'lme4'.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+LazyDataCompression: xz
+Depends:
+    R (>= 4.1)
+Imports:
+    stats,
+    utils,
+    lme4,
+    ggplot2,
+    rlang
+Suggests:
+    testthat (>= 3.0.0)
+Roxygen: list(markdown = TRUE)
+Config/testthat/edition: 3
+URL: https://github.com/RicardoReySaez/uSDT
+BugReports: https://github.com/RicardoReySaez/uSDT/issues
+Config/roxygen2/version: 8.1.0

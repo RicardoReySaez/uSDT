@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+Rplots.pdf
+
+/*.Rproj
+/*.Rcheck/
+/*.tar.gz
+
+/.claude/
+/basis/
+/dev/
+/manual-tests/
+/PLAN.md

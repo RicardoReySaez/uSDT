@@ -1,0 +1,13 @@
+^\.git$
+^basis$
+^data-raw$
+^dev$
+^PLAN\.md$
+^manual-tests$
+^.*\.Rproj$
+^\.Rproj\.user$
+^uSDT\.Rcheck$
+^.*\.tar\.gz$
+^Rplots\.pdf$
+^\.claude$
+^\.github$

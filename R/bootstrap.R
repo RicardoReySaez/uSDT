@@ -13,7 +13,7 @@
 #' Refits the model to data simulated from it, and summarises the resulting
 #' distribution of the three hypotheses. Uses `lme4::bootMer()`.
 #'
-#' @param object A `usdt_freq` object from [usdt_freq()].
+#' @param object A `hsdt` object from [hsdt()].
 #' @param nsim Number of usable bootstrap replicates. It must be at least 500.
 #' @param ncores Number of cores. Values above one use the `parallel` package,
 #'   which ships with R. A temporary PSOCK cluster provides the same behaviour
@@ -31,7 +31,7 @@
 #'   that scale, so they are reported as missing for a correlation sitting on
 #'   the boundary; `"perc"` remains available.
 #'
-#' @return The `usdt_freq` object with the interval fields of its `tests` table
+#' @return The `hsdt` object with the interval fields of its `tests` table
 #'   replaced by bootstrap summaries. Its `boot` element contains the hypothesis
 #'   replicates in `t`, the sensitivity variances in `variance`, the fixed task
 #'   parameters in `population`, and the refitted conditional task parameters
@@ -63,7 +63,7 @@
 #' Their first array dimension follows `boot$ok`, so callers can select the same
 #' usable replicates as the hypothesis summaries.
 #'
-#' @seealso [usdt_freq()]
+#' @seealso [hsdt()]
 #'
 #' @examples
 #' \donttest{
@@ -76,7 +76,7 @@
 #'                      condition_levels = c(signal = 1, noise = 0),
 #'                      response_col     = "response",
 #'                      response_levels  = c(signal = 1, noise = 0))
-#' m <- usdt_freq(d)
+#' m <- hsdt(d)
 #' b <- usdt_boot(m, nsim = 500)
 #' summary(b)
 #' }
@@ -88,8 +88,8 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
                       type = c("perc", "norm", "basic")) {
 
   # The function requires a fitted uSDT model.
-  if (!inherits(object, "usdt_freq")) {
-    .usdt_stop("`object` must come from usdt_freq(), not a plain ",
+  if (!inherits(object, "hsdt")) {
+    .usdt_stop("`object` must come from hsdt(), not a plain ",
                class(object)[1L], ".")
   }
   .check_scalar_number(nsim, "nsim", lower = .boot_min, whole = TRUE)

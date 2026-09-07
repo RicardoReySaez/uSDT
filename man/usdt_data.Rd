@@ -59,8 +59,8 @@ when the data are supplied as an SDT table through \code{sdt_cols}.}
 \code{c(signal = "old", noise = "new")}. Guessed with a message when omitted.}
 
 \item{response_col}{Column holding the response. Either a binary response,
-or a continuous measure such as response times when that task is named in
-\code{dichotomize}.}
+or a continuous measure such as response times when that task is
+dichotomized.}
 
 \item{response_levels}{Which value of \code{response_col} counts as a signal
 response, as \code{c(signal = 1, noise = 0)}. For a task that is being
@@ -80,8 +80,9 @@ and asks for an explicit choice when every value is zero or one.}
 \code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}. Supply this instead of
 \code{condition_col} and \code{response_col}.}
 
-\item{dichotomize}{Which tasks need the Meyen median split: \code{"none"},
-\code{"direct"}, \code{"indirect"} or \code{"both"}.}
+\item{dichotomize}{Which tasks need the Meyen median split, either by name
+(\code{"none"}, \code{"direct"}, \code{"indirect"}, \code{"both"}) or one logical value per
+task, as \code{list(direct = FALSE, indirect = TRUE)}.}
 
 \item{ties}{How to handle trials exactly on the median. See \code{\link[=meyen_split]{meyen_split()}}.}
 
@@ -107,17 +108,40 @@ output only.}
 \value{
 An object of class \code{usdt_data}: a list with the aggregated data
 frame (\code{agg}) and everything the model and the printed output need
-(\code{meta}). Pass it to \code{\link[=usdt_freq]{usdt_freq()}}.
+(\code{meta}). Pass it to \code{\link[=hsdt]{hsdt()}}.
 }
 \description{
 Two entry points for the same object. Use \code{usdt_data_tasks()} when each task
 lives in its own data frame, and \code{usdt_data_long()} when both tasks are
 stacked in a single data frame with a column identifying the task.
 }
-\details{
-Arguments that name columns or levels accept either one value for both
-tasks, or one per task as \code{c(direct = ..., indirect = ...)}.
+\section{One value or one per task}{
+The two tasks rarely come from the same experimental design, so every
+argument below \code{subject_col} reads the same way: give \strong{one value} and both
+tasks use it, or give \strong{one value per task} and each is read on its own.
 
+\if{html}{\out{<div class="sourceCode">}}\preformatted{subject_col      = "subj"                       # both tasks
+condition_col    = list(direct   = "condition",
+                        indirect = "cue")       # one per task
+condition_levels = list(
+  direct   = c(signal = "old",  noise = "new"),
+  indirect = c(signal = "cued", noise = "uncued"))
+dichotomize      = list(direct = FALSE, indirect = TRUE)
+}\if{html}{\out{</div>}}
+
+This applies to \code{condition_col}, \code{condition_levels}, \code{response_col},
+\code{response_levels}, \code{successes_col}, \code{trials_col}, \code{successes_type},
+\code{sdt_cols}, \code{subject_col}, \code{dichotomize} and \code{ties}, so the two tasks may
+differ in the columns they use, in the values those columns take, and even
+in the format they arrive in: one task as trials and the other as an SDT
+table. Use \code{list()} rather than \code{c()} whenever a task's own value is itself
+a vector, as it is for the \verb{*_levels} and \code{sdt_cols} arguments.
+
+\code{coding} is the exception. It defines the model, not the reading of one
+task, so it applies to both.
+}
+
+\section{Condition coding}{
 The two codings are not interchangeable. Under \code{"deviation"} the intercept
 is \code{-c}, the criterion measured from the midpoint between the signal and
 noise distributions. Under \code{"treatment"} it is \code{z(FAR)}, the criterion
@@ -128,12 +152,15 @@ This matters for dichotomized tasks. A Meyen median split forces the
 proportion of signal responses to 0.5 within each subject, so with
 balanced conditions the deviation-coded intercept is \emph{exactly} zero and the
 criterion need not be estimated at all. The treatment-coded intercept is
-\verb{-d'/2}, which is not zero and must be estimated. \code{usdt_freq()} uses the
+\verb{-d'/2}, which is not zero and must be estimated. \code{hsdt()} uses the
 \code{criterion_zero} flag recorded here to decide.
 }
+
 \examples{
 set.seed(1)
 df <- usdt_simulate(n_subj = 30, n_trials = 80)
+
+# Both tasks share every column name and every level here.
 d  <- usdt_data_long(df, task_col = "task",
                      task_levels   = c(direct = "D", indirect = "I"),
                      subject_col   = "subj",
@@ -143,7 +170,24 @@ d  <- usdt_data_long(df, task_col = "task",
                      response_levels  = c(signal = 1, noise = 0))
 d
 
+# When they do not, each task gets its own column and its own levels.
+aware <- df[df$task == "D", ]
+cuing <- df[df$task == "I", ]
+names(aware)[names(aware) == "cond"] <- "seen"
+names(cuing)[names(cuing) == "cond"] <- "cue"
+aware$seen <- ifelse(aware$seen == 1, "old",  "new")
+cuing$cue  <- ifelse(cuing$cue  == 1, "cued", "uncued")
+
+usdt_data_tasks(
+  direct = aware, indirect = cuing,
+  subject_col      = "subj",
+  condition_col    = list(direct = "seen", indirect = "cue"),
+  condition_levels = list(direct   = c(signal = "old",  noise = "new"),
+                          indirect = c(signal = "cued", noise = "uncued")),
+  response_col     = "response",
+  response_levels  = c(signal = 1, noise = 0))
+
 }
 \seealso{
-\code{\link[=meyen_split]{meyen_split()}}, \code{\link[=usdt_freq]{usdt_freq()}}, \code{\link[=sdt_moments]{sdt_moments()}}
+\code{\link[=meyen_split]{meyen_split()}}, \code{\link[=hsdt]{hsdt()}}, \code{\link[=sdt_moments]{sdt_moments()}}
 }

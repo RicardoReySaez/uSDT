@@ -17,7 +17,7 @@ without awareness.
 out loud how every column was read, what the median split did, and what
 all of it implies for the model.
 \item \code{\link[=usdt_reliability]{usdt_reliability()}} estimates the reliability of both measures.
-\item \code{\link[=usdt_freq]{usdt_freq()}} fits the model and tests the three hypotheses.
+\item \code{\link[=hsdt]{hsdt()}} fits the model and tests the three hypotheses.
 \item \code{\link[=usdt_boot]{usdt_boot()}} replaces the intervals with a parametric bootstrap when
 the model is weakly identified.
 }
@@ -46,6 +46,7 @@ reports unavailable intervals explicitly when the model reaches a boundary.
 Useful links:
 \itemize{
   \item \url{https://github.com/RicardoReySaez/uSDT}
+  \item \url{https://ricardoreysaez.github.io/uSDT/}
   \item Report bugs at \url{https://github.com/RicardoReySaez/uSDT/issues}
 }
 

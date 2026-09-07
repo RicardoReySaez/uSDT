@@ -1,7 +1,7 @@
 # data.R
 # This script prepares direct and indirect task data for uSDT models.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # Public functions
 
@@ -23,8 +23,8 @@
 #' @param condition_levels Which value of `condition_col` plays each role, as
 #'   `c(signal = "old", noise = "new")`. Guessed with a message when omitted.
 #' @param response_col Column holding the response. Either a binary response,
-#'   or a continuous measure such as response times when that task is named in
-#'   `dichotomize`.
+#'   or a continuous measure such as response times when that task is
+#'   dichotomized.
 #' @param response_levels Which value of `response_col` counts as a signal
 #'   response, as `c(signal = 1, noise = 0)`. For a task that is being
 #'   dichotomized, use the side of the median instead:
@@ -39,8 +39,9 @@
 #' @param sdt_cols A named vector giving the columns of an SDT table, as
 #'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`. Supply this instead of
 #'   `condition_col` and `response_col`.
-#' @param dichotomize Which tasks need the Meyen median split: `"none"`,
-#'   `"direct"`, `"indirect"` or `"both"`.
+#' @param dichotomize Which tasks need the Meyen median split, either by name
+#'   (`"none"`, `"direct"`, `"indirect"`, `"both"`) or one logical value per
+#'   task, as `list(direct = FALSE, indirect = TRUE)`.
 #' @param ties How to handle trials exactly on the median. See [meyen_split()].
 #' @param coding Coding of the condition. With `"deviation"` (-0.5 / +0.5),
 #'   the classical SDT criterion is the negative model intercept. With
@@ -51,11 +52,37 @@
 #'
 #' @return An object of class `usdt_data`: a list with the aggregated data
 #'   frame (`agg`) and everything the model and the printed output need
-#'   (`meta`). Pass it to [usdt_freq()].
+#'   (`meta`). Pass it to [hsdt()].
 #'
 #' @details
-#' Arguments that name columns or levels accept either one value for both
-#' tasks, or one per task as `c(direct = ..., indirect = ...)`.
+#' # One value or one per task
+#'
+#' The two tasks rarely come from the same experimental design, so every
+#' argument below `subject_col` reads the same way: give **one value** and both
+#' tasks use it, or give **one value per task** and each is read on its own.
+#'
+#' ```
+#' subject_col      = "subj"                       # both tasks
+#' condition_col    = list(direct   = "condition",
+#'                         indirect = "cue")       # one per task
+#' condition_levels = list(
+#'   direct   = c(signal = "old",  noise = "new"),
+#'   indirect = c(signal = "cued", noise = "uncued"))
+#' dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' ```
+#'
+#' This applies to `condition_col`, `condition_levels`, `response_col`,
+#' `response_levels`, `successes_col`, `trials_col`, `successes_type`,
+#' `sdt_cols`, `subject_col`, `dichotomize` and `ties`, so the two tasks may
+#' differ in the columns they use, in the values those columns take, and even
+#' in the format they arrive in: one task as trials and the other as an SDT
+#' table. Use `list()` rather than `c()` whenever a task's own value is itself
+#' a vector, as it is for the `*_levels` and `sdt_cols` arguments.
+#'
+#' `coding` is the exception. It defines the model, not the reading of one
+#' task, so it applies to both.
+#'
+#' # Condition coding
 #'
 #' The two codings are not interchangeable. Under `"deviation"` the intercept
 #' is `-c`, the criterion measured from the midpoint between the signal and
@@ -67,14 +94,16 @@
 #' proportion of signal responses to 0.5 within each subject, so with
 #' balanced conditions the deviation-coded intercept is *exactly* zero and the
 #' criterion need not be estimated at all. The treatment-coded intercept is
-#' `-d'/2`, which is not zero and must be estimated. `usdt_freq()` uses the
+#' `-d'/2`, which is not zero and must be estimated. `hsdt()` uses the
 #' `criterion_zero` flag recorded here to decide.
 #'
-#' @seealso [meyen_split()], [usdt_freq()], [sdt_moments()]
+#' @seealso [meyen_split()], [hsdt()], [sdt_moments()]
 #'
 #' @examples
 #' set.seed(1)
 #' df <- usdt_simulate(n_subj = 30, n_trials = 80)
+#'
+#' # Both tasks share every column name and every level here.
 #' d  <- usdt_data_long(df, task_col = "task",
 #'                      task_levels   = c(direct = "D", indirect = "I"),
 #'                      subject_col   = "subj",
@@ -83,6 +112,23 @@
 #'                      response_col  = "response",
 #'                      response_levels  = c(signal = 1, noise = 0))
 #' d
+#'
+#' # When they do not, each task gets its own column and its own levels.
+#' aware <- df[df$task == "D", ]
+#' cuing <- df[df$task == "I", ]
+#' names(aware)[names(aware) == "cond"] <- "seen"
+#' names(cuing)[names(cuing) == "cond"] <- "cue"
+#' aware$seen <- ifelse(aware$seen == 1, "old",  "new")
+#' cuing$cue  <- ifelse(cuing$cue  == 1, "cued", "uncued")
+#'
+#' usdt_data_tasks(
+#'   direct = aware, indirect = cuing,
+#'   subject_col      = "subj",
+#'   condition_col    = list(direct = "seen", indirect = "cue"),
+#'   condition_levels = list(direct   = c(signal = "old",  noise = "new"),
+#'                           indirect = c(signal = "cued", noise = "uncued")),
+#'   response_col     = "response",
+#'   response_levels  = c(signal = 1, noise = 0))
 #'
 #' @name usdt_data
 NULL
@@ -113,10 +159,10 @@ usdt_data_tasks <- function(direct, indirect,
               condition_col = condition_col, condition_levels = condition_levels,
               response_col  = response_col,  response_levels  = response_levels,
               successes_col = successes_col, trials_col       = trials_col,
-              successes_type = match.arg(successes_type),
+              successes_type = successes_type,
               sdt_cols      = sdt_cols,
-              dichotomize   = match.arg(dichotomize),
-              ties          = match.arg(ties),
+              dichotomize   = dichotomize,
+              ties          = ties,
               coding        = match.arg(coding),
               labels        = labels)
 }
@@ -160,10 +206,10 @@ usdt_data_long <- function(data, task_col, task_levels,
               condition_col = condition_col, condition_levels = condition_levels,
               response_col  = response_col,  response_levels  = response_levels,
               successes_col = successes_col, trials_col       = trials_col,
-              successes_type = match.arg(successes_type),
+              successes_type = successes_type,
               sdt_cols      = sdt_cols,
-              dichotomize   = match.arg(dichotomize),
-              ties          = match.arg(ties),
+              dichotomize   = dichotomize,
+              ties          = ties,
               coding        = match.arg(coding),
               labels        = if (is.null(labels))
                 c(direct = "Direct", indirect = "Indirect") else labels)
@@ -189,11 +235,12 @@ usdt_data_long <- function(data, task_col, task_levels,
     resp_lev  = .per_task(response_levels,  "response_levels",  allow_null = TRUE),
     successes = .per_task(successes_col,    "successes_col",    allow_null = TRUE),
     trials    = .per_task(trials_col,       "trials_col",       allow_null = TRUE),
-    sdt       = .per_task(sdt_cols,         "sdt_cols",         allow_null = TRUE)
+    sdt       = .per_task(sdt_cols,         "sdt_cols",         allow_null = TRUE),
+    stype     = .per_task_choice(successes_type, "successes_type",
+                                 c("auto", "counts", "proportions")),
+    ties      = .per_task_choice(ties, "ties", c("noise", "random"))
   )
-  which_dic <- switch(dichotomize,
-                      none = character(0), both = c("direct", "indirect"),
-                      dichotomize)
+  dic <- .check_dichotomize(dichotomize)
 
   # Each task becomes a table of response counts.
   cells <- list(); info <- list()
@@ -204,8 +251,8 @@ usdt_data_long <- function(data, task_col, task_levels,
       cond_lev  = arg$cond_lev[[k]],   response  = arg$response[[k]],
       resp_lev  = arg$resp_lev[[k]],   successes = arg$successes[[k]],
       trials    = arg$trials[[k]],     sdt       = arg$sdt[[k]],
-      successes_type = successes_type,
-      dichotomize = k %in% which_dic,  ties      = ties
+      successes_type = arg$stype[[k]],
+      dichotomize = dic[[k]],          ties      = arg$ties[[k]]
     )
     cells[[k]] <- res$cells
     info[[k]]  <- res$info
@@ -268,7 +315,8 @@ usdt_data_long <- function(data, task_col, task_levels,
   structure(list(
     agg  = agg,
     meta = list(
-      input = input, entry = entry, coding = coding, ties = ties,
+      input = input, entry = entry, coding = coding,
+      ties = unlist(arg$ties)[c("direct", "indirect")],
       labels = labels, tasks = info, criterion_zero = czero, criterion = chk,
       n_subj = length(union(sD, sI)), n_both = length(both), n_only = length(only),
       n_trials = sum(agg$n), n_rows = nrow(agg),

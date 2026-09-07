@@ -13,7 +13,7 @@ usdt_reliability(object)
 \method{print}{usdt_reliability}(x, ...)
 }
 \arguments{
-\item{object}{A fitted \code{usdt_freq} object, optionally returned by
+\item{object}{A fitted \code{hsdt} object, optionally returned by
 \code{\link[=usdt_boot]{usdt_boot()}}. The summary method takes the resulting
 \code{usdt_reliability} object.}
 
@@ -51,7 +51,7 @@ precision of the conditional modes, which is smaller because the model does
 borrow. A reliability of 0.83 means the direct information available for that
 subject's sensitivity matches a reliability of 0.83 against the estimated
 spread across subjects. It is \emph{not} a statement about the precision of the
-conditional mode that \code{\link[=plot.usdt_freq]{plot.usdt_freq()}} draws.
+conditional mode that \code{\link[=plot.hsdt]{plot.hsdt()}} draws.
 
 The group-level value replaces \code{v_tj} by its mean. It is a genuine variance
 ratio: for a subject drawn at random the variance of one measurement is
@@ -94,7 +94,7 @@ data <- usdt_data_long(
   response_col = "response",
   response_levels = c(signal = 1, noise = 0)
 )
-usdt_reliability(usdt_freq(data))
+usdt_reliability(hsdt(data))
 }
 
 }
@@ -103,5 +103,5 @@ Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter
 isosensitivity functions. \emph{Psychometrika}.
 }
 \seealso{
-\code{\link[=usdt_freq]{usdt_freq()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=sdt_moments]{sdt_moments()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=sdt_moments]{sdt_moments()}}
 }

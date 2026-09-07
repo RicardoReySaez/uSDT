@@ -1,7 +1,7 @@
 # test-usdt-data.R
 # This script tests the preparation of model data.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # This function creates a small data set for both input routes.
 make_binary <- function(seed = 1L, n_subj = 30L, n_trials = 60L) {
@@ -266,4 +266,134 @@ test_that("subjects missing from one task are reported", {
 test_that("levels are guessed with a message rather than silently", {
   df <- make_binary()
   expect_message(long_args(df, condition_levels = NULL), "as signal")
+})
+
+# Per-task arguments
+
+# This function relabels one task so the two designs differ.
+make_split_tasks <- function(seed = 3L) {
+  df <- make_binary(seed)
+  direct   <- df[df$task == "D", ]
+  indirect <- df[df$task == "I", ]
+  names(direct)[names(direct) == "cond"]     <- "seen"
+  names(indirect)[names(indirect) == "cond"] <- "cue"
+  direct$seen  <- ifelse(direct$seen == 1, "old", "new")
+  indirect$cue <- ifelse(indirect$cue == 1, "cued", "uncued")
+  list(direct = direct, indirect = indirect)
+}
+
+test_that("each task may use its own condition column and levels", {
+  p <- make_split_tasks()
+  d <- usdt_data_tasks(
+    direct = p$direct, indirect = p$indirect, subject_col = "subj",
+    condition_col    = list(direct = "seen", indirect = "cue"),
+    condition_levels = list(direct   = c(signal = "old",  noise = "new"),
+                            indirect = c(signal = "cued", noise = "uncued")),
+    response_col     = "response",
+    response_levels  = c(signal = 1, noise = 0))
+
+  expect_identical(d$meta$tasks$direct$condition_col, "seen")
+  expect_identical(d$meta$tasks$indirect$condition_col, "cue")
+  expect_identical(unname(d$meta$tasks$indirect$condition_levels[["signal"]]),
+                   "cued")
+
+  # The relabelling changes no count, so the aggregate must not move.
+  ref <- long_args(make_binary(3L))
+  expect_equal(d$agg[, c("subj", "task", "sig", "y", "n")],
+               ref$agg[, c("subj", "task", "sig", "y", "n")])
+})
+
+test_that("each task may use its own subject column and input format", {
+  p <- make_split_tasks()
+  tab <- do.call(rbind, lapply(split(p$indirect, p$indirect$subj), function(z)
+    data.frame(id = z$subj[1L],
+               H  = sum(z$cue == "cued"   & z$response == 1),
+               M  = sum(z$cue == "cued"   & z$response == 0),
+               FA = sum(z$cue == "uncued" & z$response == 1),
+               CR = sum(z$cue == "uncued" & z$response == 0))))
+  d <- usdt_data_tasks(
+    direct = p$direct, indirect = tab,
+    subject_col      = list(direct = "subj", indirect = "id"),
+    condition_col    = list(direct = "seen", indirect = NULL),
+    condition_levels = list(direct = c(signal = "old", noise = "new"),
+                            indirect = NULL),
+    response_col     = list(direct = "response", indirect = NULL),
+    response_levels  = list(direct = c(signal = 1, noise = 0), indirect = NULL),
+    sdt_cols         = list(direct = NULL,
+                            indirect = c(hit = "H", miss = "M",
+                                         fa = "FA", cr = "CR")))
+
+  expect_identical(d$meta$tasks$indirect$subject, "id")
+  expect_identical(d$meta$tasks$indirect$granularity, "SDT table")
+  expect_identical(d$meta$tasks$direct$granularity, "trial level")
+
+  ref <- long_args(make_binary(3L))
+  expect_equal(d$agg$y, ref$agg$y)
+  expect_equal(d$agg$n, ref$agg$n)
+})
+
+test_that("dichotomize accepts task names and one logical per task", {
+  df <- make_binary(5L, n_trials = 40L)
+  df$rt <- stats::rnorm(nrow(df))
+  args <- list(
+    response_col    = list(direct = "response", indirect = "rt"),
+    response_levels = list(direct   = c(signal = 1, noise = 0),
+                           indirect = c(signal = "faster", noise = "slower")))
+
+  by_name <- do.call(long_args, c(list(df, dichotomize = "indirect"), args))
+  by_flag <- do.call(long_args,
+                     c(list(df, dichotomize = list(direct = FALSE,
+                                                   indirect = TRUE)), args))
+  expect_equal(by_name$agg, by_flag$agg)
+  expect_false(by_flag$meta$tasks$direct$dichotomized)
+  expect_true(by_flag$meta$tasks$indirect$dichotomized)
+
+  both <- do.call(long_args, c(list(df, dichotomize = TRUE),
+                               list(response_col = "rt",
+                                    response_levels = c(signal = "faster",
+                                                        noise = "slower"))))
+  expect_true(both$meta$tasks$direct$dichotomized)
+  expect_true(both$meta$tasks$indirect$dichotomized)
+})
+
+test_that("ties and successes_type may differ between tasks", {
+  df <- make_binary(6L, n_trials = 40L)
+  df$rt <- stats::rnorm(nrow(df))
+  d <- long_args(df,
+                 response_col    = "rt",
+                 response_levels = c(signal = "faster", noise = "slower"),
+                 dichotomize     = "both",
+                 ties            = list(direct = "noise", indirect = "random"))
+  expect_identical(unname(d$meta$ties), c("noise", "random"))
+  expect_error(long_args(df, ties = list(direct = "noise", indirect = "half")),
+               "`ties` must be one of")
+})
+
+test_that("naming only one task is an error rather than a shared value", {
+  df <- make_binary(7L)
+  expect_error(long_args(df, condition_col = list(direct = "cond",
+                                                  indriect = "cond")),
+               "names one task but not the other")
+  expect_error(long_args(df, dichotomize = "indirecto"),
+               "does not accept")
+  expect_error(long_args(df, dichotomize = c("none", "direct")),
+               "combines")
+})
+
+test_that("the printed mapping keeps one row per task", {
+  p <- make_split_tasks()
+  d <- usdt_data_tasks(
+    direct = p$direct, indirect = p$indirect, subject_col = "subj",
+    condition_col    = list(direct = "seen", indirect = "cue"),
+    condition_levels = list(direct   = c(signal = "old",  noise = "new"),
+                            indirect = c(signal = "cued", noise = "uncued")),
+    response_col     = "response",
+    response_levels  = c(signal = 1, noise = 0))
+  out <- utils::capture.output(print(d))
+
+  expect_false(any(grepl("\bboth\b", out)))
+  expect_true(any(grepl("^  subject .* Direct .* subj", out)))
+  expect_true(any(grepl("^ +Indirect +subj", out)))
+  expect_true(any(grepl("^  condition +Direct +seen +old +new", out)))
+  expect_true(any(grepl("^ +Indirect +cue +cued +uncued", out)))
 })

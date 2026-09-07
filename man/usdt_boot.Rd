@@ -16,7 +16,7 @@ usdt_boot(
 )
 }
 \arguments{
-\item{object}{A \code{usdt_freq} object from \code{\link[=usdt_freq]{usdt_freq()}}.}
+\item{object}{A \code{hsdt} object from \code{\link[=hsdt]{hsdt()}}.}
 
 \item{nsim}{Number of usable bootstrap replicates. It must be at least 500.}
 
@@ -42,7 +42,7 @@ that scale, so they are reported as missing for a correlation sitting on
 the boundary; \code{"perc"} remains available.}
 }
 \value{
-The \code{usdt_freq} object with the interval fields of its \code{tests} table
+The \code{hsdt} object with the interval fields of its \code{tests} table
 replaced by bootstrap summaries. Its \code{boot} element contains the hypothesis
 replicates in \code{t}, the sensitivity variances in \code{variance}, the fixed task
 parameters in \code{population}, and the refitted conditional task parameters
@@ -89,12 +89,12 @@ d  <- usdt_data_long(df, task_col = "task",
                      condition_levels = c(signal = 1, noise = 0),
                      response_col     = "response",
                      response_levels  = c(signal = 1, noise = 0))
-m <- usdt_freq(d)
+m <- hsdt(d)
 b <- usdt_boot(m, nsim = 500)
 summary(b)
 }
 
 }
 \seealso{
-\code{\link[=usdt_freq]{usdt_freq()}}
+\code{\link[=hsdt]{hsdt()}}
 }

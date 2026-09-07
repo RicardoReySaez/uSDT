@@ -1,11 +1,11 @@
-# fit-freq.R
-# This script fits the frequentist hierarchical uSDT model.
+# fit-hsdt.R
+# This script fits the hierarchical signal detection theory model.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # Public functions
 
-#' Fit a hierarchical SDT model by maximum likelihood
+#' Fit a hierarchical signal detection theory model
 #'
 #' Fits the binomial probit mixed model in which the sensitivities of the
 #' direct and indirect tasks are correlated random effects, and tests the three
@@ -13,6 +13,8 @@
 #'
 #' @param data A `usdt_data` object from [usdt_data_long()] or
 #'   [usdt_data_tasks()].
+#' @param estimation Estimation method. Only `"frequentist"` is available:
+#'   maximum likelihood through `lme4::glmer()`.
 #' @param fix_criteria `"auto"` fixes to zero every criterion the data show to
 #'   be zero by construction, which a Meyen median split under deviation coding
 #'   guarantees. `"none"` estimates them all.
@@ -23,12 +25,12 @@
 #'   The formula, data, family, optimizer and `nAGQ = 1` remain fixed by uSDT.
 #'   Print and summary methods ignore this argument.
 #'
-#' @return An object of class `usdt_freq`: a list with the fitted model
+#' @return An object of class `hsdt`: a list with the fitted model
 #'   (`fit`), the hypothesis table (`tests`), the extracted parameters
 #'   (`pars`), the formula information (`design`) and the diagnostics
 #'   (`diagnostics`).
 #'
-#' @seealso [usdt_data_long()], [usdt_tests()], [plot.usdt_freq()]
+#' @seealso [usdt_data_long()], [usdt_tests()], [plot.hsdt()]
 #'
 #' @examples
 #' \donttest{
@@ -41,22 +43,26 @@
 #'                      condition_levels = c(signal = 1, noise = 0),
 #'                      response_col     = "response",
 #'                      response_levels  = c(signal = 1, noise = 0))
-#' m <- usdt_freq(d)
+#' m <- hsdt(d)
 #' summary(m)
 #' }
 #'
 #' @export
-usdt_freq <- function(data,
-                      fix_criteria = c("auto", "none"),
-                      level        = 0.95,
-                      optimizer    = "bobyqa",
-                      ...) {
+hsdt <- function(data,
+                 estimation   = c("frequentist"),
+                 fix_criteria = c("auto", "none"),
+                 level        = 0.95,
+                 optimizer    = "bobyqa",
+                 ...) {
 
   # The function checks the data and the requested options.
   if (!inherits(data, "usdt_data")) {
     .usdt_stop("`data` must come from usdt_data_long() or usdt_data_tasks(), ",
                "not a plain ", class(data)[1L], ".")
   }
+  estimation <- tryCatch(match.arg(estimation), error = function(e)
+    .usdt_stop("`estimation` accepts only `\"frequentist\"`, which fits the ",
+               "model by maximum likelihood with lme4."))
   fix_criteria <- match.arg(fix_criteria)
   .check_confidence_level(level)
   if (!is.character(optimizer) || length(optimizer) != 1L ||
@@ -123,14 +129,13 @@ usdt_freq <- function(data,
                  paste0("  At the bound: ",
                         paste(pars$at_bound, collapse = ", "), ".\n") else "",
                "  Reason: ", pars$inference_reason, "\n",
-               "  Use usdt_boot() for a parametric bootstrap. A future ",
-               "Bayesian version will provide regularizing priors.")
+               "  Use usdt_boot() for a parametric bootstrap.")
   }
 
   structure(list(fit = fit, tests = tests, pars = pars, design = design,
                  data = data, diagnostics = diag, devfun = devfun,
                  call = match.call(), level = level),
-            class = "usdt_freq")
+            class = "hsdt")
 }
 
 # Internal functions
@@ -202,8 +207,7 @@ usdt_freq <- function(data,
   detail <- unique(reasons[nzchar(reasons)])
   .usdt_stop("the model did not converge with any available optimizer.",
              if (length(detail)) paste0("\n  ", paste(detail, collapse = "\n  ")) else "",
-             "\n  Check the data and model identification. A future Bayesian ",
-             "version will provide regularizing priors.")
+             "\n  Check the data and model identification.")
 }
 
 # This function collects the main fitting diagnostics.

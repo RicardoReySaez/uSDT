@@ -1,7 +1,7 @@
 # utils.R
 # This script provides shared tools for the package.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # Messages
 
@@ -139,8 +139,73 @@
     return(list(direct = x[["direct"]], indirect = x[["indirect"]]))
   }
 
+  # A partial task name is a typo, not a value shared by both tasks.
+  if (any(c("direct", "indirect") %in% nms)) {
+    .usdt_stop("`", arg, "` names one task but not the other. Give one value ",
+               "for both tasks, or one for each, e.g.\n  ", arg,
+               " = list(direct = ..., indirect = ...)\n  Names found: ",
+               paste0("`", nms, "`", collapse = ", "), ".")
+  }
+
   # Both tasks use the same value in every other case.
   list(direct = x, indirect = x)
+}
+
+# This function gives each task one option from a fixed set.
+.per_task_choice <- function(x, arg, choices) {
+  v <- .per_task(x, arg)
+  lapply(v, function(z) {
+    if (!is.character(z) || anyNA(z)) {
+      .usdt_stop("`", arg, "` must be one of ",
+                 paste0("`", choices, "`", collapse = ", "), ".")
+    }
+    tryCatch(match.arg(z, choices),
+             error = function(e)
+               .usdt_stop("`", arg, "` must be one of ",
+                          paste0("`", choices, "`", collapse = ", "),
+                          ", not `", paste(z, collapse = "`, `"), "`."))
+  })
+}
+
+# This function decides which tasks need the median split.
+.check_dichotomize <- function(x) {
+
+  tasks <- c("direct", "indirect")
+  out   <- stats::setNames(logical(2L), tasks)
+
+  # A logical value for each task states the choice directly.
+  if (is.logical(x) || (is.list(x) && all(vapply(x, is.logical, TRUE)))) {
+    v <- .per_task(x, "dichotomize")
+    for (k in tasks) {
+      if (length(v[[k]]) != 1L || is.na(v[[k]])) {
+        .usdt_stop("`dichotomize` must give one `TRUE` or `FALSE` to each task.")
+      }
+      out[[k]] <- as.logical(v[[k]])
+    }
+    return(out)
+  }
+
+  # Task names select the tasks to split.
+  if (!is.character(x) || !length(x) || anyNA(x)) {
+    .usdt_stop("`dichotomize` must be `\"none\"`, `\"direct\"`, `\"indirect\"`, ",
+               "`\"both\"`, or one logical value for each task, e.g.\n",
+               "  dichotomize = list(direct = FALSE, indirect = TRUE)")
+  }
+  choices <- c("none", "indirect", "direct", "both")
+  if (identical(x, choices)) x <- "none"
+  bad <- setdiff(x, choices)
+  if (length(bad)) {
+    .usdt_stop("`dichotomize` does not accept `", bad[1L], "`. Use `\"none\"`, ",
+               "`\"direct\"`, `\"indirect\"`, `\"both\"`, or one logical value ",
+               "for each task.")
+  }
+  if (length(x) > 1L && any(c("none", "both") %in% x)) {
+    .usdt_stop("`dichotomize` combines `", paste(x, collapse = "`, `"),
+               "`. Name the tasks to split, or use `\"none\"` or `\"both\"`.")
+  }
+  which_dic <- if ("both" %in% x) tasks else setdiff(x, "none")
+  out[which_dic] <- TRUE
+  out
 }
 
 # This function checks the signal and noise values.

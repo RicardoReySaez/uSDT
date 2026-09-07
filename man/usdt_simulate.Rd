@@ -56,11 +56,11 @@ indirect task.
 \description{
 Generates trial-level data for a direct and an indirect task whose
 subject-level sensitivities are correlated, which is the structure
-\code{\link[=usdt_freq]{usdt_freq()}} estimates.
+\code{\link[=hsdt]{hsdt()}} estimates.
 }
 \details{
 The linear predictor is \verb{crit_D + d' * S}, so \code{crit_D} is the model
-intercept, the quantity \code{\link[=usdt_freq]{usdt_freq()}} estimates as \code{c_D}. The classical
+intercept, the quantity \code{\link[=hsdt]{hsdt()}} estimates as \code{c_D}. The classical
 criterion runs the other way: \code{c = -crit_D} under deviation coding, which is
 what \code{\link[=sdt_moments]{sdt_moments()}} returns and what the printed summary reports. Simulating
 \code{crit_D = 0.5} therefore recovers a criterion of \code{-0.5}.
@@ -73,5 +73,5 @@ table(df$task, df$cond)
 
 }
 \seealso{
-\code{\link[=usdt_freq]{usdt_freq()}}, \code{\link[=sdt_moments]{sdt_moments()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=sdt_moments]{sdt_moments()}}
 }

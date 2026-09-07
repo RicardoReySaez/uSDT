@@ -11,9 +11,9 @@
 #' correlation, and the latent regression of the indirect sensitivity on the
 #' direct one. They accept any `glmerMod` in which the two sensitivities are
 #' fixed effects and share a random-effects term, not only models built by
-#' [usdt_freq()].
+#' [hsdt()].
 #'
-#' @param fit A fitted `glmerMod`, typically from [usdt_freq()] or from
+#' @param fit A fitted `glmerMod`, typically from [hsdt()] or from
 #'   `lme4::glmer()` directly.
 #' @param direct,indirect Names of the two sensitivity terms in the model.
 #' @param level Confidence level.
@@ -32,7 +32,7 @@
 #' same null hypothesis. Both are therefore reported with the same Wald test on
 #' the covariance.
 #'
-#' @seealso [usdt_freq()]
+#' @seealso [hsdt()]
 #'
 #' @examples
 #' \donttest{
@@ -45,7 +45,7 @@
 #'                      condition_levels = c(signal = 1, noise = 0),
 #'                      response_col     = "response",
 #'                      response_levels  = c(signal = 1, noise = 0))
-#' m <- usdt_freq(d)
+#' m <- hsdt(d)
 #' usdt_tests(m$fit)
 #' }
 #'
@@ -202,7 +202,7 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 
 # This function finds the fitted model and its deviance function.
 .resolve_fit <- function(x) {
-  if (inherits(x, "usdt_freq")) return(list(fit = x$fit, devfun = x$devfun))
+  if (inherits(x, "hsdt")) return(list(fit = x$fit, devfun = x$devfun))
   list(fit = x, devfun = NULL)
 }
 

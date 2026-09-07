@@ -63,7 +63,7 @@
 #' variance of some indices of the signal detection theory: A simulation study.
 #' *Psicologica*.
 #'
-#' @seealso [usdt_freq()]
+#' @seealso [hsdt()]
 #'
 #' @examples
 #' set.seed(1)

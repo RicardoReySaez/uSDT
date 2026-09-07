@@ -1,13 +1,13 @@
 # plot.R
 # This script plots results from a fitted uSDT model.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 #' Plot a fitted uSDT model
 #'
-#' Creates a plot from a fitted `usdt_freq` object.
+#' Creates a plot from a fitted `hsdt` object.
 #'
-#' @param x A fitted `usdt_freq` object.
+#' @param x A fitted `hsdt` object.
 #' @param type Plot to create. `"regression"` separates the naive regression of
 #'   the observed sensitivities from the model-implied latent regression and
 #'   shows the shrinkage between them. `"shrinkage"` compares observed d' values
@@ -79,7 +79,7 @@
 #' variance parameters. All curves are model-implied; binary responses identify
 #' one operating point per task rather than an empirical multicriterion ROC.
 #'
-#' @seealso [usdt_freq()], [sdt_moments()]
+#' @seealso [hsdt()], [sdt_moments()]
 #'
 #' @examples
 #' \donttest{
@@ -95,7 +95,7 @@
 #'   response_col = "response",
 #'   response_levels = c(signal = 1, noise = 0)
 #' )
-#' fit <- usdt_freq(data)
+#' fit <- hsdt(data)
 #' plot(fit, type = "regression")
 #' plot(fit, type = "shrinkage")
 #' plot(fit, type = "roc")
@@ -103,10 +103,10 @@
 #' }
 #'
 #' @export
-plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
-                                       "caterpillar", "roc"),
-                           subject_id = NULL, band = TRUE,
-                           population_reference = TRUE, ...) {
+plot.hsdt <- function(x, type = c("regression", "shrinkage",
+                                  "caterpillar", "roc"),
+                      subject_id = NULL, band = TRUE,
+                      population_reference = TRUE, ...) {
 
   # The function checks the requested plot.
   type <- match.arg(type)
@@ -129,6 +129,28 @@ plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
          shrinkage = .plot_shrinkage(x),
          caterpillar = .plot_caterpillar(x),
          roc = .plot_roc(x, subject_id, band, population_reference))
+}
+
+# This function breaks a caption into lines that fit inside the plot.
+.wrap_caption <- function(..., width = 88L) {
+
+  # ggplot2 lays a caption out at its natural width and never wraps it, so a
+  # long one simply runs past the edge of the device and its tail is lost. The
+  # width is counted in characters rather than inches because the caption is
+  # drawn at a fixed point size: at the 9.5pt these plots use, this many
+  # characters stay inside the panels at the figure sizes they are drawn at.
+  # A caption that is still too wide for a very narrow figure will overflow,
+  # which is why the value is conservative.
+  paragraphs <- unlist(strsplit(paste0(...), "\n", fixed = TRUE))
+  paragraphs <- paragraphs[nzchar(trimws(paragraphs))]
+
+  # Each paragraph wraps on its own so the author's own breaks survive.
+  wrapped <- vapply(
+    paragraphs,
+    function(p) paste(strwrap(p, width = width), collapse = "\n"),
+    character(1L)
+  )
+  paste(wrapped, collapse = "\n")
 }
 
 # This function evaluates the latent line and its band over a grid of x.
@@ -382,7 +404,7 @@ plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
             100 * object$level,
             switch(values$method, perc = "percentile", norm = "normal",
                    basic = "basic")))
-  caption <- paste0(
+  caption <- .wrap_caption(
     "Segments show shrinkage from observed to conditional model estimates. ",
     "The latent line is implied by the fitted random-effects distribution, ",
     "not fitted to the green points.\n", band_note,
@@ -735,7 +757,7 @@ plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
     ggplot2::labs(
       x = expression(Sensitivity ~ (italic(d) * minute)),
       y = NULL,
-      caption = paste0(
+      caption = .wrap_caption(
         "Subjects are ordered by observed d\u2032 within each task. ",
         "Percentages descriptively summarise the displayed intervals."
       )
@@ -997,6 +1019,10 @@ plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
            " Equal-variance SDT.")
   }
 
+  # The square panel makes this the narrowest plot in the package, so its
+  # caption wraps sooner than the others.
+  caption <- .wrap_caption(caption, width = 58L)
+
   plot +
     ggplot2::geom_abline(
       intercept = 0, slope = 1, colour = "#8A9196",
@@ -1025,6 +1051,12 @@ plot.usdt_freq <- function(x, type = c("regression", "shrinkage",
       expand = ggplot2::expansion(mult = 0.01)
     ) +
     ggplot2::coord_equal() +
+    # A fixed aspect ratio makes the panel square and therefore narrower than
+    # the device. The legend is laid out at its own natural width, so two
+    # entries side by side overflow that panel and spill past the background
+    # of the plot. Stacking them keeps the legend as wide as its widest single
+    # label, which fits whatever width the square panel ends up with.
+    ggplot2::guides(colour = ggplot2::guide_legend(ncol = 1L)) +
     ggplot2::labs(
       title = title, x = "False-alarm rate", y = "Hit rate", caption = caption
     ) +

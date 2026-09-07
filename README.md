@@ -37,17 +37,22 @@ d <- usdt_data_tasks(
   subject_col = "subj",
   condition_col = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col = c(direct = "judged.old", indirect = "rt"),
+  response_col = list(direct = "judged.old", indirect = "rt"),
   response_levels = list(
     direct = c(signal = 1, noise = 0),
     indirect = c(signal = "faster", noise = "slower")
   ),
-  dichotomize = "indirect"
+  dichotomize = list(direct = FALSE, indirect = TRUE)
 )
 
-fit <- usdt_freq(d)
+fit <- hsdt(d)
 summary(fit)
 ```
+
+Every column, level and format argument takes either one value for both tasks
+or one per task as `list(direct = ..., indirect = ...)`, so the two tasks may
+differ in the columns they use, in the values those columns take, and in the
+format they arrive in.
 
 The source data are from Vadillo, Malejka, and Shanks (2024), *Mapping the
 reliability multiverse of contextual cuing*,

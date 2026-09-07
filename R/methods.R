@@ -1,7 +1,7 @@
 # methods.R
 # This script prints summaries for uSDT data and fitted models.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # Data summaries
 
@@ -33,8 +33,7 @@ print.usdt_data <- function(x, ...) {
   cat("\n", .rule("Variable mapping"), "\n\n", sep = "")
   cat(sprintf("  %-14s %-10s %-15s %-13s %s\n",
               "Variable", "Task", "Column", "Signal", "Noise"))
-  cat(sprintf("  %-14s %-10s %-15s %-13s %s\n", "subject", "-",
-              m$tasks$direct$subject %||% "-", "-", "-"))
+  .print_var_rows("subject",   m, "subject",       NULL)
   .print_var_rows("condition", m, "condition_col", "condition_levels")
   .print_var_rows("response",  m, "response_col",  "response_levels")
 
@@ -65,30 +64,17 @@ print.usdt_data <- function(x, ...) {
 # This function prints the role of a variable in each task.
 .print_var_rows <- function(what, m, col_field, lev_field) {
 
-  # The function collects the column and role names for both tasks.
-  get <- function(k) {
-    ti  <- m$tasks[[k]]
-    lev <- ti[[lev_field]]
-    list(col = ti[[col_field]] %||% "-",
-         sig = if (is.null(lev)) "-" else as.character(lev[["signal"]]),
-         noi = if (is.null(lev)) "-" else as.character(lev[["noise"]]),
-         tag = if (ti$dichotomized && what == "response") "  [Meyen split]" else "")
-  }
-  a <- get("direct"); b <- get("indirect")
-
-  # One row is enough when both tasks use the same mapping.
-  if (identical(a, b)) {
-    cat(sprintf("  %-14s %-10s %-15s %-13s %s%s\n", what, "both",
-                a$col, a$sig, a$noi, a$tag))
-    return(invisible(NULL))
-  }
-
-  # Separate rows show different mappings for the two tasks.
+  # Each task keeps its own row, so different mappings are always visible.
   for (k in c("direct", "indirect")) {
-    v <- get(k)
+    ti  <- m$tasks[[k]]
+    lev <- if (is.null(lev_field)) NULL else ti[[lev_field]]
+    tag <- if (ti$dichotomized && what == "response") "  [Meyen split]" else ""
     cat(sprintf("  %-14s %-10s %-15s %-13s %s%s\n",
                 if (k == "direct") what else "", m$labels[[k]],
-                v$col, v$sig, v$noi, v$tag))
+                ti[[col_field]] %||% "-",
+                if (is.null(lev)) "-" else as.character(lev[["signal"]]),
+                if (is.null(lev)) "-" else as.character(lev[["noise"]]),
+                tag))
   }
   invisible(NULL)
 }
@@ -135,11 +121,11 @@ print.usdt_data <- function(x, ...) {
 
 # Model summaries
 
-#' @param object A `usdt_freq` object.
-#' @param x A `usdt_freq` object.
-#' @rdname usdt_freq
+#' @param object A `hsdt` object.
+#' @param x A `hsdt` object.
+#' @rdname hsdt
 #' @export
-summary.usdt_freq <- function(object, ...) {
+summary.hsdt <- function(object, ...) {
 
   m   <- object$data$meta
   lab <- m$labels
@@ -236,9 +222,9 @@ summary.usdt_freq <- function(object, ...) {
   invisible(object)
 }
 
-#' @rdname usdt_freq
+#' @rdname hsdt
 #' @export
-print.usdt_freq <- function(x, ...) summary.usdt_freq(x, ...)
+print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 
 # Helpers for model summaries
 

@@ -17,7 +17,7 @@ fitted_example <- function() {
     response_col = "response",
     response_levels = c(signal = 1, noise = 0)
   )
-  list(data = data, fit = suppressWarnings(usdt_freq(data)))
+  list(data = data, fit = suppressWarnings(hsdt(data)))
 }
 
 # A Meyen split removes the indirect criterion.
@@ -36,7 +36,7 @@ split_example <- function() {
                            indirect = c(signal = "faster", noise = "slower")),
     dichotomize = "indirect"
   ))
-  list(data = data, fit = suppressWarnings(usdt_freq(data)))
+  list(data = data, fit = suppressWarnings(hsdt(data)))
 }
 
 # This function names the design columns of one task.
@@ -69,7 +69,7 @@ test_that("reliability follows the documented formulas", {
 
 test_that("reliability requires a fitted model", {
   example <- fitted_example()
-  expect_error(usdt_reliability(example$data), "usdt_freq")
+  expect_error(usdt_reliability(example$data), "hsdt")
 })
 
 test_that("reliability uses every usable bootstrap refit", {

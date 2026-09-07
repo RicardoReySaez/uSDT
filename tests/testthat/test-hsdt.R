@@ -1,7 +1,7 @@
 # test-usdt-freq.R
 # This script tests the frequentist model and its hypotheses.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-09-2026
 
 # This function fits a stable model for the comparisons below.
 fit_reference <- function(seed = 4L, ...) {
@@ -15,7 +15,7 @@ fit_reference <- function(seed = 4L, ...) {
                        condition_levels = c(signal = 1, noise = 0),
                        response_col     = "response",
                        response_levels  = c(signal = 1, noise = 0))
-  usdt_freq(d, ...)
+  hsdt(d, ...)
 }
 
 test_that("the joint covariance uses the fitted Hessian", {
@@ -408,7 +408,7 @@ test_that("a boundary fit returns stable hypothesis rows", {
                        condition_levels = c(signal = 1, noise = 0),
                        response_col     = "response",
                        response_levels  = c(signal = 1, noise = 0))
-  m <- suppressWarnings(usdt_freq(d))
+  m <- suppressWarnings(hsdt(d))
   s <- m$tests[m$tests$term == "slope", ]
 
   expect_identical(nrow(m$tests), 4L)
@@ -436,9 +436,10 @@ test_that("the model structure and interval methods cannot be changed", {
 })
 
 test_that("failure with every optimizer stops the analysis", {
-  expect_error(fit_reference(not_a_glmer_argument = TRUE), "future Bayesian")
+  expect_error(fit_reference(not_a_glmer_argument = TRUE),
+               "did not converge with any available optimizer")
 })
 
-test_that("usdt_freq rejects anything that is not a usdt_data object", {
-  expect_error(usdt_freq(data.frame(x = 1)), "usdt_data_long")
+test_that("hsdt rejects anything that is not a usdt_data object", {
+  expect_error(hsdt(data.frame(x = 1)), "usdt_data_long")
 })

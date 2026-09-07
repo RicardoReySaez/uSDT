@@ -92,5 +92,5 @@ variance of some indices of the signal detection theory: A simulation study.
 \emph{Psicologica}.
 }
 \seealso{
-\code{\link[=usdt_freq]{usdt_freq()}}
+\code{\link[=hsdt]{hsdt()}}
 }

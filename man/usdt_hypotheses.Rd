@@ -17,7 +17,7 @@ latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted \code{glmerMod}, typically from \code{\link[=usdt_freq]{usdt_freq()}} or from
+\item{fit}{A fitted \code{glmerMod}, typically from \code{\link[=hsdt]{hsdt()}} or from
 \code{lme4::glmer()} directly.}
 
 \item{direct, indirect}{Names of the two sensitivity terms in the model.}
@@ -35,7 +35,7 @@ Computes the group-level difference between sensitivities, their latent
 correlation, and the latent regression of the indirect sensitivity on the
 direct one. They accept any \code{glmerMod} in which the two sensitivities are
 fixed effects and share a random-effects term, not only models built by
-\code{\link[=usdt_freq]{usdt_freq()}}.
+\code{\link[=hsdt]{hsdt()}}.
 }
 \details{
 H1 and the two regression terms use Wald intervals. The latent correlation
@@ -57,11 +57,11 @@ d  <- usdt_data_long(df, task_col = "task",
                      condition_levels = c(signal = 1, noise = 0),
                      response_col     = "response",
                      response_levels  = c(signal = 1, noise = 0))
-m <- usdt_freq(d)
+m <- hsdt(d)
 usdt_tests(m$fit)
 }
 
 }
 \seealso{
-\code{\link[=usdt_freq]{usdt_freq()}}
+\code{\link[=hsdt]{hsdt()}}
 }

@@ -8,7 +8,7 @@
 #' Estimates how much of the spread in `d'` reflects real differences between
 #' subjects rather than trial noise, from a fitted model.
 #'
-#' @param object A fitted `usdt_freq` object, optionally returned by
+#' @param object A fitted `hsdt` object, optionally returned by
 #'   [usdt_boot()]. The summary method takes the resulting
 #'   `usdt_reliability` object.
 #'
@@ -37,7 +37,7 @@
 #' borrow. A reliability of 0.83 means the direct information available for that
 #' subject's sensitivity matches a reliability of 0.83 against the estimated
 #' spread across subjects. It is *not* a statement about the precision of the
-#' conditional mode that [plot.usdt_freq()] draws.
+#' conditional mode that [plot.hsdt()] draws.
 #'
 #' The group-level value replaces `v_tj` by its mean. It is a genuine variance
 #' ratio: for a subject drawn at random the variance of one measurement is
@@ -70,7 +70,7 @@
 #' Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter
 #' isosensitivity functions. *Psychometrika*.
 #'
-#' @seealso [usdt_freq()], [usdt_boot()], [sdt_moments()]
+#' @seealso [hsdt()], [usdt_boot()], [sdt_moments()]
 #'
 #' @examples
 #' \donttest{
@@ -86,15 +86,15 @@
 #'   response_col = "response",
 #'   response_levels = c(signal = 1, noise = 0)
 #' )
-#' usdt_reliability(usdt_freq(data))
+#' usdt_reliability(hsdt(data))
 #' }
 #'
 #' @export
 usdt_reliability <- function(object) {
 
   # Reliability needs the fitted subject variation.
-  if (!inherits(object, "usdt_freq")) {
-    .usdt_stop("`object` must come from usdt_freq(), not a plain ",
+  if (!inherits(object, "hsdt")) {
+    .usdt_stop("`object` must come from hsdt(), not a plain ",
                class(object)[1L], ".\n  Reliability needs the fitted ",
                "between-subject variance and the information each subject ",
                "contributes.")

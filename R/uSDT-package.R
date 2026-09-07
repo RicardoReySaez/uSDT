@@ -15,7 +15,7 @@
 #'     out loud how every column was read, what the median split did, and what
 #'     all of it implies for the model.
 #'   \item [usdt_reliability()] estimates the reliability of both measures.
-#'   \item [usdt_freq()] fits the model and tests the three hypotheses.
+#'   \item [hsdt()] fits the model and tests the three hypotheses.
 #'   \item [usdt_boot()] replaces the intervals with a parametric bootstrap when
 #'     the model is weakly identified.
 #' }

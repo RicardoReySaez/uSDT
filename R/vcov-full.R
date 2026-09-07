@@ -121,7 +121,7 @@
              "  This happens when the data the model was fitted to can no ",
              "longer be found.\n",
              "  Either refit the model where its data are visible, or pass ",
-             "the object returned by usdt_freq() instead of usdt_freq()$fit, ",
+             "the object returned by hsdt() instead of hsdt()$fit, ",
              "which carries the deviance function with it.")
 }
 

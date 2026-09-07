@@ -9,7 +9,7 @@
 #'
 #' Generates trial-level data for a direct and an indirect task whose
 #' subject-level sensitivities are correlated, which is the structure
-#' [usdt_freq()] estimates.
+#' [hsdt()] estimates.
 #'
 #' @param n_subj Number of subjects.
 #' @param n_trials Number of trials per subject and task, split evenly
@@ -38,12 +38,12 @@
 #'
 #' @details
 #' The linear predictor is `crit_D + d' * S`, so `crit_D` is the model
-#' intercept, the quantity [usdt_freq()] estimates as `c_D`. The classical
+#' intercept, the quantity [hsdt()] estimates as `c_D`. The classical
 #' criterion runs the other way: `c = -crit_D` under deviation coding, which is
 #' what [sdt_moments()] returns and what the printed summary reports. Simulating
 #' `crit_D = 0.5` therefore recovers a criterion of `-0.5`.
 #'
-#' @seealso [usdt_freq()], [sdt_moments()]
+#' @seealso [hsdt()], [sdt_moments()]
 #'
 #' @examples
 #' set.seed(1)

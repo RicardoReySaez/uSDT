@@ -1,5 +1,5 @@
 # fit-hsdt.R
-# This script fits the hierarchical signal detection theory model.
+# Fit hierarchical Signal Detection Theory models
 # Author: Ricardo Rey-Sáez
 # Last modified: 08-09-2026
 
@@ -7,66 +7,75 @@
 
 #' Fit a hierarchical signal detection theory model
 #'
-#' Fits the model to prepared data and tests the three hypotheses of the
-#' unconscious processing design. Every subject has one sensitivity in each
-#' task, and the model allows the two sensitivities to correlate across
-#' subjects. Estimation uses `lme4::glmer()`.
+#' Fits a bivariate hierarchical SDT model using [lme4::glmer()] and evaluates
+#' the core unconscious processing hypotheses. The model estimates task-specific
+#' sensitivities (\eqn{d'}) and response criteria (\eqn{c}) as fixed effects,
+#' while estimating their variation and correlation across participants via
+#' random effects.
 #'
-#' @param data A `usdt_data` object from [usdt_data_long()] or
-#'   [usdt_data_tasks()].
-#' @param estimation Estimation method. Only `"frequentist"` is available, and
-#'   it fits the model by maximum likelihood.
-#' @param fix_criteria What to do with the criteria. `"auto"` fixes to zero
-#'   every criterion that the data make zero by construction, which happens
-#'   after a median split under deviation coding. `"none"` estimates all of
-#'   them.
-#' @param level Confidence level.
-#' @param optimizer Optimizer given to `lme4::glmerControl()`. The function
-#'   tries other optimizers when this one does not converge or reaches a
-#'   singular fit.
-#' @param ... Named arguments passed on to every `lme4::glmer()` call. The
-#'   formula, the data, the family, the optimizer and `nAGQ = 1` stay under the
-#'   control of the package. The print and summary methods ignore this
-#'   argument.
+#' @param data A `usdt_data` object from [usdt_data_tasks()] or
+#'   [usdt_data_long()].
+#' @param estimation Estimation framework. Currently only `"frequentist"`
+#'   (maximum likelihood via Laplace approximation) is supported.
+#' @param fix_criteria How to handle response criteria. `"auto"` fixes to zero
+#'   any criterion that is zero by design (such as a task split at the median
+#'   under deviation coding). `"none"` estimates all criteria.
+#' @param level Confidence level for Wald intervals (default is 0.95).
+#' @param optimizer Primary optimizer passed to [lme4::glmerControl()].
+#'   Alternative optimizers are automatically evaluated if the default fails to
+#'   converge or produces a singular fit.
+#' @param ... Additional arguments passed to [lme4::glmer()]. Model formula,
+#'   family, and data inputs remain managed by the package.
 #'
-#' @return An object of class `hsdt`. It holds the fitted model in `fit`, the
-#'   three hypothesis tests in `tests`, the estimates they are built from in
-#'   `pars`, a description of the model formula in `design`, and the fitting
-#'   diagnostics in `diagnostics`. Use `summary()` to read it.
+#' @return An object of class `hsdt` containing:
+#' * `$fit`: The underlying `glmerMod` object from `lme4`.
+#' * `$tests`: Summary table for hypotheses H1, H2, and H3.
+#' * `$pars`: Model parameter estimates on the SDT scale.
+#' * `$design`: Summary of the model specification and formula.
+#' * `$diagnostics`: Convergence flags and singular fit indicators.
 #'
 #' @details
-#' The model works on counts of signal responses. It uses a probit link, so its
-#' parameters keep the usual signal detection meaning. The fixed effects give
-#' the average sensitivity of each task, and any criterion that is estimated.
-#' The random effects give the departure of each subject from those averages,
-#' and the two sensitivities share one covariance, which is what makes the
-#' latent correlation available.
+#' The model fits trial counts with a binomial probit link, directly mapping
+#' coefficients to standard Signal Detection Theory parameters. Fixed effects
+#' capture population sensitivities and criteria, while random effects estimate
+#' participant variation and the latent correlation between direct and indirect
+#' sensitivity.
 #'
-#' The three hypotheses come out of that covariance and the two averages. H1 is
-#' the difference between the average sensitivities. H2 is their correlation
-#' across subjects. H3 is the regression of the indirect sensitivity on the
-#' direct one, and its intercept is the sensitivity expected in the indirect
-#' task from a subject whose direct sensitivity is zero. See [usdt_tests()].
+#' Hypotheses evaluated by default:
+#' * **H1:** Mean sensitivity difference between tasks.
+#' * **H2:** Latent correlation of sensitivities across participants.
+#' * **H3:** Latent regression of indirect on direct sensitivity. Its intercept
+#'   reflects expected indirect performance when direct awareness is zero
+#'   (\eqn{d'_{\mathrm{Direct}} = 0}).
 #'
-#' Some datasets do not carry enough information for H2 and H3. The function
-#' still returns the fit and warns, and [usdt_boot()] can then provide
-#' intervals by simulation.
+#' When sample sizes or trial counts are low, variance components can reach
+#' singular boundaries. In these cases, the function issues a warning, and
+#' parametric bootstrap intervals can be calculated using [usdt_boot()].
 #'
-#' @seealso [usdt_data_long()], [usdt_tests()], [usdt_boot()], [plot.hsdt()]
+#' @seealso [usdt_data_tasks()], [usdt_tests()], [usdt_boot()], [plot.hsdt()]
 #'
 #' @examples
 #' \donttest{
-#' set.seed(1)
-#' df <- usdt_simulate(n_subj = 40, n_trials = 100)
-#' d  <- usdt_data_long(df, task_col = "task",
-#'                      task_levels      = c(direct = "D", indirect = "I"),
-#'                      subject_col      = "subj",
-#'                      condition_col    = "cond",
-#'                      condition_levels = c(signal = 1, noise = 0),
-#'                      response_col     = "response",
-#'                      response_levels  = c(signal = 1, noise = 0))
+#' # Contextual cuing data from Vadillo et al. (2025)
+#' d <- usdt_data_tasks(
+#'   direct   = vadillo_awareness,
+#'   indirect = vadillo_cuing,
+#'   subject_col      = "subj",
+#'   condition_col    = "condition",
+#'   condition_levels = c(signal = "old", noise = "new"),
+#'   response_col     = list(direct = "judged.old", indirect = "rt"),
+#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
+#'                           indirect = c(signal = "faster", noise = "slower")),
+#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' )
+#'
 #' m <- hsdt(d)
+#'
+#' # Full summary table with SDT parameters and hypothesis tests
 #' summary(m)
+#'
+#' # Inspect the model formula (indirect criterion omitted by default)
+#' m$design$formula
 #' }
 #'
 #' @export

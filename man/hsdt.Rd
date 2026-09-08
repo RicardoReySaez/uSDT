@@ -20,78 +20,91 @@ hsdt(
 \method{print}{hsdt}(x, ...)
 }
 \arguments{
-\item{data}{A \code{usdt_data} object from \code{\link[=usdt_data_long]{usdt_data_long()}} or
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.}
+\item{data}{A \code{usdt_data} object from \code{\link[=usdt_data_tasks]{usdt_data_tasks()}} or
+\code{\link[=usdt_data_long]{usdt_data_long()}}.}
 
-\item{estimation}{Estimation method. Only \code{"frequentist"} is available, and
-it fits the model by maximum likelihood.}
+\item{estimation}{Estimation framework. Currently only \code{"frequentist"}
+(maximum likelihood via Laplace approximation) is supported.}
 
-\item{fix_criteria}{What to do with the criteria. \code{"auto"} fixes to zero
-every criterion that the data make zero by construction, which happens
-after a median split under deviation coding. \code{"none"} estimates all of
-them.}
+\item{fix_criteria}{How to handle response criteria. \code{"auto"} fixes to zero
+any criterion that is zero by design (such as a task split at the median
+under deviation coding). \code{"none"} estimates all criteria.}
 
-\item{level}{Confidence level.}
+\item{level}{Confidence level for Wald intervals (default is 0.95).}
 
-\item{optimizer}{Optimizer given to \code{lme4::glmerControl()}. The function
-tries other optimizers when this one does not converge or reaches a
-singular fit.}
+\item{optimizer}{Primary optimizer passed to \code{\link[lme4:glmerControl]{lme4::glmerControl()}}.
+Alternative optimizers are automatically evaluated if the default fails to
+converge or produces a singular fit.}
 
-\item{...}{Named arguments passed on to every \code{lme4::glmer()} call. The
-formula, the data, the family, the optimizer and \code{nAGQ = 1} stay under the
-control of the package. The print and summary methods ignore this
-argument.}
+\item{...}{Additional arguments passed to \code{\link[lme4:glmer]{lme4::glmer()}}. Model formula,
+family, and data inputs remain managed by the package.}
 
 \item{object}{An \code{hsdt} object.}
 
 \item{x}{An \code{hsdt} object.}
 }
 \value{
-An object of class \code{hsdt}. It holds the fitted model in \code{fit}, the
-three hypothesis tests in \code{tests}, the estimates they are built from in
-\code{pars}, a description of the model formula in \code{design}, and the fitting
-diagnostics in \code{diagnostics}. Use \code{summary()} to read it.
+An object of class \code{hsdt} containing:
+\itemize{
+\item \verb{$fit}: The underlying \code{glmerMod} object from \code{lme4}.
+\item \verb{$tests}: Summary table for hypotheses H1, H2, and H3.
+\item \verb{$pars}: Model parameter estimates on the SDT scale.
+\item \verb{$design}: Summary of the model specification and formula.
+\item \verb{$diagnostics}: Convergence flags and singular fit indicators.
+}
 }
 \description{
-Fits the model to prepared data and tests the three hypotheses of the
-unconscious processing design. Every subject has one sensitivity in each
-task, and the model allows the two sensitivities to correlate across
-subjects. Estimation uses \code{lme4::glmer()}.
+Fits a bivariate hierarchical SDT model using \code{\link[lme4:glmer]{lme4::glmer()}} and evaluates
+the core unconscious processing hypotheses. The model estimates task-specific
+sensitivities (\eqn{d'}) and response criteria (\eqn{c}) as fixed effects,
+while estimating their variation and correlation across participants via
+random effects.
 }
 \details{
-The model works on counts of signal responses. It uses a probit link, so its
-parameters keep the usual signal detection meaning. The fixed effects give
-the average sensitivity of each task, and any criterion that is estimated.
-The random effects give the departure of each subject from those averages,
-and the two sensitivities share one covariance, which is what makes the
-latent correlation available.
+The model fits trial counts with a binomial probit link, directly mapping
+coefficients to standard Signal Detection Theory parameters. Fixed effects
+capture population sensitivities and criteria, while random effects estimate
+participant variation and the latent correlation between direct and indirect
+sensitivity.
 
-The three hypotheses come out of that covariance and the two averages. H1 is
-the difference between the average sensitivities. H2 is their correlation
-across subjects. H3 is the regression of the indirect sensitivity on the
-direct one, and its intercept is the sensitivity expected in the indirect
-task from a subject whose direct sensitivity is zero. See \code{\link[=usdt_tests]{usdt_tests()}}.
+Hypotheses evaluated by default:
+\itemize{
+\item \strong{H1:} Mean sensitivity difference between tasks.
+\item \strong{H2:} Latent correlation of sensitivities across participants.
+\item \strong{H3:} Latent regression of indirect on direct sensitivity. Its intercept
+reflects expected indirect performance when direct awareness is zero
+(\eqn{d'_{\mathrm{Direct}} = 0}).
+}
 
-Some datasets do not carry enough information for H2 and H3. The function
-still returns the fit and warns, and \code{\link[=usdt_boot]{usdt_boot()}} can then provide
-intervals by simulation.
+When sample sizes or trial counts are low, variance components can reach
+singular boundaries. In these cases, the function issues a warning, and
+parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}.
 }
 \examples{
 \donttest{
-set.seed(1)
-df <- usdt_simulate(n_subj = 40, n_trials = 100)
-d  <- usdt_data_long(df, task_col = "task",
-                     task_levels      = c(direct = "D", indirect = "I"),
-                     subject_col      = "subj",
-                     condition_col    = "cond",
-                     condition_levels = c(signal = 1, noise = 0),
-                     response_col     = "response",
-                     response_levels  = c(signal = 1, noise = 0))
+# Contextual cuing data from Vadillo et al. (2025)
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+
 m <- hsdt(d)
+
+# Full summary table with SDT parameters and hypothesis tests
 summary(m)
+
+# Inspect the model formula (indirect criterion omitted by default)
+m$design$formula
 }
 
 }
 \seealso{
-\code{\link[=usdt_data_long]{usdt_data_long()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
 }

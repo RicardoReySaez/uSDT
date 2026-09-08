@@ -6,6 +6,20 @@ paired direct and indirect measures, allowing researchers to compare
 both sensitivities, estimate their latent association, and test indirect
 sensitivity when direct sensitivity is zero.
 
+## Documentation
+
+The package website is at **<https://ricardoreysaez.github.io/uSDT/>**.
+It contains:
+
+- [Getting
+  started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
+  a tutorial that walks through the whole workflow with real data, from
+  two trial-level data frames to the three hypotheses.
+- [Reference](https://ricardoreysaez.github.io/uSDT/reference/index.html),
+  the help page of every function.
+- [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html),
+  the changes in each release.
+
 ## Installation
 
 Install the development version from GitHub:

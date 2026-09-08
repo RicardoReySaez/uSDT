@@ -670,14 +670,17 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                         levels = c(labels[["direct"]], labels[["indirect"]]))
   values$method <- factor(values$method,
                           levels = c("Observed", "Model-estimated"))
+  # Panel titles are drawn on a graphics device, so they stay ASCII: a device
+  # in a single-byte locale cannot convert every character, and a failed
+  # conversion is an error at render time rather than a missing glyph.
   panel_levels <- c(
-    paste0(labels[["direct"]], " task \u00b7 Observed"),
-    paste0(labels[["direct"]], " task \u00b7 Model-estimated"),
-    paste0(labels[["indirect"]], " task \u00b7 Observed"),
-    paste0(labels[["indirect"]], " task \u00b7 Model-estimated")
+    paste0(labels[["direct"]], " task: Observed"),
+    paste0(labels[["direct"]], " task: Model-estimated"),
+    paste0(labels[["indirect"]], " task: Observed"),
+    paste0(labels[["indirect"]], " task: Model-estimated")
   )
   values$panel <- factor(
-    paste0(values$task, " task \u00b7 ", values$method),
+    paste0(values$task, " task: ", values$method),
     levels = panel_levels
   )
   rownames(values) <- NULL
@@ -757,7 +760,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       x = expression(Sensitivity ~ (italic(d) * minute)),
       y = NULL,
       caption = .wrap_caption(
-        "Subjects are ordered by observed d\u2032 within each task. ",
+        "Subjects are ordered by observed d' within each task. ",
         "Percentages descriptively summarise the displayed intervals."
       )
     ) +

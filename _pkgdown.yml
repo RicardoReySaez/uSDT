@@ -6,6 +6,7 @@
 url: https://ricardoreysaez.github.io/uSDT/
 
 template:
+  math-rendering: katex
   bootstrap: 5
 
   # The light switch adds a light / dark / auto selector to the navbar. It uses

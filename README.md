@@ -2,6 +2,7 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
 
 `uSDT` estimates hierarchical signal detection theory (SDT) models for
@@ -9,6 +10,19 @@ research on unconscious processing. It jointly models sensitivity in paired
 direct and indirect measures, allowing researchers to compare both
 sensitivities, estimate their latent association, and test indirect sensitivity
 when direct sensitivity is zero.
+
+## Documentation
+
+The package website is at
+**<https://ricardoreysaez.github.io/uSDT/>**. It contains:
+
+- [Getting started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
+  a tutorial that walks through the whole workflow with real data, from two
+  trial-level data frames to the three hypotheses.
+- [Reference](https://ricardoreysaez.github.io/uSDT/reference/index.html), the
+  help page of every function.
+- [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html), the
+  changes in each release.
 
 ## Installation
 

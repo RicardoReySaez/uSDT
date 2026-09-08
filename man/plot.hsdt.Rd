@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.hsdt}
 \alias{plot.hsdt}
-\title{Plot a fitted hierarchical SDT model}
+\title{Diagnostic and analytical plots for hierarchical SDT models}
 \usage{
 \method{plot}{hsdt}(
   x,
@@ -10,115 +10,109 @@
   subject_id = NULL,
   band = TRUE,
   population_reference = TRUE,
+  observed_se = NULL,
   ...
 )
 }
 \arguments{
-\item{x}{A fitted \code{hsdt} object.}
+\item{x}{An \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}.}
 
-\item{type}{Which plot to draw. \code{"regression"} compares the regression of
-the observed sensitivities with the one the model implies. \code{"shrinkage"}
-joins the observed \verb{d'} of each subject to the estimate the model gives
-them. \code{"caterpillar"} shows the sensitivity of every subject with its
-interval, next to zero. \code{"roc"} draws the ROC curves that follow from the
-two sensitivities.}
+\item{type}{Character string indicating the plot type:
+\itemize{
+\item \code{"regression"}: Compares the observed OLS regression with the latent
+regression line (H3).
+\item \code{"shrinkage"}: Connects observed \eqn{d'} to model-implied \eqn{d'} for
+each participant across bivariate contours.
+\item \code{"caterpillar"}: Compares observed \eqn{d'} and model-implied \eqn{d'}
+with confidence intervals for each participant alongside zero.
+\item \code{"roc"}: Shows model-implied ROC curves with estimated criteria.
+}}
 
-\item{subject_id}{Subject to draw in an ROC plot. Without it the plot shows
-the curves of an average subject.}
+\item{subject_id}{Identifier for a specific participant when \code{type = "roc"}.
+If omitted, displays population-level curves.}
 
-\item{band}{Show the uncertainty band in a regression or ROC plot.}
+\item{band}{Logical. Show confidence bands around regression lines or ROC
+curves (default is \code{TRUE}).}
 
-\item{population_reference}{Add the average curves as thin dashed lines
-behind the curves of one subject in an ROC plot.}
+\item{population_reference}{Logical. When plotting an individual ROC curve,
+add population-average curves as dashed reference lines.}
 
-\item{...}{Reserved for future plot types.}
+\item{observed_se}{Variance formulation for empirical intervals in
+\code{"caterpillar"} plots: \code{"gg"} (Gourevitch & Galanter, 1967, default) or
+\code{"miller"} (Miller, 1996).}
+
+\item{...}{Additional arguments passed to underlying plotting methods.}
 }
 \value{
-A \code{ggplot} object. Its \code{data} component holds the values that the
-selected plot shows.
+A \code{ggplot} object. Its underlying data frame is stored in \verb{$data}.
 }
 \description{
-Draws one of four plots from a fitted model. They show the relation between
-the two tasks, how much the model corrects the observed values, the
-sensitivity of each subject, and the implied ROC curves.
+Generates diagnostic visualizations for a fitted hierarchical SDT model,
+including observed versus latent regression (H3), shrinkage patterns,
+participant-level caterpillar intervals, and model-implied ROC curves.
 }
-\section{The regression plot}{
-The plot has two panels that share their axes. The left panel shows the
-observed sensitivities and the ordinary regression line through them. Trial
-noise in the direct task pulls the slope of that line towards zero, so it
-understates the relation between the tasks.
-
-The right panel joins each observed value to the estimate the model gives
-that subject, and draws the line \code{gamma_I + beta1 * (x - gamma_D)}. Its
-slope divides the covariance of the two sensitivities by the variance of the
-direct one, which removes the effect of trial noise. The value of this line
-at \code{x = 0} is the intercept that H3 reports, the sensitivity expected in the
-indirect task from a subject with no direct sensitivity. The marker at
-\code{x = 0} reads the same band, so it always agrees with the hypothesis table.
-
-Each panel gives its intercept and slope with the corresponding p-values.
-The band of the observed line is the usual confidence interval of a
-least-squares fit. The band of the model line comes from the delta method,
-or from the replicates once \code{\link[=usdt_boot]{usdt_boot()}} has run.
+\section{Regression plot (\code{type = "regression"})}{
+Compares observed and latent associations across two panels sharing axes.
+The left panel shows observed \eqn{d'} values and an ordinary least-squares
+line. When direct task reliability is low, trial-level sampling noise
+attenuates this observed slope toward zero. The right panel plots the latent
+regression line (\eqn{d'_I} on \eqn{d'_D}) from H3, correcting for
+measurement error. The value of this line at \eqn{d'_D = 0} marks the
+intercept testing for unconscious processing. Confidence bands are computed
+via the delta method or bootstrap replicates when \code{\link[=usdt_boot]{usdt_boot()}} is present.
 }
 
-\section{The shrinkage plot}{
-The observed values come from \code{\link[=sdt_moments]{sdt_moments()}} with the Hautus correction,
-and the model values add the departure of each subject to the average of
-their task. A line joins the two values of every subject. The grey contours
-describe the observed values and the coloured contour describes the model
-values, which makes visible how much the model pulls the extreme subjects
-towards the centre.
+\section{Shrinkage plot (\code{type = "shrinkage"})}{
+Connects each participant's observed \eqn{d'} (from \code{\link[=sdt_moments]{sdt_moments()}} with Hautus
+correction) to their model-implied \eqn{d'}. The lower the reliability of the
+measures, the higher the shrinkage of observed estimates toward the
+group-level mean.
 }
 
-\section{The caterpillar plot}{
-The intervals of the observed values use Miller standard errors and a normal
-approximation. The model intervals cover the whole sensitivity of the
-subject, so they carry the uncertainty of the task average, of the variance
-components, and of the departure of that subject, along with the relations
-among them. They are therefore only slightly wider than the departures that
-\code{lme4::ranef()} returns alone. They become unavailable when the model cannot
-estimate its full covariance safely. The percentage in the lower right
-corner of each panel describes how many of the intervals shown include zero.
+\section{Caterpillar plot (\code{type = "caterpillar"})}{
+Plots observed \eqn{d'} and model-implied \eqn{d'} with confidence intervals
+for every participant. Empirical intervals use normal approximations based
+on \code{observed_se}. Model-implied intervals incorporate uncertainty from
+population means, variance components, and participant random effects.
 }
 
-\section{The ROC plot}{
-The curves follow the equal-variance identity
-\code{HR = pnorm(qnorm(FAR) + dprime)}, and the point on each curve marks the
-fitted criterion of that task. The average curves describe a subject whose
-departures are zero. The curves of one subject use the estimates the model
-gives that subject.
-
-The band of an average curve transforms the interval of the sensitivity, or
-the bootstrap replicates when they exist, using the interval type chosen in
-\code{\link[=usdt_boot]{usdt_boot()}}. The band of a subject holds the average and the variance
-components fixed. Every curve comes from the model. A binary response gives
-one point per task, so these plots do not show an ROC curve measured across
-several criteria.
+\section{ROC plot (\code{type = "roc"})}{
+Displays model-implied ROC curves for an average participant or a specific
+individual, with points marking the estimated response criteria.
 }
 
 \examples{
 \donttest{
-set.seed(1)
-df <- usdt_simulate(n_subj = 40, n_trials = 100)
-data <- usdt_data_long(
-  df,
-  task_col = "task",
-  task_levels = c(direct = "D", indirect = "I"),
-  subject_col = "subj",
-  condition_col = "cond",
-  condition_levels = c(signal = 1, noise = 0),
-  response_col = "response",
-  response_levels = c(signal = 1, noise = 0)
+# Contextual cuing data from Vadillo et al. (2025)
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
 )
-fit <- hsdt(data)
+
+fit <- hsdt(d)
+
+# 1. Observed vs. latent regression (H3)
 plot(fit, type = "regression")
+
+# 2. Bivariate shrinkage toward the group mean
 plot(fit, type = "shrinkage")
+
+# 3. Participant-level intervals (observed vs. model-implied)
+plot(fit, type = "caterpillar")
+
+# 4. Model-implied ROC curves
 plot(fit, type = "roc")
-plot(fit, type = "roc", subject_id = "1")
+plot(fit, type = "roc", subject_id = "2001", population_reference = TRUE)
 }
 
 }
 \seealso{
-\code{\link[=hsdt]{hsdt()}}, \code{\link[=sdt_moments]{sdt_moments()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=sdt_moments]{sdt_moments()}}, \code{\link[=usdt_boot]{usdt_boot()}}
 }

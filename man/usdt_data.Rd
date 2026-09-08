@@ -141,7 +141,7 @@ estimate it.
 # 1. Tasks in separate data frames
 # Direct task: binary choices (old/new)
 # Indirect task: response times (split at the median)
-d <- usdt_data_tasks(
+d_separate <- usdt_data_tasks(
   direct   = vadillo_awareness,
   indirect = vadillo_cuing,
   subject_col      = "subj",
@@ -152,7 +152,7 @@ d <- usdt_data_tasks(
                           indirect = c(signal = "faster", noise = "slower")),
   dichotomize      = list(direct = FALSE, indirect = TRUE)
 )
-d
+d_separate
 
 # 2. Tasks combined in a single long data frame
 long <- rbind(
@@ -166,7 +166,7 @@ long <- rbind(
              response  = vadillo_cuing$rt)
 )
 
-usdt_data_long(
+d_long <- usdt_data_long(
   long,
   task_col         = "task",
   task_levels      = c(direct = "D", indirect = "I"),
@@ -178,6 +178,7 @@ usdt_data_long(
                           indirect = c(signal = "faster", noise = "slower")),
   dichotomize      = list(direct = FALSE, indirect = TRUE)
 )
+d_long
 
 }
 \seealso{

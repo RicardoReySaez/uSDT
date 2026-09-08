@@ -6,7 +6,7 @@
 \alias{sensitivity_diff}
 \alias{latent_cor}
 \alias{latent_regression}
-\title{Test the three hypotheses of a hierarchical SDT model}
+\title{Test the three core hypotheses of a hierarchical SDT model}
 \usage{
 usdt_tests(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 
@@ -17,64 +17,116 @@ latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted model, either an \code{hsdt} object or a \code{glmerMod} from
+\item{fit}{A fitted model: an \code{hsdt} object or a \code{glmerMod} from
 \code{lme4::glmer()}.}
 
-\item{direct, indirect}{Names of the two sensitivity terms in the model.}
+\item{direct, indirect}{Character strings naming the sensitivity terms in the
+model. Defaults match the internal naming of \code{\link[=hsdt]{hsdt()}}. For custom models,
+both terms must be fixed effects and share a common random-effects grouping
+by subject.}
 
-\item{level}{Confidence level.}
+\item{level}{Confidence level for intervals (default is 0.95).}
 }
 \value{
-A data frame with one row per quantity. The columns are \code{term},
-\code{estimate}, \code{se}, \code{statistic}, \code{p.value}, \code{conf.low}, \code{conf.high} and
-\code{ci_method}. Two further columns, \code{status} and \code{reason}, mark the results
-that the data cannot support and explain why. \code{usdt_tests()} adds a
-\code{hypothesis} column with the values \code{H1}, \code{H2} and \code{H3}.
+A data frame with columns \code{term}, \code{estimate}, \code{se}, \code{statistic},
+\code{p.value}, \code{conf.low}, \code{conf.high}, and \code{ci_method}. Columns \code{status} and
+\code{reason} flag unsupported estimates (e.g., singular fits). \code{usdt_tests()}
+includes an extra \code{hypothesis} column (\code{H1}, \code{H2}, \code{H3}).
 }
 \description{
-Computes the difference between the average sensitivities of the two tasks,
-their correlation across subjects, and the regression of the indirect
-sensitivity on the direct one. \code{usdt_tests()} returns the three together,
-and the other three functions return one each.
+Evaluates the difference between average task sensitivities (H1), their
+correlation across subjects (H2), and the regression of indirect sensitivity
+on direct sensitivity (H3). \code{usdt_tests()} computes all three together,
+while individual functions compute them separately.
 }
 \details{
-\code{\link[=hsdt]{hsdt()}} already runs these tests, so most users read them in its summary.
-Calling them directly is useful for a model fitted by hand, because they
-accept any \code{glmerMod} in which the two sensitivities are fixed effects and
-share a random-effects term.
-
-H1 compares the two average sensitivities. A clear difference means that the
-direct task measures more than the indirect one, or the reverse.
-
-H2 gives the correlation between the two sensitivities across subjects. It
-asks whether the subjects who are sensitive in one task are also the
-sensitive ones in the other.
-
-H3 regresses the indirect sensitivity on the direct one. Its intercept is
-the sensitivity expected in the indirect task from a subject whose direct
-sensitivity is zero, which is the test for unconscious processing.
-
-H1 and the two regression terms use Wald intervals. The correlation uses a
-Fisher-z interval, so its limits stay between -1 and 1.
-
-The slope of H3 is zero exactly when the covariance between the two
-sensitivities is zero, and so is the correlation of H2. The two therefore
-state the same null hypothesis, and both report the same test on that
-covariance.
+These tests run automatically inside \code{\link[=hsdt]{hsdt()}} and appear in its summary.
+Calling them directly is especially useful when fitting custom models with
+\code{\link[lme4:glmer]{lme4::glmer()}}, allowing you to test these hypotheses while controlling for
+additional covariates (e.g., set size, experimental groups).
 }
+\section{The three hypotheses}{
+\itemize{
+\item \strong{H1 (Mean difference):} Tests whether average sensitivity differs
+between the direct and indirect tasks.
+\item \strong{H2 (Correlation):} Tests the correlation between task sensitivities
+across participants using a Fisher-\eqn{z} transformed interval.
+\item \strong{H3 (Latent regression):} Regresses indirect sensitivity onto direct
+sensitivity. The intercept represents expected indirect performance when
+direct sensitivity is zero (\eqn{d'_{\mathrm{Direct}} = 0}), testing for
+unconscious processing.
+}
+
+Because both the correlation (H2) and regression slope (H3) are zero if and
+only if the covariance between sensitivities is zero, they evaluate the same
+association and share identical test statistics.
+}
+
+\section{Custom models with covariates}{
+To adjust tests for additional factors, specify the model directly using
+\code{\link[lme4:glmer]{lme4::glmer()}}. As long as the two sensitivity terms are included as fixed
+effects and correlated across subjects via random slopes, \code{usdt_tests()} will
+compute the latent tests conditional on those covariates.
+}
+
 \examples{
 \donttest{
-set.seed(1)
-df <- usdt_simulate(n_subj = 40, n_trials = 100)
-d  <- usdt_data_long(df, task_col = "task",
-                     task_levels      = c(direct = "D", indirect = "I"),
-                     subject_col      = "subj",
-                     condition_col    = "cond",
-                     condition_levels = c(signal = 1, noise = 0),
-                     response_col     = "response",
-                     response_levels  = c(signal = 1, noise = 0))
+# 1. Standard model via hsdt()
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+
 m <- hsdt(d)
-usdt_tests(m$fit)
+
+# All three tests at once
+usdt_tests(m)
+
+# Or one test at a time
+sensitivity_diff(m)   # H1
+latent_cor(m)         # H2
+latent_regression(m)  # H3
+
+
+# 2. Custom model with covariates via glmer()
+# Controlling for display set size across both tasks
+trials <- rbind(
+  data.frame(vadillo_awareness[c("subj", "condition", "set.size")],
+             task = "D", resp = vadillo_awareness$judged.old),
+  data.frame(vadillo_cuing[c("subj", "condition", "set.size")],
+             task = "I", resp = meyen_split(vadillo_cuing$rt,
+                                            by = vadillo_cuing$subj))
+)
+
+# Deviation contrasts (-0.5 vs 0.5); `direct` flags the direct task
+trials <- within(trials, {
+  cond   <- ifelse(condition == "old", 0.5, -0.5)
+  size   <- ifelse(set.size == "set size 16", 0.5, -0.5)
+  direct <- as.integer(task == "D")
+})
+
+# Standard glmer formula: indirect criterion is omitted (fixed at 0
+# by the median split). Random effects estimate the direct criterion
+# and correlated task sensitivities across subjects.
+fit <- lme4::glmer(
+  resp ~ 0 + direct + task:size + task:cond +
+    (0 + direct | subj) + (0 + task:cond | subj),
+  data = trials, family = binomial("probit"),
+  control = lme4::glmerControl(optimizer = "bobyqa")
+)
+
+# Check the names lme4 assigned to the sensitivity terms
+names(lme4::fixef(fit))
+
+# Evaluate hypotheses conditional on set size
+usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
 }
 
 }

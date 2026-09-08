@@ -221,8 +221,12 @@
   x
 }
 
-# This function assigns missing signal and noise roles.
-.guess_levels <- function(v, arg, label) {
+# This function reports that signal and noise roles are missing.
+#
+# The roles are never inferred from the values themselves. Nothing in a pair
+# such as `cued` and `uncued` says which one is the signal, and taking the
+# wrong one reverses the sign of every d' that follows.
+.require_levels <- function(v, arg, label) {
 
   # The variable must contain two observed values.
   u <- if (is.factor(v)) levels(droplevels(v)) else sort(unique(v[!is.na(v)]))
@@ -234,13 +238,11 @@
                "`dichotomize` so it is median-split first.")
   }
 
-  # The second value becomes the signal.
-  out <- stats::setNames(c(u[2L], u[1L]), c("signal", "noise"))
-
-  # The message tells the user which roles were assigned.
-  .usdt_msg(label, ": taking `", out[["signal"]], "` as signal and `",
-            out[["noise"]], "` as noise. Set `", arg, "` to override.")
-  out
+  # The two observed values go into the message so they can be copied.
+  .usdt_stop("`", arg, "` is required. ", label, " holds `", u[1L], "` and `",
+             u[2L], "`, and which of them is the signal cannot be read from ",
+             "the values themselves.\n",
+             "  Set `", arg, " = c(signal = <one>, noise = <the other>)`.")
 }
 
 # Data aggregation

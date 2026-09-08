@@ -195,7 +195,15 @@ test_that("the model plots use the expected subject sensitivities", {
 
   expect_s3_class(caterpillar, "ggplot")
   expect_equal(observed_intervals$estimate, moments$dprime[moment_row])
-  expect_equal(observed_intervals$se, moments$se_dprime[moment_row])
+  expect_equal(observed_intervals$se, moments$se_gg[moment_row])
+
+  # `observed_se` selects the other standard error without touching the rest.
+  miller <- plot(m, type = "caterpillar", observed_se = "miller")$data
+  miller <- miller[miller$method == "Observed" & miller$task == "Direct", ]
+  expect_equal(miller$se, moments$se_miller[moment_row])
+  expect_equal(miller$estimate, observed_intervals$estimate)
+  expect_error(plot(m, type = "shrinkage", observed_se = "gg"),
+               "only used by")
   expect_equal(model_intervals$estimate,
                fixed[["d_D"]] + conditional$condval[conditional_row])
 

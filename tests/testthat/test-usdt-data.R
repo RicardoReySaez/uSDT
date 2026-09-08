@@ -263,9 +263,22 @@ test_that("subjects missing from one task are reported", {
   expect_warning(long_args(df[!drop, ]), "only one task")
 })
 
-test_that("levels are guessed with a message rather than silently", {
+test_that("missing signal and noise roles are an error, never a guess", {
   df <- make_binary()
-  expect_message(long_args(df, condition_levels = NULL), "as signal")
+  expect_error(long_args(df, condition_levels = NULL),
+               "`condition_levels` is required")
+  expect_error(long_args(df, response_levels = NULL),
+               "`response_levels` is required")
+
+  # A median-split task names the side of the median, and must still name it.
+  set.seed(1)
+  rt <- usdt_simulate(n_subj = 30L, n_trials = 60L, rt = TRUE)
+  expect_error(
+    long_args(rt,
+              response_col    = c(direct = "response", indirect = "rt"),
+              response_levels = NULL,
+              dichotomize     = "indirect"),
+    "`response_levels` is required")
 })
 
 # Per-task arguments

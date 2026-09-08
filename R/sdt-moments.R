@@ -1,5 +1,5 @@
 # sdt-moments.R
-# This script calculates signal detection measures for each subject.
+# Calculate subject-level Signal Detection Theory measures
 # Author: Ricardo Rey-Sáez
 # Last modified: 08-09-2026
 
@@ -7,81 +7,97 @@
 
 #' Signal detection measures for each subject
 #'
-#' Computes the hit rate, the false-alarm rate, d' and the criterion of every
-#' subject, without fitting a model. It can also add the sampling variance of
-#' d'. These descriptive values are useful to inspect the data before fitting,
-#' and to compare with the model estimates afterwards.
+#' Computes empirical hit rates, false-alarm rates, sensitivity (\eqn{d'}), and
+#' response criteria for each participant without fitting a model. It can also
+#' calculate sampling variances, standard errors, and expected values for
+#' \eqn{d'}.
 #'
-#' @param data A `usdt_data` object, or a plain data frame with one row per
-#'   trial. With a `usdt_data` object the function processes both tasks and
-#'   adds a `task` column.
-#' @param subject_col,condition_col,response_col Names of the columns that hold
-#'   the subject, the condition and the response. They are needed only for a
-#'   plain data frame.
-#' @param condition_levels,response_levels Which value plays each role, as
-#'   `c(signal = ..., noise = ...)`. The function guesses them and reports its
-#'   choice when they are missing.
-#' @param coding Which criterion to report. `"deviation"` gives the classical
-#'   criterion `c = -(z(HR) + z(FAR)) / 2`, measured from the midpoint between
-#'   the two distributions. `"treatment"` gives `lambda = -z(FAR)`, measured
-#'   from the noise distribution. The two are related by `lambda = c + d'/2`.
+#' @param data A `usdt_data` object or a standard trial-level data frame.
+#'   When given a `usdt_data` object, the function processes both tasks and
+#'   includes a `task` column in the output.
+#' @param subject_col,condition_col,response_col Column names for subject,
+#'   condition, and response variables. Only required when `data` is a plain
+#'   data frame.
+#' @param condition_levels,response_levels Named vectors mapping condition and
+#'   response labels, like `c(signal = "old", noise = "new")`. Required for a
+#'   plain data frame. A `usdt_data` object supplies its own roles and needs
+#'   neither.
+#' @param coding Criterion definition to report: `"deviation"` measures the
+#'   criterion from the midpoint between the signal and noise distributions,
+#'   whereas `"treatment"` measures it from the noise distribution.
 #'   A `usdt_data` object supplies its own coding.
-#' @param correction What to do with rates of exactly 0 or 1, which make `d'`
-#'   infinite. `"hautus"` adds 0.5 to the four counts of the affected subject.
-#'   `"none"` leaves the infinite values in place.
-#' @param variances If `TRUE`, adds the sampling variance of `d'` from
-#'   Gourevitch and Galanter (1967) and from Miller (1996), together with the
-#'   standard error that follows from the second one.
+#' @param correction Handling of extreme rates (0 or 1) that make \eqn{d'}
+#'   infinite. `"hautus"` adds 0.5 to all four cell counts for affected
+#'   participants. `"none"` leaves infinite values in place.
+#' @param variances Logical. If `TRUE`, computes the sampling variance of
+#'   \eqn{d'} from Gourevitch and Galanter (1967) and Miller (1996), each with
+#'   its own standard error, as well as the expected value of \eqn{d'} under
+#'   Miller's distribution.
 #'
-#' @return A data frame with one row per subject, or one row per subject and
-#'   task when `data` is a `usdt_data` object. It holds the four response
-#'   counts (`hit`, `miss`, `fa`, `cr`), the two rates (`hr`, `far`) and their
-#'   probit values (`zhr`, `zfar`), then `dprime`, `criterion`, and `corrected`
-#'   to mark the subjects that received the edge correction. With
-#'   `variances = TRUE` it also holds `var_gg`, `var_miller`, `e_miller` and
-#'   `se_dprime`.
+#' @return A data frame with one row per subject (or per subject and task for
+#'   `usdt_data` inputs) containing:
+#' * `hit`, `miss`, `fa`, `cr`: Raw response counts.
+#' * `hr`, `far`: Observed hit and false-alarm rates.
+#' * `zhr`, `zfar`: Probit-transformed rates.
+#' * `dprime`, `criterion`: Descriptive SDT estimates.
+#' * `corrected`: Logical flag indicating whether the participant received an
+#'   edge correction.
+#' * `var_gg`, `se_gg`: Asymptotic variance and standard error from Gourevitch
+#'   and Galanter (1967), present when `variances = TRUE`.
+#' * `var_miller`, `se_miller`, `expected_dprime`: Moments from Miller (1996),
+#'   present when `variances = TRUE`.
 #'
 #' @details
-#' The edge correction applies only to the subjects that need it. Applying it
-#' to the whole sample would change the estimates of every other subject as
-#' well, and those estimates are already usable.
+#' Edge corrections apply only to participants with extreme rates (0 or 1)
+#' rather than the whole sample, leaving well-defined rates unchanged.
 #'
-#' The Miller variance treats the observed hit and false-alarm rates as
-#' binomial probabilities. Samples that reach a rate of 0 or 1 receive the
-#' values `0.5 / n` and `(n - 0.5) / n`. The number of trials stays the
-#' original one throughout.
-#'
-#' `var_gg` comes from the expected information of the two probit cells, with
-#' the criterion treated as a nuisance parameter. It equals the standard error
-#' that a probit regression would give for `d'` if it were fitted to that
-#' subject alone. [usdt_reliability()] uses the same formula, but evaluates it
-#' at the rates the hierarchical model predicts instead of the observed ones.
+#' When requested, the sampling variance of \eqn{d'} is estimated using the
+#' asymptotic approximation of Gourevitch and Galanter (1967) and the
+#' binomial-distribution approach of Miller (1996). See Suero et al. (2017)
+#' for a comparison between the two approaches.
 #'
 #' @references
 #' Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter
-#' isosensitivity functions. *Psychometrika*.
+#' isosensitivity functions. \emph{Psychometrika}, 32(1), 25--33.
+#' \doi{10.1007/BF02289402}
 #'
 #' Hautus, M. J. (1995). Corrections for extreme proportions and their biasing
-#' effects on estimated values of d'. *Behavior Research Methods*.
+#' effects on estimated values of \eqn{d'}. \emph{Behavior Research Methods,
+#' Instruments, & Computers}, 27(1), 46--51. \doi{10.3758/BF03203619}
 #'
-#' Miller, J. (1996). The sampling distribution of d'. *Perception &
-#' Psychophysics*.
+#' Miller, J. (1996). The sampling distribution of \eqn{d'}. \emph{Perception &
+#' Psychophysics}, 58(1), 65--72. \doi{10.3758/BF03205476}
 #'
 #' Suero, M., Privado, J., & Botella, J. (2017). Methods to estimate the
 #' variance of some indices of the signal detection theory: A simulation study.
-#' *Psicologica*.
+#' \emph{Psicologica}, 38(1), 77--109.
 #'
 #' @seealso [hsdt()]
 #'
 #' @examples
-#' set.seed(1)
-#' df <- usdt_simulate(n_subj = 20, n_trials = 80)
-#' head(sdt_moments(df[df$task == "D", ],
-#'                  subject_col   = "subj",
-#'                  condition_col = "cond",
-#'                  condition_levels = c(signal = 1, noise = 0),
-#'                  response_col  = "response",
-#'                  response_levels  = c(signal = 1, noise = 0)))
+#' # 1. From a prepared usdt_data object (both tasks at once)
+#' d <- usdt_data_tasks(
+#'   direct   = vadillo_awareness,
+#'   indirect = vadillo_cuing,
+#'   subject_col      = "subj",
+#'   condition_col    = "condition",
+#'   condition_levels = c(signal = "old", noise = "new"),
+#'   response_col     = list(direct = "judged.old", indirect = "rt"),
+#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
+#'                           indirect = c(signal = "faster", noise = "slower")),
+#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' )
+#'
+#' head(sdt_moments(d))
+#'
+#' # 2. From raw trials with sampling variances and standard errors
+#' head(sdt_moments(vadillo_awareness,
+#'                  subject_col      = "subj",
+#'                  condition_col    = "condition",
+#'                  condition_levels = c(signal = "old", noise = "new"),
+#'                  response_col     = "judged.old",
+#'                  response_levels  = c(signal = 1, noise = 0),
+#'                  variances        = TRUE))
 #'
 #' @export
 sdt_moments <- function(data,
@@ -120,13 +136,13 @@ sdt_moments <- function(data,
 
   condition_levels <- .check_levels(condition_levels, "condition_levels")
   if (is.null(condition_levels)) {
-    condition_levels <- .guess_levels(data[[condition_col]], "condition_levels",
-                                      paste0("`", condition_col, "`"))
+    .require_levels(data[[condition_col]], "condition_levels",
+                    paste0("`", condition_col, "`"))
   }
   response_levels <- .check_levels(response_levels, "response_levels")
   if (is.null(response_levels)) {
-    response_levels <- .guess_levels(data[[response_col]], "response_levels",
-                                     paste0("`", response_col, "`"))
+    .require_levels(data[[response_col]], "response_levels",
+                    paste0("`", response_col, "`"))
   }
 
   # The function maps the roles and counts the four response types.
@@ -202,8 +218,7 @@ sdt_moments <- function(data,
 
   # The function adds the sampling variance when the user requests it.
   if (variances) {
-    v <- .sdt_variances(nr = nr, ns = ns, pi_fa = far, pi_a = hr)
-    out <- cbind(out, v, se_dprime = sqrt(v$var_miller))
+    out <- cbind(out, .sdt_variances(nr = nr, ns = ns, pi_fa = far, pi_a = hr))
   }
   rownames(out) <- NULL
   out
@@ -245,5 +260,11 @@ sdt_moments <- function(data,
     v_esp[i] <- ea - ef
     var_m[i] <- (sum(za^2 * pa) - ea^2) + (sum(zf^2 * pf) - ef^2)
   }
-  data.frame(var_gg = var_gg, e_miller = v_esp, var_miller = var_m)
+  # Each variance travels next to its own standard error, so that the choice
+  # between the two is made by name at the point of use.
+  data.frame(var_gg          = var_gg,
+             se_gg           = sqrt(var_gg),
+             var_miller      = var_m,
+             se_miller       = sqrt(var_m),
+             expected_dprime = v_esp)
 }

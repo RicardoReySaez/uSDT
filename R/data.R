@@ -25,12 +25,14 @@
 #' @param condition_col Name of the column for signal and noise conditions.
 #'   Not needed when using `sdt_cols`.
 #' @param condition_levels Named vector mapping condition labels, like
-#'   `c(signal = "old", noise = "new")`. Guessed automatically if left empty.
+#'   `c(signal = "old", noise = "new")`. Required: which label is the signal and
+#'   the noise.
 #' @param response_col Name of the column with responses. Can be binary choices
 #'   or continuous values (like response times) to split at the median.
 #' @param response_levels Named vector mapping responses, like
-#'   `c(signal = 1, noise = 0)` or `c(signal = "faster", noise = "slower")`.
-#'   Guessed automatically if left empty.
+#'   `c(signal = 1, noise = 0)`. For a task named in `dichotomize` it names the
+#'   side of the median instead, as `c(signal = "faster", noise = "slower")` or
+#'   the reverse. Required in both cases.
 #' @param successes_col,trials_col Names of columns with pre-calculated counts
 #'   or proportions of signal responses and total trials. Use these instead of
 #'   `response_col`.
@@ -379,7 +381,7 @@ usdt_data_long <- function(data, task_col, task_levels,
   # The condition values receive signal and noise roles.
   cond_lev <- .check_levels(cond_lev, "condition_levels")
   if (is.null(cond_lev)) {
-    cond_lev <- .guess_levels(cv, "condition_levels", paste0("`", condition, "` in ", where))
+    .require_levels(cv, "condition_levels", paste0("`", condition, "` in ", where))
   }
   sig <- .role_match(cv, cond_lev, condition, where)
 
@@ -396,7 +398,7 @@ usdt_data_long <- function(data, task_col, task_levels,
   } else {
     resp_lev <- .check_levels(resp_lev, "response_levels")
     if (is.null(resp_lev)) {
-      resp_lev <- .guess_levels(rv, "response_levels", paste0("`", response, "` in ", where))
+      .require_levels(rv, "response_levels", paste0("`", response, "` in ", where))
     }
     resp <- as.integer(.role_match(rv, resp_lev, response, where))
     dic  <- NULL
@@ -427,8 +429,8 @@ usdt_data_long <- function(data, task_col, task_levels,
               "condition_col/successes_col/trials_col", where)
   cond_lev <- .check_levels(cond_lev, "condition_levels")
   if (is.null(cond_lev)) {
-    cond_lev <- .guess_levels(data[[condition]], "condition_levels",
-                              paste0("`", condition, "` in ", where))
+    .require_levels(data[[condition]], "condition_levels",
+                    paste0("`", condition, "` in ", where))
   }
   sig <- .role_match(data[[condition]], cond_lev, condition, where)
   s <- data[[successes]]
@@ -525,10 +527,11 @@ usdt_data_long <- function(data, task_col, task_levels,
 # This function identifies which side of the median means signal.
 .split_side <- function(resp_lev, col, where) {
   if (is.null(resp_lev)) {
-    .usdt_msg("`", col, "` in ", where, " is being median-split; taking ",
-              "faster responses as signal. Set `response_levels = ",
-              'c(signal = "slower", noise = "faster")` to reverse it.')
-    return("faster")
+    .usdt_stop("`response_levels` is required. `", col, "` in ", where,
+               " is being median-split, so the argument names the side of the ",
+               "median that counts as signal.\n",
+               '  Set `response_levels = c(signal = "faster", noise = ',
+               '"slower")` or the reverse.')
   }
   resp_lev <- .check_levels(resp_lev, "response_levels")
   side <- as.character(resp_lev[["signal"]])

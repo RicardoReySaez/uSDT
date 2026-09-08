@@ -17,87 +17,105 @@ sdt_moments(
 )
 }
 \arguments{
-\item{data}{A \code{usdt_data} object, or a plain data frame with one row per
-trial. With a \code{usdt_data} object the function processes both tasks and
-adds a \code{task} column.}
+\item{data}{A \code{usdt_data} object or a standard trial-level data frame.
+When given a \code{usdt_data} object, the function processes both tasks and
+includes a \code{task} column in the output.}
 
-\item{subject_col, condition_col, response_col}{Names of the columns that hold
-the subject, the condition and the response. They are needed only for a
-plain data frame.}
+\item{subject_col, condition_col, response_col}{Column names for subject,
+condition, and response variables. Only required when \code{data} is a plain
+data frame.}
 
-\item{condition_levels, response_levels}{Which value plays each role, as
-\code{c(signal = ..., noise = ...)}. The function guesses them and reports its
-choice when they are missing.}
+\item{condition_levels, response_levels}{Named vectors mapping condition and
+response labels, like \code{c(signal = "old", noise = "new")}. Required for a
+plain data frame. A \code{usdt_data} object supplies its own roles and needs
+neither.}
 
-\item{coding}{Which criterion to report. \code{"deviation"} gives the classical
-criterion \code{c = -(z(HR) + z(FAR)) / 2}, measured from the midpoint between
-the two distributions. \code{"treatment"} gives \code{lambda = -z(FAR)}, measured
-from the noise distribution. The two are related by \verb{lambda = c + d'/2}.
+\item{coding}{Criterion definition to report: \code{"deviation"} measures the
+criterion from the midpoint between the signal and noise distributions,
+whereas \code{"treatment"} measures it from the noise distribution.
 A \code{usdt_data} object supplies its own coding.}
 
-\item{correction}{What to do with rates of exactly 0 or 1, which make \verb{d'}
-infinite. \code{"hautus"} adds 0.5 to the four counts of the affected subject.
-\code{"none"} leaves the infinite values in place.}
+\item{correction}{Handling of extreme rates (0 or 1) that make \eqn{d'}
+infinite. \code{"hautus"} adds 0.5 to all four cell counts for affected
+participants. \code{"none"} leaves infinite values in place.}
 
-\item{variances}{If \code{TRUE}, adds the sampling variance of \verb{d'} from
-Gourevitch and Galanter (1967) and from Miller (1996), together with the
-standard error that follows from the second one.}
+\item{variances}{Logical. If \code{TRUE}, computes the sampling variance of
+\eqn{d'} from Gourevitch and Galanter (1967) and Miller (1996), each with
+its own standard error, as well as the expected value of \eqn{d'} under
+Miller's distribution.}
 }
 \value{
-A data frame with one row per subject, or one row per subject and
-task when \code{data} is a \code{usdt_data} object. It holds the four response
-counts (\code{hit}, \code{miss}, \code{fa}, \code{cr}), the two rates (\code{hr}, \code{far}) and their
-probit values (\code{zhr}, \code{zfar}), then \code{dprime}, \code{criterion}, and \code{corrected}
-to mark the subjects that received the edge correction. With
-\code{variances = TRUE} it also holds \code{var_gg}, \code{var_miller}, \code{e_miller} and
-\code{se_dprime}.
+A data frame with one row per subject (or per subject and task for
+\code{usdt_data} inputs) containing:
+\itemize{
+\item \code{hit}, \code{miss}, \code{fa}, \code{cr}: Raw response counts.
+\item \code{hr}, \code{far}: Observed hit and false-alarm rates.
+\item \code{zhr}, \code{zfar}: Probit-transformed rates.
+\item \code{dprime}, \code{criterion}: Descriptive SDT estimates.
+\item \code{corrected}: Logical flag indicating whether the participant received an
+edge correction.
+\item \code{var_gg}, \code{se_gg}: Asymptotic variance and standard error from Gourevitch
+and Galanter (1967), present when \code{variances = TRUE}.
+\item \code{var_miller}, \code{se_miller}, \code{expected_dprime}: Moments from Miller (1996),
+present when \code{variances = TRUE}.
+}
 }
 \description{
-Computes the hit rate, the false-alarm rate, d' and the criterion of every
-subject, without fitting a model. It can also add the sampling variance of
-d'. These descriptive values are useful to inspect the data before fitting,
-and to compare with the model estimates afterwards.
+Computes empirical hit rates, false-alarm rates, sensitivity (\eqn{d'}), and
+response criteria for each participant without fitting a model. It can also
+calculate sampling variances, standard errors, and expected values for
+\eqn{d'}.
 }
 \details{
-The edge correction applies only to the subjects that need it. Applying it
-to the whole sample would change the estimates of every other subject as
-well, and those estimates are already usable.
+Edge corrections apply only to participants with extreme rates (0 or 1)
+rather than the whole sample, leaving well-defined rates unchanged.
 
-The Miller variance treats the observed hit and false-alarm rates as
-binomial probabilities. Samples that reach a rate of 0 or 1 receive the
-values \code{0.5 / n} and \code{(n - 0.5) / n}. The number of trials stays the
-original one throughout.
-
-\code{var_gg} comes from the expected information of the two probit cells, with
-the criterion treated as a nuisance parameter. It equals the standard error
-that a probit regression would give for \verb{d'} if it were fitted to that
-subject alone. \code{\link[=usdt_reliability]{usdt_reliability()}} uses the same formula, but evaluates it
-at the rates the hierarchical model predicts instead of the observed ones.
+When requested, the sampling variance of \eqn{d'} is estimated using the
+asymptotic approximation of Gourevitch and Galanter (1967) and the
+binomial-distribution approach of Miller (1996). See Suero et al. (2017)
+for a comparison between the two approaches.
 }
 \examples{
-set.seed(1)
-df <- usdt_simulate(n_subj = 20, n_trials = 80)
-head(sdt_moments(df[df$task == "D", ],
-                 subject_col   = "subj",
-                 condition_col = "cond",
-                 condition_levels = c(signal = 1, noise = 0),
-                 response_col  = "response",
-                 response_levels  = c(signal = 1, noise = 0)))
+# 1. From a prepared usdt_data object (both tasks at once)
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+
+head(sdt_moments(d))
+
+# 2. From raw trials with sampling variances and standard errors
+head(sdt_moments(vadillo_awareness,
+                 subject_col      = "subj",
+                 condition_col    = "condition",
+                 condition_levels = c(signal = "old", noise = "new"),
+                 response_col     = "judged.old",
+                 response_levels  = c(signal = 1, noise = 0),
+                 variances        = TRUE))
 
 }
 \references{
 Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter
-isosensitivity functions. \emph{Psychometrika}.
+isosensitivity functions. \emph{Psychometrika}, 32(1), 25--33.
+\doi{10.1007/BF02289402}
 
 Hautus, M. J. (1995). Corrections for extreme proportions and their biasing
-effects on estimated values of d'. \emph{Behavior Research Methods}.
+effects on estimated values of \eqn{d'}. \emph{Behavior Research Methods,
+Instruments, & Computers}, 27(1), 46--51. \doi{10.3758/BF03203619}
 
-Miller, J. (1996). The sampling distribution of d'. \emph{Perception &
-Psychophysics}.
+Miller, J. (1996). The sampling distribution of \eqn{d'}. \emph{Perception &
+Psychophysics}, 58(1), 65--72. \doi{10.3758/BF03205476}
 
 Suero, M., Privado, J., & Botella, J. (2017). Methods to estimate the
 variance of some indices of the signal detection theory: A simulation study.
-\emph{Psicologica}.
+\emph{Psicologica}, 38(1), 77--109.
 }
 \seealso{
 \code{\link[=hsdt]{hsdt()}}

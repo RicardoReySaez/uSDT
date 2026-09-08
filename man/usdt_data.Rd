@@ -55,14 +55,16 @@ usdt_data_long(
 Not needed when using \code{sdt_cols}.}
 
 \item{condition_levels}{Named vector mapping condition labels, like
-\code{c(signal = "old", noise = "new")}. Guessed automatically if left empty.}
+\code{c(signal = "old", noise = "new")}. Required: which label is the signal and
+the noise.}
 
 \item{response_col}{Name of the column with responses. Can be binary choices
 or continuous values (like response times) to split at the median.}
 
 \item{response_levels}{Named vector mapping responses, like
-\code{c(signal = 1, noise = 0)} or \code{c(signal = "faster", noise = "slower")}.
-Guessed automatically if left empty.}
+\code{c(signal = 1, noise = 0)}. For a task named in \code{dichotomize} it names the
+side of the median instead, as \code{c(signal = "faster", noise = "slower")} or
+the reverse. Required in both cases.}
 
 \item{successes_col, trials_col}{Names of columns with pre-calculated counts
 or proportions of signal responses and total trials. Use these instead of

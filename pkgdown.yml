@@ -1,0 +1,9 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  uSDT-tutorial: uSDT-tutorial.html
+last_built: 2026-09-08T07:37Z
+urls:
+  reference: https://ricardoreysaez.github.io/uSDT/reference
+  article: https://ricardoreysaez.github.io/uSDT/articles

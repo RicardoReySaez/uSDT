@@ -11,7 +11,8 @@
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
-<script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="../katex-auto.js"></script><script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/Inter-0.4.10/font.css" rel="stylesheet">
 <link href="../deps/JetBrains_Mono-0.4.10/font.css" rel="stylesheet">
@@ -215,24 +216,16 @@ list per task</strong> using
 </h3>
 <p>The <code>coding</code> argument only affects what the response
 criterion (also called “bias parameter”) represents in the model. Task
-sensitivity
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>)
-remains identical under both schemes:</p>
+sensitivity (<span class="math inline">d'</span>) remains identical
+under both schemes:</p>
 <ul>
 <li>
 <strong><code>"deviation"</code> (default):</strong> Codes signal as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>+</mi><mn>0.5</mn></mrow><annotation encoding="application/x-tex">+0.5</annotation></semantics></math>
-and noise as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mn>0.5</mn></mrow><annotation encoding="application/x-tex">-0.5</annotation></semantics></math>.
-The intercept reflects the overall response bias centered between both
-stimulus distributions.</li>
+<span class="math inline">+0.5</span> and noise as <span class="math inline">-0.5</span>. The intercept reflects the overall
+response bias centered between both stimulus distributions.</li>
 <li>
-<strong><code>"treatment"</code>:</strong> Codes noise as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math>
-and signal as
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>1</mn><annotation encoding="application/x-tex">1</annotation></semantics></math>.
-The intercept reflects the criterion relative only to the baseline
-(noise) condition.</li>
+<strong><code>"treatment"</code>:</strong> Codes noise as <span class="math inline">0</span> and signal as <span class="math inline">1</span>. The intercept reflects the criterion
+relative only to the baseline (noise) condition.</li>
 </ul>
 <p>By default, <code>uSDT</code> uses deviation coding.</p>
 </div>
@@ -254,12 +247,10 @@ faster than the median.</li>
 </ul>
 <p>By design, splitting exactly at the median balances fast and slow
 responses across trials. <strong>Under deviation coding</strong>, this
-balance centers the indirect decision criterion at zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>c</mi><mo>≈</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">c \approx 0</annotation></semantics></math>).
-Because of this, <code><a href="../reference/hsdt.html">hsdt()</a></code> fixes the indirect criterion to
-zero by default whenever the mean absolute subject criterion is below
-0.02 (you can override this with
-<code>fix_criteria = "none"</code>).</p>
+balance centers the indirect decision criterion at zero (<span class="math inline">c \approx 0</span>). Because of this,
+<code><a href="../reference/hsdt.html">hsdt()</a></code> fixes the indirect criterion to zero by default
+whenever the mean absolute subject criterion is below 0.02 (you can
+override this with <code>fix_criteria = "none"</code>).</p>
 </div>
 <div class="section level3">
 <h3 id="inspecting-the-prepared-data">Inspecting the prepared data<a class="anchor" aria-label="anchor" href="#inspecting-the-prepared-data"></a>
@@ -307,10 +298,9 @@ and signal/noise assignments match your experimental expectations
 RTs).</li>
 <li>
 <strong>Descriptives:</strong> Reports the median and range of hit
-rates (HR), false alarm rates (FAR), and descriptive
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-across subjects. It also warns if any participants hit floor or ceiling
-rates, which helps catch data issues early.</li>
+rates (HR), false alarm rates (FAR), and descriptive <span class="math inline">d'</span> across subjects. It also warns if any
+participants hit floor or ceiling rates, which helps catch data issues
+early.</li>
 </ul>
 </div>
 </div>
@@ -320,11 +310,10 @@ rates, which helps catch data issues early.</li>
 <p>Once the data are prepared, <a href="../reference/hsdt.html"><code>hsdt()</code></a> fits the
 hierarchical SDT model via a binomial probit generalized linear mixed
 model (implemented with <code>lme4</code>). The model estimates the
-average sensitivity
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>)
-for each task along with between-subjects individual differences. You
-can inspect the parameter estimates, random-effects, and hypothesis
-tests using <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>:</p>
+average sensitivity (<span class="math inline">d'</span>) for each
+task along with between-subjects individual differences. You can inspect
+the parameter estimates, random-effects, and hypothesis tests using
+<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Fit hierarchical SDT model</span></span>
 <span><span class="va">fit_uSDT</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">data_usdt</span><span class="op">)</span></span>
@@ -384,16 +373,13 @@ before presenting hypothesis tests:</p>
 <strong>Fixed effects (group-level means):</strong> The fixed
 estimates describe average task performance across all participants.
 Here, mean sensitivity is reliably above zero in both the direct task
-(<code>d' = 0.24</code>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow><annotation encoding="application/x-tex">p &lt; .001</annotation></semantics></math>)
-and the indirect task (<code>d' = 0.13</code>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow><annotation encoding="application/x-tex">p &lt; .001</annotation></semantics></math>),
-indicating above-chance recognition and a significant contextual cuing
-effect overall. The direct criterion (<code>-0.04</code>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>.215</mn></mrow><annotation encoding="application/x-tex">p = .215</annotation></semantics></math>)
-shows no substantial group-level response bias. As determined during
-data preparation, the indirect criterion is fixed to zero and therefore
-omitted from estimation.</li>
+(<code>d' = 0.24</code>, <span class="math inline">p &lt; .001</span>)
+and the indirect task (<code>d' = 0.13</code>, <span class="math inline">p &lt; .001</span>), indicating above-chance
+recognition and a significant contextual cuing effect overall. The
+direct criterion (<code>-0.04</code>, <span class="math inline">p =
+.215</span>) shows no substantial group-level response bias. As
+determined during data preparation, the indirect criterion is fixed to
+zero and therefore omitted from estimation.</li>
 <li>
 <strong>Random effects (individual differences):</strong> These
 parameters capture between-subject variability around the group means.
@@ -413,69 +399,51 @@ questions often raised in the unconscious processing literature. You can
 inspect these results directly in the main summary or extract them as a
 standalone table with <code>fit_uSDT$tests</code>.</p>
 <div class="section level4">
-<h4 id="h1-group-level-sensitivity-difference-delta-d">H1: Group-level sensitivity difference
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><msup><mi>d</mi><mo>′</mo></msup></mrow><annotation encoding="application/x-tex">\Delta d'</annotation></semantics></math>)<a class="anchor" aria-label="anchor" href="#h1-group-level-sensitivity-difference-delta-d"></a>
+<h4 id="h1-group-level-sensitivity-difference-delta-d">H1: Group-level sensitivity difference (<span class="math inline">\Delta d'</span>)<a class="anchor" aria-label="anchor" href="#h1-group-level-sensitivity-difference-delta-d"></a>
 </h4>
 <p>The first hypothesis asks whether the two tasks differ in their
 average sensitivity. In unconscious perception paradigms, finding that
-indirect sensitivity clearly exceeds direct sensitivity
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><msup><mi>d</mi><mo>′</mo></msup><mo>&lt;</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">\Delta d' &lt; 0</annotation></semantics></math>)
-is sometimes taken as an indirect-task advantage—suggesting that the
-indirect measure picks up signal that conscious report misses.</p>
+indirect sensitivity clearly exceeds direct sensitivity (<span class="math inline">\Delta d' &lt; 0</span>) is sometimes taken as
+an indirect-task advantage—suggesting that the indirect measure picks up
+signal that conscious report misses.</p>
 <p>In our sample, the difference is positive and significantly different
-from zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi mathvariant="normal">Δ</mi><msup><mi>d</mi><mo>′</mo></msup><mo>=</mo><mn>0.11</mn></mrow><annotation encoding="application/x-tex">\Delta d' = 0.11</annotation></semantics></math>,
-95% CI
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0.04</mn><mo>,</mo><mn>0.18</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0.04, 0.18]</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>.002</mn></mrow><annotation encoding="application/x-tex">p = .002</annotation></semantics></math>).
-Direct recognition was significantly stronger than indirect contextual
-cuing, so we find no evidence of an indirect-task advantage.</p>
+from zero (<span class="math inline">\Delta d' = 0.11</span>, 95% CI
+<span class="math inline">[0.04, 0.18]</span>, <span class="math inline">p = .002</span>). Direct recognition was
+significantly stronger than indirect contextual cuing, so we find no
+evidence of an indirect-task advantage.</p>
 </div>
 <div class="section level4">
-<h4 id="h2-latent-correlation-between-tasks-rho">H2: Latent correlation between tasks
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ρ</mi><annotation encoding="application/x-tex">\rho</annotation></semantics></math>)<a class="anchor" aria-label="anchor" href="#h2-latent-correlation-between-tasks-rho"></a>
+<h4 id="h2-latent-correlation-between-tasks-rho">H2: Latent correlation between tasks (<span class="math inline">\rho</span>)<a class="anchor" aria-label="anchor" href="#h2-latent-correlation-between-tasks-rho"></a>
 </h4>
 <p>The second test examines individual differences: do participants with
 stronger conscious recognition also display larger cuing effects? In
 some theoretical accounts, an indirect effect that operates
 independently of conscious awareness would predict a weak or near-zero
 correlation between both measures.</p>
-<p>Here, the estimated latent correlation is positive
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi><mo>=</mo><mn>0.49</mn></mrow><annotation encoding="application/x-tex">\rho = 0.49</annotation></semantics></math>),
-but it comes with considerable estimation uncertainty (95% CI
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>−</mi><mn>0.67</mn><mo>,</mo><mn>0.95</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[-0.67, 0.95]</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>.313</mn></mrow><annotation encoding="application/x-tex">p = .313</annotation></semantics></math>).
-Because the confidence interval is so wide, failing to reach
-significance here simply reflects high measurement noise around the
-correlation, rather than positive evidence that the two processes are
-dissociated. We will see this more clearly later when evaluating
-task-specific reliability.</p>
+<p>Here, the estimated latent correlation is positive (<span class="math inline">\rho = 0.49</span>), but it comes with considerable
+estimation uncertainty (95% CI <span class="math inline">[-0.67,
+0.95]</span>, <span class="math inline">p = .313</span>). Because the
+confidence interval is so wide, failing to reach significance here
+simply reflects high measurement noise around the correlation, rather
+than positive evidence that the two processes are dissociated. We will
+see this more clearly later when evaluating task-specific
+reliability.</p>
 </div>
 <div class="section level4">
-<h4 id="h3-latent-regression-indirect-d-on-direct-d">H3: Latent regression (Indirect
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-on Direct
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>)<a class="anchor" aria-label="anchor" href="#h3-latent-regression-indirect-d-on-direct-d"></a>
+<h4 id="h3-latent-regression-indirect-d-on-direct-d">H3: Latent regression (Indirect <span class="math inline">d'</span> on Direct <span class="math inline">d'</span>)<a class="anchor" aria-label="anchor" href="#h3-latent-regression-indirect-d-on-direct-d"></a>
 </h4>
 <p>The third test evaluates what happens at the boundary of awareness
-via a latent regression. Specifically, the intercept
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mn>0</mn></msub><annotation encoding="application/x-tex">\beta_0</annotation></semantics></math>)
-estimates what level of indirect sensitivity we would expect when direct
-sensitivity is exactly zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>d</mi><mtext mathvariant="normal">Direct</mtext><mo>′</mo></msubsup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">d'_{\text{Direct}} = 0</annotation></semantics></math>).
-If this intercept is significantly different from zero and positive, it
-suggests that participants would still show a behavioral cuing effect
-even without any conscious awareness of the stimuli.</p>
-<p>In this experiment, the regression slope is positive
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>=</mo><mn>0.36</mn></mrow><annotation encoding="application/x-tex">\beta_1 = 0.36</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>.313</mn></mrow><annotation encoding="application/x-tex">p = .313</annotation></semantics></math>),
-and the estimated intercept is slightly above zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>=</mo><mn>0.04</mn></mrow><annotation encoding="application/x-tex">\beta_0 = 0.04</annotation></semantics></math>).
-However, its confidence interval easily covers zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>−</mi><mn>0.18</mn><mo>,</mo><mn>0.27</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[-0.18, 0.27]</annotation></semantics></math>,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mn>.701</mn></mrow><annotation encoding="application/x-tex">p = .701</annotation></semantics></math>),
-showing no evidence of unconscious processing in the absence of
-awareness.</p>
+via a latent regression. Specifically, the intercept (<span class="math inline">\beta_0</span>) estimates what level of indirect
+sensitivity we would expect when direct sensitivity is exactly zero
+(<span class="math inline">d'_{\text{Direct}} = 0</span>). If this
+intercept is significantly different from zero and positive, it suggests
+that participants would still show a behavioral cuing effect even
+without any conscious awareness of the stimuli.</p>
+<p>In this experiment, the regression slope is positive (<span class="math inline">\beta_1 = 0.36</span>, <span class="math inline">p =
+.313</span>), and the estimated intercept is slightly above zero (<span class="math inline">\beta_0 = 0.04</span>). However, its confidence
+interval easily covers zero (<span class="math inline">[-0.18,
+0.27]</span>, <span class="math inline">p = .701</span>), showing no
+evidence of unconscious processing in the absence of awareness.</p>
 </div>
 </div>
 </div>
@@ -512,9 +480,7 @@ direct task (<code>.13</code>) and the indirect task (<code>.32</code>).
 Because individual differences in both measures carry substantial trial
 noise, the model cannot estimate between-task associations with
 precision. This modest reliability directly explains the wide confidence
-intervals we observed earlier for the latent correlation
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>ρ</mi><annotation encoding="application/x-tex">\rho</annotation></semantics></math>)
-and the regression intercept.</p>
+intervals we observed earlier for the latent correlation (<span class="math inline">\rho</span>) and the regression intercept.</p>
 <p>In addition to the overall group summary, you can inspect
 subject-specific reliability estimates. The <code>$subjects</code>
 element returns a data frame with individual values:</p>
@@ -544,29 +510,18 @@ sensitivities against the model’s latent regression side by side:</p>
 <ul>
 <li>
 <strong>Observed estimates (left panel):</strong> Regressing raw
-indirect
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-on raw direct
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-ignores measurement error. Unreliability severely flattens the slope
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>1</mn></msub><mo>=</mo><mn>0.043</mn></mrow><annotation encoding="application/x-tex">b_1 = 0.043</annotation></semantics></math>)
-and artificially pushes the intercept upward
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>0</mn></msub><mo>=</mo><mn>0.118</mn><mo>,</mo><mi>p</mi><mo>&lt;</mo><mn>.001</mn></mrow><annotation encoding="application/x-tex">b_0 = 0.118, p &lt; .001</annotation></semantics></math>).
-An applied researcher relying on standard regression would mistakenly
-conclude that there is compelling evidence for unconscious processing at
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi>d</mi><mtext mathvariant="normal">Direct</mtext><mo>′</mo></msubsup><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">d'_{\text{Direct}} = 0</annotation></semantics></math>.</li>
+indirect <span class="math inline">d'</span> on raw direct <span class="math inline">d'</span> ignores measurement error.
+Unreliability severely flattens the slope (<span class="math inline">b_1
+= 0.043</span>) and artificially pushes the intercept upward (<span class="math inline">b_0 = 0.118, p &lt; .001</span>). An applied
+researcher relying on standard regression would mistakenly conclude that
+there is compelling evidence for unconscious processing at <span class="math inline">d'_{\text{Direct}} = 0</span>.</li>
 <li>
 <strong>Model-estimated sensitivities (right panel):</strong> The
 hierarchical model corrects for trial-level noise. Grey segments show
-shrinkage from raw
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-to model-implied
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-values (green points). Accounting for unreliability steepens the latent
-slope
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>1</mn></msub><mo>=</mo><mn>0.356</mn></mrow><annotation encoding="application/x-tex">b_1 = 0.356</annotation></semantics></math>)
-and pulls the intercept down to near zero
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>b</mi><mn>0</mn></msub><mo>=</mo><mn>0.044</mn><mo>,</mo><mi>p</mi><mo>=</mo><mn>.701</mn></mrow><annotation encoding="application/x-tex">b_0 = 0.044, p = .701</annotation></semantics></math>,
+shrinkage from raw <span class="math inline">d'</span> to
+model-implied <span class="math inline">d'</span> values (green
+points). Accounting for unreliability steepens the latent slope (<span class="math inline">b_1 = 0.356</span>) and pulls the intercept down to
+near zero (<span class="math inline">b_0 = 0.044, p = .701</span>,
 marked at the vertical dotted line).</li>
 </ul>
 </div>
@@ -575,10 +530,8 @@ marked at the vertical dotted line).</li>
 </h3>
 <p>To inspect how the model pulls individual estimates toward the group
 distribution, set <code>type = "shrinkage"</code>, where grey circles
-show raw
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>,
-while green points show the model-implied
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
+show raw <span class="math inline">d'</span>, while green points
+show the model-implied <span class="math inline">d'</span>
 estimates.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"shrinkage"</span><span class="op">)</span></span></code></pre></div>
@@ -592,13 +545,11 @@ use a caterpillar plot:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"caterpillar"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-caterpillar-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
-<p>The left panels show observed
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
+<p>The left panels show observed <span class="math inline">d'</span>
 values and their 95% confidence intervals, whereas the right panels show
-model-implied
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>d</mi><mo>′</mo></msup><annotation encoding="application/x-tex">d'</annotation></semantics></math>
-values and their 95% confidence intervals. Green intervals exclude zero,
-whereas brown intervals cross the dotted vertical line.</p>
+model-implied <span class="math inline">d'</span> values and their
+95% confidence intervals. Green intervals exclude zero, whereas brown
+intervals cross the dotted vertical line.</p>
 <p>In the raw data, noisy trial estimates leave most individual
 intervals crossing zero (91% in direct, 79% in indirect). Pooling
 information in the hierarchical model shrinks extreme point estimates
@@ -616,10 +567,9 @@ space, set <code>type = "roc"</code>:</p>
 <p>The plot draws model-implied, equal-variance ROC curves for each task
 based on the group-level parameter estimates. The circular markers
 indicate the operating point determined by the fitted response criterion
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>c</mi><annotation encoding="application/x-tex">c</annotation></semantics></math>),
-accompanied by their 95% Wald bands and Area Under the Curve (AUC)
-values. You can also inspect individual participants by supplying a
-<code>subject_id</code>:</p>
+(<span class="math inline">c</span>), accompanied by their 95% Wald
+bands and Area Under the Curve (AUC) values. You can also inspect
+individual participants by supplying a <code>subject_id</code>:</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"roc"</span>, subject_id <span class="op">=</span> <span class="fl">2040</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-roc-subject-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
@@ -636,9 +586,8 @@ the background for visual reference.</p>
 </h3>
 <p>Analytical standard errors and Wald intervals can become unreliable
 when variance components approach zero or correlations sit near
-boundaries
-(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mn>1</mn></mrow><annotation encoding="application/x-tex">\pm 1</annotation></semantics></math>).
-For more robust inference, <a href="../reference/usdt_boot.html"><code>usdt_boot()</code></a>
+boundaries (<span class="math inline">\pm 1</span>). For more robust
+inference, <a href="../reference/usdt_boot.html"><code>usdt_boot()</code></a>
 implements a parametric bootstrap that simulates new data from the
 fitted model and refits each replicate.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">

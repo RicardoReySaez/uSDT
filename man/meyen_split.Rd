@@ -2,44 +2,46 @@
 % Please edit documentation in R/dichotomize.R
 \name{meyen_split}
 \alias{meyen_split}
-\title{Turn a continuous measure into a binary response}
+\title{Dichotomize response times into binary choices}
 \usage{
 meyen_split(x, by, signal = c("faster", "slower"), ties = c("noise", "random"))
 }
 \arguments{
-\item{x}{Numeric vector with the continuous measure, usually response times.}
+\item{x}{Numeric vector of continuous values, typically response times.}
 
-\item{by}{Vector identifying the subject of each value in \code{x}. Every subject
-receives their own median.}
+\item{by}{Vector identifying the subject for each observation in \code{x}.
+Medians are computed independently for each participant.}
 
-\item{signal}{Which side of the median counts as a signal response. Use
-\code{"faster"} when the signal condition speeds responses up, as in priming
-and cueing tasks. Use \code{"slower"} when the signal condition slows responses
-down, as in interference tasks.}
+\item{signal}{Character string specifying which side of the median will be
+treated as the "signal" response under an SDT framework. Use \code{"faster"}
+when the target condition speeds up responses (e.g., facilitatory priming,
+spatial cueing) or \code{"slower"} when it slows responses down (e.g.,
+interference, Stroop-like effects).}
 
-\item{ties}{What to do with trials that fall exactly on the median.
-\code{"noise"} gives them the noise response. \code{"random"} assigns them at
-random, which keeps the split as close to even as the data allow.}
+\item{ties}{How to handle trials that match the subject's median exactly.
+\code{"noise"} assigns them to the noise category (0). \code{"random"} breaks ties at
+random, keeping cell proportions as balanced as possible.}
 }
 \value{
-An integer vector as long as \code{x}, with \code{1} for signal responses and
-\code{0} for noise responses. Missing values in \code{x} stay missing.
+An integer vector of \code{0}s (noise response) and \code{1}s (signal response)
+matching the length of \code{x}. Missing values (\code{NA}) are preserved.
 }
 \description{
-Splits a continuous measure, usually response times, at each subject's own
-median. The median uses all the trials of that subject, without separating
-the conditions. The binary result can then be analysed on the same
-sensitivity scale as a direct task that already gives binary responses. The
-procedure follows Meyen et al. (2022).
+Splits response times (or other continuous measures) at each subject's
+overall median, following the preprocessing approach of Meyen et al. (2022).
+The median is calculated across all trials for each participant without
+distinguishing between stimulus conditions or other covariates. This produces
+a binary outcome that allows response times to be mapped onto a Signal
+Detection Theory sensitivity metric (\eqn{d'}).
 }
 \details{
-A subject with an odd number of trials cannot be split into two equal
-halves, because the median is one of the observed values. With
-\code{ties = "noise"} that subject gets a proportion of \verb{(n - 1) / (2n)} signal
-responses instead of 0.5, so the criterion moves slightly away from zero.
-The difference is \verb{1 / (2n)} and rarely matters. Setting \code{ties = "random"}
-removes it, because rounding up or down at random is unbiased across
-subjects.
+With an odd number of trials (\eqn{n}), a dataset cannot be split into two
+equal halves because the median falls exactly on an observed trial.
+Setting \code{ties = "noise"} assigns this middle trial to noise, producing a
+signal proportion of \eqn{(n - 1) / (2\cdot n)} and slightly shifting the response
+criterion. In practice, this difference (\eqn{1 / (2\cdot n)}) is negligible, but
+setting \code{ties = "random"} resolves ties probabilistically to avoid any
+systematic directional bias.
 }
 \examples{
 rt   <- c(320, 410, 295, 500, 380, 450)
@@ -51,5 +53,5 @@ meyen_split(rt, by = subj)
 Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 (2022). Advancing research on unconscious priming: When can scientists claim
 an indirect task advantage? \emph{Journal of Experimental Psychology: General},
-151(1), 65-81. \doi{10.1037/xge0001065}
+151(1), 65--81. <10.1037/xge0001065>
 }

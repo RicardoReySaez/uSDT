@@ -1,65 +1,74 @@
 # data.R
 # This script prepares direct and indirect task data for uSDT models.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
-#' Prepare paired direct and indirect measures for a hierarchical SDT model
+#' Prepare the data of a direct and an indirect task
 #'
-#' Two entry points for the same object. Use `usdt_data_tasks()` when each task
-#' lives in its own data frame, and `usdt_data_long()` when both tasks are
-#' stacked in a single data frame with a column identifying the task.
+#' Both functions build the same object. Use `usdt_data_tasks()` when each task
+#' has its own data frame, and `usdt_data_long()` when a single data frame
+#' holds both tasks together with a column that identifies them.
 #'
-#' @param direct,indirect For `usdt_data_tasks()`, the data frame of each task.
-#'   For `usdt_data_long()`, ignored; use `task_levels` instead.
-#' @param data For `usdt_data_long()`, a single data frame holding both tasks.
-#' @param task_col Column identifying the task, for `usdt_data_long()`.
-#' @param task_levels Which value of `task_col` is each task, as
+#' The functions count the responses of every subject in each condition, check
+#' that the two tasks describe the same subjects, and record how each column
+#' was read. Printing the result shows all of that, so the coding can be
+#' checked before the model runs.
+#'
+#' @param direct,indirect The data frame of each task, for `usdt_data_tasks()`.
+#'   `usdt_data_long()` ignores them and uses `task_levels` instead.
+#' @param data A single data frame holding both tasks, for `usdt_data_long()`.
+#' @param task_col Name of the column that identifies the task, for
+#'   `usdt_data_long()`.
+#' @param task_levels Which value of `task_col` belongs to each task, as
 #'   `c(direct = "D", indirect = "I")`.
-#' @param subject_col Column identifying the subject.
-#' @param condition_col Column holding the signal/noise condition. Not needed
-#'   when the data are supplied as an SDT table through `sdt_cols`.
+#' @param subject_col Name of the column that identifies the subject.
+#' @param condition_col Name of the column that holds the signal and noise
+#'   condition. It is not needed when the data arrive as an SDT table through
+#'   `sdt_cols`.
 #' @param condition_levels Which value of `condition_col` plays each role, as
-#'   `c(signal = "old", noise = "new")`. Guessed with a message when omitted.
-#' @param response_col Column holding the response. Either a binary response,
-#'   or a continuous measure such as response times when that task is
-#'   dichotomized.
+#'   `c(signal = "old", noise = "new")`. The function guesses them and reports
+#'   its choice when they are missing.
+#' @param response_col Name of the column that holds the response. It can be a
+#'   binary response, or a continuous measure such as response times when the
+#'   task is dichotomized.
 #' @param response_levels Which value of `response_col` counts as a signal
-#'   response, as `c(signal = 1, noise = 0)`. For a task that is being
-#'   dichotomized, use the side of the median instead:
-#'   `c(signal = "faster", noise = "slower")`. Guessed with a message when
-#'   omitted.
-#' @param successes_col,trials_col Columns holding already-aggregated data:
-#'   the number or proportion of signal responses, and the number of trials.
-#'   Supply these instead of `response_col`.
+#'   response, as `c(signal = 1, noise = 0)`. A task that is dichotomized takes
+#'   the side of the median instead, as
+#'   `c(signal = "faster", noise = "slower")`. The function guesses them and
+#'   reports its choice when they are missing.
+#' @param successes_col,trials_col Names of the columns that hold data already
+#'   summed up, the number or proportion of signal responses and the number of
+#'   trials. Give these instead of `response_col`.
 #' @param successes_type Format of `successes_col`. Use `"counts"` for counts
-#'   and `"proportions"` for proportions. `"auto"` detects unambiguous input
-#'   and asks for an explicit choice when every value is zero or one.
-#' @param sdt_cols A named vector giving the columns of an SDT table, as
-#'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`. Supply this instead of
+#'   and `"proportions"` for proportions. `"auto"` recognises clear cases and
+#'   asks for an explicit choice when every value is zero or one.
+#' @param sdt_cols Names of the columns of an SDT table, as
+#'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`. Give these instead of
 #'   `condition_col` and `response_col`.
-#' @param dichotomize Which tasks need the Meyen median split, either by name
-#'   (`"none"`, `"direct"`, `"indirect"`, `"both"`) or one logical value per
-#'   task, as `list(direct = FALSE, indirect = TRUE)`.
-#' @param ties How to handle trials exactly on the median. See [meyen_split()].
-#' @param coding Coding of the condition. With `"deviation"` (-0.5 / +0.5),
-#'   the classical SDT criterion is the negative model intercept. With
-#'   `"treatment"` (0 / 1), the criterion measured from the noise distribution
-#'   is also the negative model intercept. See Details.
-#' @param labels Optional display names for the two tasks, used in printed
-#'   output only.
+#' @param dichotomize Which tasks need the median split of [meyen_split()].
+#'   Name them with `"none"`, `"direct"`, `"indirect"` or `"both"`, or give one
+#'   logical value per task, as `list(direct = FALSE, indirect = TRUE)`.
+#' @param ties What to do with trials that fall exactly on the median. See
+#'   [meyen_split()].
+#' @param coding How the condition enters the model. See Details.
+#' @param labels Display names for the two tasks. They only affect printed
+#'   output.
 #'
-#' @return An object of class `usdt_data`: a list with the aggregated data
-#'   frame (`agg`) and everything the model and the printed output need
-#'   (`meta`). Pass it to [hsdt()].
+#' @return An object of class `usdt_data`. Its `agg` element is the data frame
+#'   of counts that the model uses, with one row per subject, task and
+#'   condition. Its `meta` element records how every column was read, which
+#'   tasks were split at the median, and the descriptive summaries shown when
+#'   the object is printed. Pass the object to [hsdt()].
 #'
 #' @details
 #' # One value or one per task
 #'
 #' The two tasks rarely come from the same experimental design, so every
-#' argument below `subject_col` reads the same way: give **one value** and both
-#' tasks use it, or give **one value per task** and each is read on its own.
+#' argument that names a column, a level or a format accepts two forms. Give
+#' one value and both tasks use it. Give one value per task and each task is
+#' read on its own.
 #'
 #' ```
 #' subject_col      = "subj"                       # both tasks
@@ -71,31 +80,32 @@
 #' dichotomize      = list(direct = FALSE, indirect = TRUE)
 #' ```
 #'
-#' This applies to `condition_col`, `condition_levels`, `response_col`,
-#' `response_levels`, `successes_col`, `trials_col`, `successes_type`,
-#' `sdt_cols`, `subject_col`, `dichotomize` and `ties`, so the two tasks may
-#' differ in the columns they use, in the values those columns take, and even
-#' in the format they arrive in: one task as trials and the other as an SDT
-#' table. Use `list()` rather than `c()` whenever a task's own value is itself
-#' a vector, as it is for the `*_levels` and `sdt_cols` arguments.
+#' This applies to `subject_col`, `condition_col`, `condition_levels`,
+#' `response_col`, `response_levels`, `successes_col`, `trials_col`,
+#' `successes_type`, `sdt_cols`, `dichotomize` and `ties`. The two tasks may
+#' therefore use different columns, different values inside those columns, and
+#' even different formats, with one task given trial by trial and the other as
+#' an SDT table. Use `list()` rather than `c()` when the value of a task is
+#' itself a vector, as happens with the `*_levels` and `sdt_cols` arguments.
 #'
-#' `coding` is the exception. It defines the model, not the reading of one
-#' task, so it applies to both.
+#' Only `coding` works differently. It describes the model itself, so it always
+#' applies to both tasks at once.
 #'
 #' # Condition coding
 #'
-#' The two codings are not interchangeable. Under `"deviation"` the intercept
-#' is `-c`, the criterion measured from the midpoint between the signal and
-#' noise distributions. Under `"treatment"` it is `z(FAR)`, the criterion
-#' measured from the noise distribution, and the two are related by
+#' The two codings answer different questions and give different intercepts.
+#' Under `"deviation"` the condition takes the values -0.5 and +0.5, and the
+#' intercept is `-c`, the criterion measured from the midpoint between the
+#' signal and noise distributions. Under `"treatment"` the condition takes the
+#' values 0 and 1, and the intercept is `z(FAR)`, the criterion measured from
+#' the noise distribution. The two intercepts are related by
 #' `intercept_treatment = intercept_deviation - d'/2`.
 #'
-#' This matters for dichotomized tasks. A Meyen median split forces the
-#' proportion of signal responses to 0.5 within each subject, so with
-#' balanced conditions the deviation-coded intercept is *exactly* zero and the
-#' criterion need not be estimated at all. The treatment-coded intercept is
-#' `-d'/2`, which is not zero and must be estimated. `hsdt()` uses the
-#' `criterion_zero` flag recorded here to decide.
+#' The choice matters for a task that was split at the median. The split leaves
+#' each subject with half signal responses, so with balanced conditions the
+#' deviation intercept is exactly zero and needs no estimation. The treatment
+#' intercept equals `-d'/2` instead, which is not zero and has to be estimated.
+#' The object records this in `criterion_zero`, and [hsdt()] uses it to decide.
 #'
 #' @seealso [meyen_split()], [hsdt()], [sdt_moments()]
 #'

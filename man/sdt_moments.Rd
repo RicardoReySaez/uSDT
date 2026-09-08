@@ -2,7 +2,7 @@
 % Please edit documentation in R/sdt-moments.R
 \name{sdt_moments}
 \alias{sdt_moments}
-\title{Signal detection parameters by the method of moments}
+\title{Signal detection measures for each subject}
 \usage{
 sdt_moments(
   data,
@@ -17,54 +17,62 @@ sdt_moments(
 )
 }
 \arguments{
-\item{data}{Either a \code{usdt_data} object, in which case both tasks are
-processed and a \code{task} column is returned, or a plain data frame with one
-row per trial.}
+\item{data}{A \code{usdt_data} object, or a plain data frame with one row per
+trial. With a \code{usdt_data} object the function processes both tasks and
+adds a \code{task} column.}
 
-\item{subject_col, condition_col, response_col}{Column names, for a plain data
-frame. Ignored when \code{data} is a \code{usdt_data} object.}
+\item{subject_col, condition_col, response_col}{Names of the columns that hold
+the subject, the condition and the response. They are needed only for a
+plain data frame.}
 
-\item{condition_levels, response_levels}{Role mappings, as
-\code{c(signal = ..., noise = ...)}. Guessed with a message when omitted.}
+\item{condition_levels, response_levels}{Which value plays each role, as
+\code{c(signal = ..., noise = ...)}. The function guesses them and reports its
+choice when they are missing.}
 
-\item{coding}{\code{"deviation"} returns the classical criterion
-\code{c = -(z(HR) + z(FAR)) / 2}, measured from the midpoint of the two
-distributions. \code{"treatment"} returns \code{lambda = -z(FAR)}, measured from the
-noise distribution. These are the same two parameterisations the model
-uses, and they are related by \verb{lambda = c + d'/2}. Taken from the object
-when \code{data} is a \code{usdt_data}.}
+\item{coding}{Which criterion to report. \code{"deviation"} gives the classical
+criterion \code{c = -(z(HR) + z(FAR)) / 2}, measured from the midpoint between
+the two distributions. \code{"treatment"} gives \code{lambda = -z(FAR)}, measured
+from the noise distribution. The two are related by \verb{lambda = c + d'/2}.
+A \code{usdt_data} object supplies its own coding.}
 
-\item{correction}{How to handle rates of exactly 0 or 1, which send \verb{d'} to
-infinity. \code{"hautus"} adds 0.5 to all four cells \strong{of the affected
-subject only}; \code{"none"} leaves the infinities in place.}
+\item{correction}{What to do with rates of exactly 0 or 1, which make \verb{d'}
+infinite. \code{"hautus"} adds 0.5 to the four counts of the affected subject.
+\code{"none"} leaves the infinite values in place.}
 
 \item{variances}{If \code{TRUE}, adds the sampling variance of \verb{d'} from
-Gourevitch & Galanter (1967) and from Miller (1996), plus the implied
-standard error.}
+Gourevitch and Galanter (1967) and from Miller (1996), together with the
+standard error that follows from the second one.}
 }
 \value{
-A data frame with one row per subject (per task, when given a
-\code{usdt_data} object).
+A data frame with one row per subject, or one row per subject and
+task when \code{data} is a \code{usdt_data} object. It holds the four response
+counts (\code{hit}, \code{miss}, \code{fa}, \code{cr}), the two rates (\code{hr}, \code{far}) and their
+probit values (\code{zhr}, \code{zfar}), then \code{dprime}, \code{criterion}, and \code{corrected}
+to mark the subjects that received the edge correction. With
+\code{variances = TRUE} it also holds \code{var_gg}, \code{var_miller}, \code{e_miller} and
+\code{se_dprime}.
 }
 \description{
-Computes hit and false-alarm rates, d' and the criterion for each
-subject, optionally with the sampling variance of d'.
+Computes the hit rate, the false-alarm rate, d' and the criterion of every
+subject, without fitting a model. It can also add the sampling variance of
+d'. These descriptive values are useful to inspect the data before fitting,
+and to compare with the model estimates afterwards.
 }
 \details{
-The edge correction is applied per subject rather than to the whole
-sample. Correcting everybody because one person hit the ceiling would shift
-every other estimate for no reason.
+The edge correction applies only to the subjects that need it. Applying it
+to the whole sample would change the estimates of every other subject as
+well, and those estimates are already usable.
 
-The Miller calculation uses the observed hit and false-alarm rates as its
-binomial probabilities. It assigns the rates \code{0.5 / n} and
-\code{(n - 0.5) / n} to hypothetical samples at a boundary. The calculation
-always uses the original number of trials.
+The Miller variance treats the observed hit and false-alarm rates as
+binomial probabilities. Samples that reach a rate of 0 or 1 receive the
+values \code{0.5 / n} and \code{(n - 0.5) / n}. The number of trials stays the
+original one throughout.
 
-\code{var_gg} is the expected Fisher information of the two probit cells with the
-criterion profiled out, so it is also the error variance a probit GLM would
-report for \verb{d'} on those cells alone. \code{\link[=usdt_reliability]{usdt_reliability()}} uses that same
-formula, evaluated at the rates the hierarchical model implies rather than at
-the observed ones.
+\code{var_gg} comes from the expected information of the two probit cells, with
+the criterion treated as a nuisance parameter. It equals the standard error
+that a probit regression would give for \verb{d'} if it were fitted to that
+subject alone. \code{\link[=usdt_reliability]{usdt_reliability()}} uses the same formula, but evaluates it
+at the rates the hierarchical model predicts instead of the observed ones.
 }
 \examples{
 set.seed(1)

@@ -1,47 +1,67 @@
 # simulate.R
 # This script simulates trial data from the hierarchical uSDT model.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
 #' Simulate data from a hierarchical SDT model
 #'
-#' Generates trial-level data for a direct and an indirect task whose
-#' subject-level sensitivities are correlated, which is the structure
-#' [hsdt()] estimates.
+#' Generates trial-level data for a direct and an indirect task. Every subject
+#' has one sensitivity in each task, and the two sensitivities correlate across
+#' subjects. This is the structure that [hsdt()] estimates, so the function is
+#' useful to check an analysis before collecting data, or to study the power of
+#' a planned design.
 #'
 #' @param n_subj Number of subjects.
-#' @param n_trials Number of trials per subject and task, split evenly
-#'   between the signal and the noise condition.
-#' @param gamma_D,gamma_I Group-level sensitivity (d') of the direct and the
+#' @param n_trials Number of trials per subject and task. Half of them belong
+#'   to the signal condition and half to the noise condition.
+#' @param gamma_D,gamma_I Average sensitivity (d') of the direct and the
 #'   indirect task.
-#' @param sd_D,sd_I Between-subject standard deviation of each sensitivity.
-#' @param rho Latent correlation between the two sensitivities.
-#' @param crit_D,sd_crit Group-level *model intercept* of the direct task and
-#'   its between-subject standard deviation. The classical criterion is its
-#'   negative, `c = -crit_D`. See Details.
-#' @param crit_I,sd_crit_I The same for the indirect task. Both are forced to
-#'   zero when `rt = TRUE`, because a Meyen median split leaves no criterion to
-#'   estimate. Leaving them at zero for a *binary* indirect task produces data
-#'   that no model with an indirect criterion can fit without becoming
-#'   singular, so the defaults mirror the direct task.
-#' @param rt If `TRUE`, the indirect task is returned as response times rather
-#'   than as a binary response, so that the median split of [meyen_split()] can
-#'   be exercised. The times are a monotone decreasing transform of the latent
-#'   evidence, so faster responses correspond to signal.
+#' @param sd_D,sd_I How much each sensitivity varies between subjects.
+#' @param rho Correlation between the two sensitivities across subjects.
+#' @param crit_D,sd_crit Model intercept of the direct task and how much it
+#'   varies between subjects. The classical criterion has the opposite sign,
+#'   `c = -crit_D`. See Details.
+#' @param crit_I,sd_crit_I The same two values for the indirect task. The
+#'   function sets both to zero when `rt = TRUE`, because a median split leaves
+#'   no criterion to estimate. For a binary indirect task, keep `sd_crit_I`
+#'   above zero. A value of zero gives every subject the same criterion, and
+#'   the model then becomes singular when it tries to estimate that variation.
+#' @param rt If `TRUE`, the indirect task returns response times instead of
+#'   binary responses, so that the median split of [meyen_split()] has
+#'   something to work on. The times fall as the evidence for signal rises, so
+#'   faster responses correspond to signal. See Details.
 #'
-#' @return A data frame with one row per trial and columns `subj`, `task`
-#'   (`"D"` or `"I"`), `cond` (`1` signal, `0` noise) and `response`. When
-#'   `rt = TRUE` a numeric `rt` column is added, and `response` is `NA` for the
-#'   indirect task.
+#' @return A data frame with one row per trial and the columns `subj`, `task`
+#'   (`"D"` or `"I"`), `cond` (`1` for signal, `0` for noise) and `response`.
+#'   With `rt = TRUE` it also has a numeric `rt` column, and `response` is `NA`
+#'   in the indirect task.
 #'
 #' @details
 #' The linear predictor is `crit_D + d' * S`, so `crit_D` is the model
-#' intercept, the quantity [hsdt()] estimates as `c_D`. The classical
-#' criterion runs the other way: `c = -crit_D` under deviation coding, which is
-#' what [sdt_moments()] returns and what the printed summary reports. Simulating
-#' `crit_D = 0.5` therefore recovers a criterion of `-0.5`.
+#' intercept, which [hsdt()] reports as `c_D`. The classical criterion has the
+#' opposite sign under deviation coding, `c = -crit_D`. That is the value
+#' [sdt_moments()] returns and the value the printed summary shows. Simulating
+#' `crit_D = 0.5` therefore gives a criterion of `-0.5`.
+#'
+#' # Simulated response times
+#'
+#' With `rt = TRUE` the indirect task returns `exp(6.2 - 0.25 * e)`, where `e`
+#' is the latent evidence of that trial. The logarithm of the time is normal,
+#' so the time itself follows a lognormal distribution, and it decreases as the
+#' evidence grows. A faster response is therefore the signal response.
+#'
+#' The two constants only set the scale in milliseconds. They place the median
+#' at `exp(6.2)`, around 493 ms, with the middle 95% of times between 302 and
+#' 806 ms. A median split gives the same result under any transformation that
+#' preserves the order of the values, so the recovered sensitivity does not
+#' depend on them.
+#'
+#' The simulated times carry no variation beyond the evidence itself. This
+#' makes `gamma_I` exactly the sensitivity of the dichotomized measure. Real
+#' response times also vary for reasons unrelated to the discrimination, and
+#' that extra variation would lower the sensitivity recovered from the split.
 #'
 #' @seealso [hsdt()], [sdt_moments()]
 #'
@@ -109,6 +129,13 @@ usdt_simulate <- function(n_subj = 50, n_trials = 100,
 
       # The task returns either binary responses or response times.
       if (rt && task == "I") {
+
+        # The exponent is the trial's own latent evidence, negated, so the
+        # time is lognormal and falls as the evidence rises: a faster response
+        # is the signal response. A median split is invariant under any
+        # monotone transform, so neither constant reaches the recovered d'.
+        # They only place the median at exp(6.2), about 493 ms, with the
+        # middle 95% between 302 and 806 ms.
         lat <- stats::rnorm(n_trials, mean = eta, sd = 1)
         row$rt <- exp(6.2 - 0.25 * lat)
       } else {

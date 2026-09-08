@@ -1,36 +1,58 @@
 # fit-hsdt.R
 # This script fits the hierarchical signal detection theory model.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
 #' Fit a hierarchical signal detection theory model
 #'
-#' Fits the binomial probit mixed model in which the sensitivities of the
-#' direct and indirect tasks are correlated random effects, and tests the three
-#' hypotheses of the unconscious-processing design.
+#' Fits the model to prepared data and tests the three hypotheses of the
+#' unconscious processing design. Every subject has one sensitivity in each
+#' task, and the model allows the two sensitivities to correlate across
+#' subjects. Estimation uses `lme4::glmer()`.
 #'
 #' @param data A `usdt_data` object from [usdt_data_long()] or
 #'   [usdt_data_tasks()].
-#' @param estimation Estimation method. Only `"frequentist"` is available:
-#'   maximum likelihood through `lme4::glmer()`.
-#' @param fix_criteria `"auto"` fixes to zero every criterion the data show to
-#'   be zero by construction, which a Meyen median split under deviation coding
-#'   guarantees. `"none"` estimates them all.
+#' @param estimation Estimation method. Only `"frequentist"` is available, and
+#'   it fits the model by maximum likelihood.
+#' @param fix_criteria What to do with the criteria. `"auto"` fixes to zero
+#'   every criterion that the data make zero by construction, which happens
+#'   after a median split under deviation coding. `"none"` estimates all of
+#'   them.
 #' @param level Confidence level.
-#' @param optimizer Optimizer passed to `lme4::glmerControl()`. Other optimizers
-#'   are tried when the model does not converge or reaches a singular fit.
-#' @param ... Named arguments passed unchanged to every `lme4::glmer()` call.
-#'   The formula, data, family, optimizer and `nAGQ = 1` remain fixed by uSDT.
-#'   Print and summary methods ignore this argument.
+#' @param optimizer Optimizer given to `lme4::glmerControl()`. The function
+#'   tries other optimizers when this one does not converge or reaches a
+#'   singular fit.
+#' @param ... Named arguments passed on to every `lme4::glmer()` call. The
+#'   formula, the data, the family, the optimizer and `nAGQ = 1` stay under the
+#'   control of the package. The print and summary methods ignore this
+#'   argument.
 #'
-#' @return An object of class `hsdt`: a list with the fitted model
-#'   (`fit`), the hypothesis table (`tests`), the extracted parameters
-#'   (`pars`), the formula information (`design`) and the diagnostics
-#'   (`diagnostics`).
+#' @return An object of class `hsdt`. It holds the fitted model in `fit`, the
+#'   three hypothesis tests in `tests`, the estimates they are built from in
+#'   `pars`, a description of the model formula in `design`, and the fitting
+#'   diagnostics in `diagnostics`. Use `summary()` to read it.
 #'
-#' @seealso [usdt_data_long()], [usdt_tests()], [plot.hsdt()]
+#' @details
+#' The model works on counts of signal responses. It uses a probit link, so its
+#' parameters keep the usual signal detection meaning. The fixed effects give
+#' the average sensitivity of each task, and any criterion that is estimated.
+#' The random effects give the departure of each subject from those averages,
+#' and the two sensitivities share one covariance, which is what makes the
+#' latent correlation available.
+#'
+#' The three hypotheses come out of that covariance and the two averages. H1 is
+#' the difference between the average sensitivities. H2 is their correlation
+#' across subjects. H3 is the regression of the indirect sensitivity on the
+#' direct one, and its intercept is the sensitivity expected in the indirect
+#' task from a subject whose direct sensitivity is zero. See [usdt_tests()].
+#'
+#' Some datasets do not carry enough information for H2 and H3. The function
+#' still returns the fit and warns, and [usdt_boot()] can then provide
+#' intervals by simulation.
+#'
+#' @seealso [usdt_data_long()], [usdt_tests()], [usdt_boot()], [plot.hsdt()]
 #'
 #' @examples
 #' \donttest{

@@ -12,4 +12,6 @@ Rplots.pdf
 /basis/
 /dev/
 /manual-tests/
-/PLAN.md
+
+# Built pkgdown site: rebuilt by the workflow, never committed.
+/docs/

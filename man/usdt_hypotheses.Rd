@@ -17,34 +17,50 @@ latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted \code{glmerMod}, typically from \code{\link[=hsdt]{hsdt()}} or from
-\code{lme4::glmer()} directly.}
+\item{fit}{A fitted model, either an \code{hsdt} object or a \code{glmerMod} from
+\code{lme4::glmer()}.}
 
 \item{direct, indirect}{Names of the two sensitivity terms in the model.}
 
 \item{level}{Confidence level.}
 }
 \value{
-A data frame with one row per quantity and columns \code{term},
+A data frame with one row per quantity. The columns are \code{term},
 \code{estimate}, \code{se}, \code{statistic}, \code{p.value}, \code{conf.low}, \code{conf.high} and
-\code{ci_method}. The columns \code{status} and \code{reason} identify results that cannot
-support inference. \code{usdt_tests()} adds a \code{hypothesis} column.
+\code{ci_method}. Two further columns, \code{status} and \code{reason}, mark the results
+that the data cannot support and explain why. \code{usdt_tests()} adds a
+\code{hypothesis} column with the values \code{H1}, \code{H2} and \code{H3}.
 }
 \description{
-Computes the group-level difference between sensitivities, their latent
-correlation, and the latent regression of the indirect sensitivity on the
-direct one. They accept any \code{glmerMod} in which the two sensitivities are
-fixed effects and share a random-effects term, not only models built by
-\code{\link[=hsdt]{hsdt()}}.
+Computes the difference between the average sensitivities of the two tasks,
+their correlation across subjects, and the regression of the indirect
+sensitivity on the direct one. \code{usdt_tests()} returns the three together,
+and the other three functions return one each.
 }
 \details{
-H1 and the two regression terms use Wald intervals. The latent correlation
-uses a Fisher-z interval so its limits remain between -1 and 1.
+\code{\link[=hsdt]{hsdt()}} already runs these tests, so most users read them in its summary.
+Calling them directly is useful for a model fitted by hand, because they
+accept any \code{glmerMod} in which the two sensitivities are fixed effects and
+share a random-effects term.
 
-The latent slope is zero exactly when the latent covariance is zero, which
-is also when the latent correlation is zero, so H2 and the H3 slope are the
-same null hypothesis. Both are therefore reported with the same Wald test on
-the covariance.
+H1 compares the two average sensitivities. A clear difference means that the
+direct task measures more than the indirect one, or the reverse.
+
+H2 gives the correlation between the two sensitivities across subjects. It
+asks whether the subjects who are sensitive in one task are also the
+sensitive ones in the other.
+
+H3 regresses the indirect sensitivity on the direct one. Its intercept is
+the sensitivity expected in the indirect task from a subject whose direct
+sensitivity is zero, which is the test for unconscious processing.
+
+H1 and the two regression terms use Wald intervals. The correlation uses a
+Fisher-z interval, so its limits stay between -1 and 1.
+
+The slope of H3 is zero exactly when the covariance between the two
+sensitivities is zero, and so is the correlation of H2. The two therefore
+state the same null hypothesis, and both report the same test on that
+covariance.
 }
 \examples{
 \donttest{
@@ -63,5 +79,5 @@ usdt_tests(m$fit)
 
 }
 \seealso{
-\code{\link[=hsdt]{hsdt()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}
 }

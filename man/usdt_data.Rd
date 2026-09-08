@@ -5,7 +5,7 @@
 \alias{usdt_data_tasks}
 \alias{usdt_data_long}
 \alias{print.usdt_data}
-\title{Prepare paired direct and indirect measures for a hierarchical SDT model}
+\title{Prepare the data of a direct and an indirect task}
 \usage{
 usdt_data_tasks(
   direct,
@@ -47,58 +47,59 @@ usdt_data_long(
 \method{print}{usdt_data}(x, ...)
 }
 \arguments{
-\item{direct, indirect}{For \code{usdt_data_tasks()}, the data frame of each task.
-For \code{usdt_data_long()}, ignored; use \code{task_levels} instead.}
+\item{direct, indirect}{The data frame of each task, for \code{usdt_data_tasks()}.
+\code{usdt_data_long()} ignores them and uses \code{task_levels} instead.}
 
-\item{subject_col}{Column identifying the subject.}
+\item{subject_col}{Name of the column that identifies the subject.}
 
-\item{condition_col}{Column holding the signal/noise condition. Not needed
-when the data are supplied as an SDT table through \code{sdt_cols}.}
+\item{condition_col}{Name of the column that holds the signal and noise
+condition. It is not needed when the data arrive as an SDT table through
+\code{sdt_cols}.}
 
 \item{condition_levels}{Which value of \code{condition_col} plays each role, as
-\code{c(signal = "old", noise = "new")}. Guessed with a message when omitted.}
+\code{c(signal = "old", noise = "new")}. The function guesses them and reports
+its choice when they are missing.}
 
-\item{response_col}{Column holding the response. Either a binary response,
-or a continuous measure such as response times when that task is
-dichotomized.}
+\item{response_col}{Name of the column that holds the response. It can be a
+binary response, or a continuous measure such as response times when the
+task is dichotomized.}
 
 \item{response_levels}{Which value of \code{response_col} counts as a signal
-response, as \code{c(signal = 1, noise = 0)}. For a task that is being
-dichotomized, use the side of the median instead:
-\code{c(signal = "faster", noise = "slower")}. Guessed with a message when
-omitted.}
+response, as \code{c(signal = 1, noise = 0)}. A task that is dichotomized takes
+the side of the median instead, as
+\code{c(signal = "faster", noise = "slower")}. The function guesses them and
+reports its choice when they are missing.}
 
-\item{successes_col, trials_col}{Columns holding already-aggregated data:
-the number or proportion of signal responses, and the number of trials.
-Supply these instead of \code{response_col}.}
+\item{successes_col, trials_col}{Names of the columns that hold data already
+summed up, the number or proportion of signal responses and the number of
+trials. Give these instead of \code{response_col}.}
 
 \item{successes_type}{Format of \code{successes_col}. Use \code{"counts"} for counts
-and \code{"proportions"} for proportions. \code{"auto"} detects unambiguous input
-and asks for an explicit choice when every value is zero or one.}
+and \code{"proportions"} for proportions. \code{"auto"} recognises clear cases and
+asks for an explicit choice when every value is zero or one.}
 
-\item{sdt_cols}{A named vector giving the columns of an SDT table, as
-\code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}. Supply this instead of
+\item{sdt_cols}{Names of the columns of an SDT table, as
+\code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}. Give these instead of
 \code{condition_col} and \code{response_col}.}
 
-\item{dichotomize}{Which tasks need the Meyen median split, either by name
-(\code{"none"}, \code{"direct"}, \code{"indirect"}, \code{"both"}) or one logical value per
-task, as \code{list(direct = FALSE, indirect = TRUE)}.}
+\item{dichotomize}{Which tasks need the median split of \code{\link[=meyen_split]{meyen_split()}}.
+Name them with \code{"none"}, \code{"direct"}, \code{"indirect"} or \code{"both"}, or give one
+logical value per task, as \code{list(direct = FALSE, indirect = TRUE)}.}
 
-\item{ties}{How to handle trials exactly on the median. See \code{\link[=meyen_split]{meyen_split()}}.}
+\item{ties}{What to do with trials that fall exactly on the median. See
+\code{\link[=meyen_split]{meyen_split()}}.}
 
-\item{coding}{Coding of the condition. With \code{"deviation"} (-0.5 / +0.5),
-the classical SDT criterion is the negative model intercept. With
-\code{"treatment"} (0 / 1), the criterion measured from the noise distribution
-is also the negative model intercept. See Details.}
+\item{coding}{How the condition enters the model. See Details.}
 
-\item{labels}{Optional display names for the two tasks, used in printed
-output only.}
+\item{labels}{Display names for the two tasks. They only affect printed
+output.}
 
-\item{data}{For \code{usdt_data_long()}, a single data frame holding both tasks.}
+\item{data}{A single data frame holding both tasks, for \code{usdt_data_long()}.}
 
-\item{task_col}{Column identifying the task, for \code{usdt_data_long()}.}
+\item{task_col}{Name of the column that identifies the task, for
+\code{usdt_data_long()}.}
 
-\item{task_levels}{Which value of \code{task_col} is each task, as
+\item{task_levels}{Which value of \code{task_col} belongs to each task, as
 \code{c(direct = "D", indirect = "I")}.}
 
 \item{x}{A \code{usdt_data} object.}
@@ -106,19 +107,28 @@ output only.}
 \item{...}{Ignored.}
 }
 \value{
-An object of class \code{usdt_data}: a list with the aggregated data
-frame (\code{agg}) and everything the model and the printed output need
-(\code{meta}). Pass it to \code{\link[=hsdt]{hsdt()}}.
+An object of class \code{usdt_data}. Its \code{agg} element is the data frame
+of counts that the model uses, with one row per subject, task and
+condition. Its \code{meta} element records how every column was read, which
+tasks were split at the median, and the descriptive summaries shown when
+the object is printed. Pass the object to \code{\link[=hsdt]{hsdt()}}.
 }
 \description{
-Two entry points for the same object. Use \code{usdt_data_tasks()} when each task
-lives in its own data frame, and \code{usdt_data_long()} when both tasks are
-stacked in a single data frame with a column identifying the task.
+Both functions build the same object. Use \code{usdt_data_tasks()} when each task
+has its own data frame, and \code{usdt_data_long()} when a single data frame
+holds both tasks together with a column that identifies them.
+}
+\details{
+The functions count the responses of every subject in each condition, check
+that the two tasks describe the same subjects, and record how each column
+was read. Printing the result shows all of that, so the coding can be
+checked before the model runs.
 }
 \section{One value or one per task}{
 The two tasks rarely come from the same experimental design, so every
-argument below \code{subject_col} reads the same way: give \strong{one value} and both
-tasks use it, or give \strong{one value per task} and each is read on its own.
+argument that names a column, a level or a format accepts two forms. Give
+one value and both tasks use it. Give one value per task and each task is
+read on its own.
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{subject_col      = "subj"                       # both tasks
 condition_col    = list(direct   = "condition",
@@ -129,31 +139,32 @@ condition_levels = list(
 dichotomize      = list(direct = FALSE, indirect = TRUE)
 }\if{html}{\out{</div>}}
 
-This applies to \code{condition_col}, \code{condition_levels}, \code{response_col},
-\code{response_levels}, \code{successes_col}, \code{trials_col}, \code{successes_type},
-\code{sdt_cols}, \code{subject_col}, \code{dichotomize} and \code{ties}, so the two tasks may
-differ in the columns they use, in the values those columns take, and even
-in the format they arrive in: one task as trials and the other as an SDT
-table. Use \code{list()} rather than \code{c()} whenever a task's own value is itself
-a vector, as it is for the \verb{*_levels} and \code{sdt_cols} arguments.
+This applies to \code{subject_col}, \code{condition_col}, \code{condition_levels},
+\code{response_col}, \code{response_levels}, \code{successes_col}, \code{trials_col},
+\code{successes_type}, \code{sdt_cols}, \code{dichotomize} and \code{ties}. The two tasks may
+therefore use different columns, different values inside those columns, and
+even different formats, with one task given trial by trial and the other as
+an SDT table. Use \code{list()} rather than \code{c()} when the value of a task is
+itself a vector, as happens with the \verb{*_levels} and \code{sdt_cols} arguments.
 
-\code{coding} is the exception. It defines the model, not the reading of one
-task, so it applies to both.
+Only \code{coding} works differently. It describes the model itself, so it always
+applies to both tasks at once.
 }
 
 \section{Condition coding}{
-The two codings are not interchangeable. Under \code{"deviation"} the intercept
-is \code{-c}, the criterion measured from the midpoint between the signal and
-noise distributions. Under \code{"treatment"} it is \code{z(FAR)}, the criterion
-measured from the noise distribution, and the two are related by
+The two codings answer different questions and give different intercepts.
+Under \code{"deviation"} the condition takes the values -0.5 and +0.5, and the
+intercept is \code{-c}, the criterion measured from the midpoint between the
+signal and noise distributions. Under \code{"treatment"} the condition takes the
+values 0 and 1, and the intercept is \code{z(FAR)}, the criterion measured from
+the noise distribution. The two intercepts are related by
 \verb{intercept_treatment = intercept_deviation - d'/2}.
 
-This matters for dichotomized tasks. A Meyen median split forces the
-proportion of signal responses to 0.5 within each subject, so with
-balanced conditions the deviation-coded intercept is \emph{exactly} zero and the
-criterion need not be estimated at all. The treatment-coded intercept is
-\verb{-d'/2}, which is not zero and must be estimated. \code{hsdt()} uses the
-\code{criterion_zero} flag recorded here to decide.
+The choice matters for a task that was split at the median. The split leaves
+each subject with half signal responses, so with balanced conditions the
+deviation intercept is exactly zero and needs no estimation. The treatment
+intercept equals \verb{-d'/2} instead, which is not zero and has to be estimated.
+The object records this in \code{criterion_zero}, and \code{\link[=hsdt]{hsdt()}} uses it to decide.
 }
 
 \examples{

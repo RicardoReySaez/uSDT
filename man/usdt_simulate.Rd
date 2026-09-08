@@ -22,49 +22,69 @@ usdt_simulate(
 \arguments{
 \item{n_subj}{Number of subjects.}
 
-\item{n_trials}{Number of trials per subject and task, split evenly
-between the signal and the noise condition.}
+\item{n_trials}{Number of trials per subject and task. Half of them belong
+to the signal condition and half to the noise condition.}
 
-\item{gamma_D, gamma_I}{Group-level sensitivity (d') of the direct and the
+\item{gamma_D, gamma_I}{Average sensitivity (d') of the direct and the
 indirect task.}
 
-\item{sd_D, sd_I}{Between-subject standard deviation of each sensitivity.}
+\item{sd_D, sd_I}{How much each sensitivity varies between subjects.}
 
-\item{rho}{Latent correlation between the two sensitivities.}
+\item{rho}{Correlation between the two sensitivities across subjects.}
 
-\item{crit_D, sd_crit}{Group-level \emph{model intercept} of the direct task and
-its between-subject standard deviation. The classical criterion is its
-negative, \code{c = -crit_D}. See Details.}
+\item{crit_D, sd_crit}{Model intercept of the direct task and how much it
+varies between subjects. The classical criterion has the opposite sign,
+\code{c = -crit_D}. See Details.}
 
-\item{crit_I, sd_crit_I}{The same for the indirect task. Both are forced to
-zero when \code{rt = TRUE}, because a Meyen median split leaves no criterion to
-estimate. Leaving them at zero for a \emph{binary} indirect task produces data
-that no model with an indirect criterion can fit without becoming
-singular, so the defaults mirror the direct task.}
+\item{crit_I, sd_crit_I}{The same two values for the indirect task. The
+function sets both to zero when \code{rt = TRUE}, because a median split leaves
+no criterion to estimate. For a binary indirect task, keep \code{sd_crit_I}
+above zero. A value of zero gives every subject the same criterion, and
+the model then becomes singular when it tries to estimate that variation.}
 
-\item{rt}{If \code{TRUE}, the indirect task is returned as response times rather
-than as a binary response, so that the median split of \code{\link[=meyen_split]{meyen_split()}} can
-be exercised. The times are a monotone decreasing transform of the latent
-evidence, so faster responses correspond to signal.}
+\item{rt}{If \code{TRUE}, the indirect task returns response times instead of
+binary responses, so that the median split of \code{\link[=meyen_split]{meyen_split()}} has
+something to work on. The times fall as the evidence for signal rises, so
+faster responses correspond to signal. See Details.}
 }
 \value{
-A data frame with one row per trial and columns \code{subj}, \code{task}
-(\code{"D"} or \code{"I"}), \code{cond} (\code{1} signal, \code{0} noise) and \code{response}. When
-\code{rt = TRUE} a numeric \code{rt} column is added, and \code{response} is \code{NA} for the
-indirect task.
+A data frame with one row per trial and the columns \code{subj}, \code{task}
+(\code{"D"} or \code{"I"}), \code{cond} (\code{1} for signal, \code{0} for noise) and \code{response}.
+With \code{rt = TRUE} it also has a numeric \code{rt} column, and \code{response} is \code{NA}
+in the indirect task.
 }
 \description{
-Generates trial-level data for a direct and an indirect task whose
-subject-level sensitivities are correlated, which is the structure
-\code{\link[=hsdt]{hsdt()}} estimates.
+Generates trial-level data for a direct and an indirect task. Every subject
+has one sensitivity in each task, and the two sensitivities correlate across
+subjects. This is the structure that \code{\link[=hsdt]{hsdt()}} estimates, so the function is
+useful to check an analysis before collecting data, or to study the power of
+a planned design.
 }
 \details{
 The linear predictor is \verb{crit_D + d' * S}, so \code{crit_D} is the model
-intercept, the quantity \code{\link[=hsdt]{hsdt()}} estimates as \code{c_D}. The classical
-criterion runs the other way: \code{c = -crit_D} under deviation coding, which is
-what \code{\link[=sdt_moments]{sdt_moments()}} returns and what the printed summary reports. Simulating
-\code{crit_D = 0.5} therefore recovers a criterion of \code{-0.5}.
+intercept, which \code{\link[=hsdt]{hsdt()}} reports as \code{c_D}. The classical criterion has the
+opposite sign under deviation coding, \code{c = -crit_D}. That is the value
+\code{\link[=sdt_moments]{sdt_moments()}} returns and the value the printed summary shows. Simulating
+\code{crit_D = 0.5} therefore gives a criterion of \code{-0.5}.
 }
+\section{Simulated response times}{
+With \code{rt = TRUE} the indirect task returns \code{exp(6.2 - 0.25 * e)}, where \code{e}
+is the latent evidence of that trial. The logarithm of the time is normal,
+so the time itself follows a lognormal distribution, and it decreases as the
+evidence grows. A faster response is therefore the signal response.
+
+The two constants only set the scale in milliseconds. They place the median
+at \code{exp(6.2)}, around 493 ms, with the middle 95\% of times between 302 and
+806 ms. A median split gives the same result under any transformation that
+preserves the order of the values, so the recovered sensitivity does not
+depend on them.
+
+The simulated times carry no variation beyond the evidence itself. This
+makes \code{gamma_I} exactly the sensitivity of the dichotomized measure. Real
+response times also vary for reasons unrelated to the discrimination, and
+that extra variation would lower the sensitivity recovered from the split.
+}
+
 \examples{
 set.seed(1)
 df <- usdt_simulate(n_subj = 20, n_trials = 60)

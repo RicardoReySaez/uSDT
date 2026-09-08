@@ -1,38 +1,54 @@
 # hypotheses.R
 # This script calculates the three hypothesis tests used by uSDT.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
 #' Test the three hypotheses of a hierarchical SDT model
 #'
-#' Computes the group-level difference between sensitivities, their latent
-#' correlation, and the latent regression of the indirect sensitivity on the
-#' direct one. They accept any `glmerMod` in which the two sensitivities are
-#' fixed effects and share a random-effects term, not only models built by
-#' [hsdt()].
+#' Computes the difference between the average sensitivities of the two tasks,
+#' their correlation across subjects, and the regression of the indirect
+#' sensitivity on the direct one. `usdt_tests()` returns the three together,
+#' and the other three functions return one each.
 #'
-#' @param fit A fitted `glmerMod`, typically from [hsdt()] or from
-#'   `lme4::glmer()` directly.
+#' [hsdt()] already runs these tests, so most users read them in its summary.
+#' Calling them directly is useful for a model fitted by hand, because they
+#' accept any `glmerMod` in which the two sensitivities are fixed effects and
+#' share a random-effects term.
+#'
+#' @param fit A fitted model, either an `hsdt` object or a `glmerMod` from
+#'   `lme4::glmer()`.
 #' @param direct,indirect Names of the two sensitivity terms in the model.
 #' @param level Confidence level.
 #'
-#' @return A data frame with one row per quantity and columns `term`,
+#' @return A data frame with one row per quantity. The columns are `term`,
 #'   `estimate`, `se`, `statistic`, `p.value`, `conf.low`, `conf.high` and
-#'   `ci_method`. The columns `status` and `reason` identify results that cannot
-#'   support inference. `usdt_tests()` adds a `hypothesis` column.
+#'   `ci_method`. Two further columns, `status` and `reason`, mark the results
+#'   that the data cannot support and explain why. `usdt_tests()` adds a
+#'   `hypothesis` column with the values `H1`, `H2` and `H3`.
 #'
 #' @details
-#' H1 and the two regression terms use Wald intervals. The latent correlation
-#' uses a Fisher-z interval so its limits remain between -1 and 1.
+#' H1 compares the two average sensitivities. A clear difference means that the
+#' direct task measures more than the indirect one, or the reverse.
 #'
-#' The latent slope is zero exactly when the latent covariance is zero, which
-#' is also when the latent correlation is zero, so H2 and the H3 slope are the
-#' same null hypothesis. Both are therefore reported with the same Wald test on
-#' the covariance.
+#' H2 gives the correlation between the two sensitivities across subjects. It
+#' asks whether the subjects who are sensitive in one task are also the
+#' sensitive ones in the other.
 #'
-#' @seealso [hsdt()]
+#' H3 regresses the indirect sensitivity on the direct one. Its intercept is
+#' the sensitivity expected in the indirect task from a subject whose direct
+#' sensitivity is zero, which is the test for unconscious processing.
+#'
+#' H1 and the two regression terms use Wald intervals. The correlation uses a
+#' Fisher-z interval, so its limits stay between -1 and 1.
+#'
+#' The slope of H3 is zero exactly when the covariance between the two
+#' sensitivities is zero, and so is the correlation of H2. The two therefore
+#' state the same null hypothesis, and both report the same test on that
+#' covariance.
+#'
+#' @seealso [hsdt()], [usdt_boot()]
 #'
 #' @examples
 #' \donttest{

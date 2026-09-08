@@ -1,69 +1,76 @@
 # bootstrap.R
 # This script runs a parametric bootstrap for fitted uSDT models.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
 # Fewer usable replicates than this cannot support a two-sided interval.
 .boot_min <- 500L
 
-#' Parametric bootstrap for a hierarchical SDT model
+#' Bootstrap intervals for a hierarchical SDT model
 #'
-#' Refits the model to data simulated from it, and summarises the resulting
-#' distribution of the three hypotheses. Uses `lme4::bootMer()`.
+#' Simulates many datasets from the fitted model, refits the model to each one,
+#' and builds the intervals of the three hypotheses from the results. This is
+#' useful when the ordinary intervals are unavailable or hard to trust, which
+#' happens when the model reaches a boundary. The work is done by
+#' `lme4::bootMer()`.
 #'
-#' @param object A `hsdt` object from [hsdt()].
-#' @param nsim Number of usable bootstrap replicates. It must be at least 500.
-#' @param ncores Number of cores. Values above one use the `parallel` package,
-#'   which ships with R. A temporary PSOCK cluster provides the same behaviour
-#'   on Windows, macOS and Linux. The cluster closes when the bootstrap ends.
-#' @param max_attempts Maximum number of fitted bootstrap samples. The default
-#'   allows two attempts for every requested usable replicate.
-#' @param seed Optional seed for the bootstrap samples.
-#' @param progress Show a progress bar. The default shows it in interactive R
+#' @param object An `hsdt` object from [hsdt()].
+#' @param nsim Number of usable replicates to reach. It must be at least 500.
+#' @param ncores Number of cores to use. Values above one run the replicates in
+#'   parallel through the `parallel` package, which comes with R. The temporary
+#'   cluster behaves the same way on Windows, macOS and Linux, and it closes
+#'   when the bootstrap ends.
+#' @param max_attempts Largest number of replicates to fit. The default allows
+#'   two attempts for every usable replicate requested.
+#' @param seed Seed for the simulated datasets, so the result can be
+#'   reproduced.
+#' @param progress Show a progress bar. It appears by default in interactive
 #'   sessions.
 #' @param level Confidence level.
-#' @param type Interval type: `"perc"` for percentile, `"norm"` for a normal
-#'   interval centred on the bias-corrected estimate, or `"basic"`. The
-#'   correlation uses the Fisher-z scale for `"norm"` and `"basic"`, so their
-#'   limits stay inside its range. Those two intervals need a finite centre on
-#'   that scale, so they are reported as missing for a correlation sitting on
-#'   the boundary; `"perc"` remains available.
+#' @param type Type of interval. `"perc"` takes the percentiles of the
+#'   replicates, `"norm"` builds a normal interval around the bias-corrected
+#'   estimate, and `"basic"` reflects the percentiles around the estimate. The
+#'   last two work on the Fisher-z scale for the correlation, which keeps their
+#'   limits inside its range. They need a finite centre on that scale, so a
+#'   correlation that sits on the boundary reports them as missing. `"perc"`
+#'   stays available in that case.
 #'
-#' @return The `hsdt` object with the interval fields of its `tests` table
-#'   replaced by bootstrap summaries. Its `boot` element contains the hypothesis
-#'   replicates in `t`, the sensitivity variances in `variance`, the fixed task
-#'   parameters in `population`, and the refitted conditional task parameters
-#'   for every subject in `subjects`.
+#' @return The `hsdt` object, with the interval columns of its `tests` table
+#'   replaced by the bootstrap results. The new `boot` element holds the
+#'   replicates of the three hypotheses in `t`, the sensitivity variances in
+#'   `variance`, the average task parameters in `population`, and the estimates
+#'   of every subject in `subjects`. It also holds the counts and diagnostics
+#'   of the run.
 #'
 #' @details
-#' Only replicates that failed to fit or failed to converge are dropped. A
-#' singular or boundary replicate is kept: it is the model's own answer for a
-#' weakly identified dataset, and removing it conditions the interval on the
-#' region where identification is not a problem, which narrows it. Their counts
-#' are reported in `boot$retained`. The function continues until it reaches
-#' `nsim` usable replicates or `max_attempts` fitted samples.
+#' The function drops a replicate only when the model fails to fit or fails to
+#' converge. It keeps singular and boundary replicates, because they are the
+#' answer the model gives for a difficult dataset, and removing them would make
+#' the intervals narrower than they should be. `boot$retained` reports how many
+#' there were. The run continues until it reaches `nsim` usable replicates or
+#' `max_attempts` fitted samples.
 #'
-#' An incomplete bootstrap returns the fitted object with every attempted
-#' sample and its diagnostics in the `boot` element. It also gives a warning.
-#' At least 500 usable replicates are required before bootstrap summaries
-#' replace the original interval fields.
+#' An incomplete run still returns the object, with every attempt and its
+#' diagnostics in `boot`, and it gives a warning. Bootstrap summaries replace
+#' the original intervals only from 500 usable replicates onwards.
 #'
-#' The point estimate stays the one the model produced: a bootstrap describes
-#' the sampling distribution of an estimator rather than replacing it. The
-#' bootstrap p-value compares the absolute fitted estimate with the centred
-#' bootstrap distribution. One is added to its numerator and denominator so a
-#' finite simulation cannot return a p-value of zero.
+#' The point estimates do not change. A bootstrap describes how much an
+#' estimate would vary from sample to sample, and the estimate itself remains
+#' the one the model produced. The bootstrap p-value compares the fitted
+#' estimate in absolute value with the centred distribution of the replicates.
+#' The count adds one to the numerator and the denominator, so a finite
+#' simulation never returns a p-value of zero.
 #'
-#' The `population` and `subjects` components retain four parameters in every
-#' attempted replicate: the two criterion intercepts (`c_D`, `c_I`) and the two
-#' sensitivities (`d_D`, `d_I`). A criterion fixed by the model is stored as
-#' zero. Subject values combine the refitted fixed effect and conditional mode.
-#' Their first array dimension follows `boot$ok`, so callers can select the same
-#' usable replicates as the hypothesis summaries.
+#' The `population` and `subjects` components keep four parameters from every
+#' attempted replicate, the two criterion intercepts `c_D` and `c_I` and the
+#' two sensitivities `d_D` and `d_I`. A criterion that the model fixed is
+#' stored as zero, and the values of a subject combine the refitted average
+#' with that subject's own departure from it. Their first dimension follows
+#' `boot$ok`, so the same usable replicates can be selected again.
 #'
-#' @seealso [hsdt()]
+#' @seealso [hsdt()], [usdt_tests()]
 #'
 #' @examples
 #' \donttest{

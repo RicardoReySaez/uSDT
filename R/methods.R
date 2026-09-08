@@ -1,7 +1,7 @@
 # methods.R
 # This script prints summaries for uSDT data and fitted models.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-09-2026
+# Last modified: 08-09-2026
 
 # Data summaries
 
@@ -121,8 +121,8 @@ print.usdt_data <- function(x, ...) {
 
 # Model summaries
 
-#' @param object A `hsdt` object.
-#' @param x A `hsdt` object.
+#' @param object An `hsdt` object.
+#' @param x An `hsdt` object.
 #' @rdname hsdt
 #' @export
 summary.hsdt <- function(object, ...) {

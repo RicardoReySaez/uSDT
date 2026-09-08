@@ -7,39 +7,41 @@
 \title{uSDT: Hierarchical Signal Detection Theory for Unconscious Processing}
 \description{
 Fits hierarchical signal detection theory models to paired direct and
-indirect measures, the design used to test whether a stimulus is processed
-without awareness.
+indirect measures. This is the design used to test whether a stimulus is
+processed without awareness.
 }
 \section{The workflow}{
 
 \enumerate{
-\item \code{\link[=usdt_data_long]{usdt_data_long()}} or \code{\link[=usdt_data_tasks]{usdt_data_tasks()}} prepare the data. They say
-out loud how every column was read, what the median split did, and what
-all of it implies for the model.
-\item \code{\link[=usdt_reliability]{usdt_reliability()}} estimates the reliability of both measures.
+\item \code{\link[=usdt_data_long]{usdt_data_long()}} or \code{\link[=usdt_data_tasks]{usdt_data_tasks()}} prepare the data. Printing
+the result reports how every column was read, which tasks were split at
+the median, and what the model will do with all of it.
+\item \code{\link[=sdt_moments]{sdt_moments()}} gives descriptive estimates for each subject.
 \item \code{\link[=hsdt]{hsdt()}} fits the model and tests the three hypotheses.
-\item \code{\link[=usdt_boot]{usdt_boot()}} replaces the intervals with a parametric bootstrap when
-the model is weakly identified.
+\item \code{\link[=plot]{plot()}} and \code{\link[=usdt_reliability]{usdt_reliability()}} help to interpret the fit, and
+\code{\link[=usdt_boot]{usdt_boot()}} adds intervals by simulation when the model needs them.
 }
 }
 
 \section{The three hypotheses}{
 
 \describe{
-\item{H1}{The group-level difference between the two sensitivities.}
-\item{H2}{Their latent correlation across subjects.}
-\item{H3}{The latent regression of the indirect sensitivity on the direct
-one. Its intercept is the indirect sensitivity expected of a subject
-whose direct sensitivity is zero, which is the test for unconscious
-processing.}
+\item{H1}{The difference between the average sensitivities of the two
+tasks.}
+\item{H2}{The correlation between the two sensitivities across subjects.}
+\item{H3}{The regression of the indirect sensitivity on the direct one.
+Its intercept is the sensitivity expected in the indirect task from a
+subject whose direct sensitivity is zero, which is the test for
+unconscious processing.}
 }
 }
 
 \section{Confidence intervals}{
 
-The group difference and latent regression use Wald intervals. The latent
-correlation uses Fisher-z so its limits remain between -1 and 1. The package
-reports unavailable intervals explicitly when the model reaches a boundary.
+H1 and the regression of H3 use Wald intervals. The correlation of H2 uses a
+Fisher-z interval, so its limits stay between -1 and 1. When the model
+reaches a boundary and an interval becomes unreliable, the package reports it
+as unavailable and explains why.
 }
 
 \seealso{

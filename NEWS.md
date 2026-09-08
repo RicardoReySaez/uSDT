@@ -36,4 +36,4 @@ First release.
 
 * `usdt_simulate()` generates data from the model for simulation studies.
 * `vadillo_awareness` and `vadillo_cuing` provide trial-level data from
-  Experiment 2 of Vadillo, Malejka and Shanks (2024).
+  Experiment 2 of Vadillo, Malejka and Shanks (2025).

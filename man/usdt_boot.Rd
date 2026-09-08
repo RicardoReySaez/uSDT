@@ -2,7 +2,7 @@
 % Please edit documentation in R/bootstrap.R
 \name{usdt_boot}
 \alias{usdt_boot}
-\title{Parametric bootstrap for a hierarchical SDT model}
+\title{Bootstrap intervals for a hierarchical SDT model}
 \usage{
 usdt_boot(
   object,
@@ -16,67 +16,74 @@ usdt_boot(
 )
 }
 \arguments{
-\item{object}{A \code{hsdt} object from \code{\link[=hsdt]{hsdt()}}.}
+\item{object}{An \code{hsdt} object from \code{\link[=hsdt]{hsdt()}}.}
 
-\item{nsim}{Number of usable bootstrap replicates. It must be at least 500.}
+\item{nsim}{Number of usable replicates to reach. It must be at least 500.}
 
-\item{ncores}{Number of cores. Values above one use the \code{parallel} package,
-which ships with R. A temporary PSOCK cluster provides the same behaviour
-on Windows, macOS and Linux. The cluster closes when the bootstrap ends.}
+\item{ncores}{Number of cores to use. Values above one run the replicates in
+parallel through the \code{parallel} package, which comes with R. The temporary
+cluster behaves the same way on Windows, macOS and Linux, and it closes
+when the bootstrap ends.}
 
-\item{max_attempts}{Maximum number of fitted bootstrap samples. The default
-allows two attempts for every requested usable replicate.}
+\item{max_attempts}{Largest number of replicates to fit. The default allows
+two attempts for every usable replicate requested.}
 
-\item{seed}{Optional seed for the bootstrap samples.}
+\item{seed}{Seed for the simulated datasets, so the result can be
+reproduced.}
 
-\item{progress}{Show a progress bar. The default shows it in interactive R
+\item{progress}{Show a progress bar. It appears by default in interactive
 sessions.}
 
 \item{level}{Confidence level.}
 
-\item{type}{Interval type: \code{"perc"} for percentile, \code{"norm"} for a normal
-interval centred on the bias-corrected estimate, or \code{"basic"}. The
-correlation uses the Fisher-z scale for \code{"norm"} and \code{"basic"}, so their
-limits stay inside its range. Those two intervals need a finite centre on
-that scale, so they are reported as missing for a correlation sitting on
-the boundary; \code{"perc"} remains available.}
+\item{type}{Type of interval. \code{"perc"} takes the percentiles of the
+replicates, \code{"norm"} builds a normal interval around the bias-corrected
+estimate, and \code{"basic"} reflects the percentiles around the estimate. The
+last two work on the Fisher-z scale for the correlation, which keeps their
+limits inside its range. They need a finite centre on that scale, so a
+correlation that sits on the boundary reports them as missing. \code{"perc"}
+stays available in that case.}
 }
 \value{
-The \code{hsdt} object with the interval fields of its \code{tests} table
-replaced by bootstrap summaries. Its \code{boot} element contains the hypothesis
-replicates in \code{t}, the sensitivity variances in \code{variance}, the fixed task
-parameters in \code{population}, and the refitted conditional task parameters
-for every subject in \code{subjects}.
+The \code{hsdt} object, with the interval columns of its \code{tests} table
+replaced by the bootstrap results. The new \code{boot} element holds the
+replicates of the three hypotheses in \code{t}, the sensitivity variances in
+\code{variance}, the average task parameters in \code{population}, and the estimates
+of every subject in \code{subjects}. It also holds the counts and diagnostics
+of the run.
 }
 \description{
-Refits the model to data simulated from it, and summarises the resulting
-distribution of the three hypotheses. Uses \code{lme4::bootMer()}.
+Simulates many datasets from the fitted model, refits the model to each one,
+and builds the intervals of the three hypotheses from the results. This is
+useful when the ordinary intervals are unavailable or hard to trust, which
+happens when the model reaches a boundary. The work is done by
+\code{lme4::bootMer()}.
 }
 \details{
-Only replicates that failed to fit or failed to converge are dropped. A
-singular or boundary replicate is kept: it is the model's own answer for a
-weakly identified dataset, and removing it conditions the interval on the
-region where identification is not a problem, which narrows it. Their counts
-are reported in \code{boot$retained}. The function continues until it reaches
-\code{nsim} usable replicates or \code{max_attempts} fitted samples.
+The function drops a replicate only when the model fails to fit or fails to
+converge. It keeps singular and boundary replicates, because they are the
+answer the model gives for a difficult dataset, and removing them would make
+the intervals narrower than they should be. \code{boot$retained} reports how many
+there were. The run continues until it reaches \code{nsim} usable replicates or
+\code{max_attempts} fitted samples.
 
-An incomplete bootstrap returns the fitted object with every attempted
-sample and its diagnostics in the \code{boot} element. It also gives a warning.
-At least 500 usable replicates are required before bootstrap summaries
-replace the original interval fields.
+An incomplete run still returns the object, with every attempt and its
+diagnostics in \code{boot}, and it gives a warning. Bootstrap summaries replace
+the original intervals only from 500 usable replicates onwards.
 
-The point estimate stays the one the model produced: a bootstrap describes
-the sampling distribution of an estimator rather than replacing it. The
-bootstrap p-value compares the absolute fitted estimate with the centred
-bootstrap distribution. One is added to its numerator and denominator so a
-finite simulation cannot return a p-value of zero.
+The point estimates do not change. A bootstrap describes how much an
+estimate would vary from sample to sample, and the estimate itself remains
+the one the model produced. The bootstrap p-value compares the fitted
+estimate in absolute value with the centred distribution of the replicates.
+The count adds one to the numerator and the denominator, so a finite
+simulation never returns a p-value of zero.
 
-The \code{population} and \code{subjects} components retain four parameters in every
-attempted replicate: the two criterion intercepts (\code{c_D}, \code{c_I}) and the two
-sensitivities (\code{d_D}, \code{d_I}). A criterion fixed by the model is stored as
-zero. Subject values combine the refitted fixed effect and conditional mode.
-Their first array dimension follows \code{boot$ok}, so callers can select the same
-usable replicates as the hypothesis summaries.
+The \code{population} and \code{subjects} components keep four parameters from every
+attempted replicate, the two criterion intercepts \code{c_D} and \code{c_I} and the
+two sensitivities \code{d_D} and \code{d_I}. A criterion that the model fixed is
+stored as zero, and the values of a subject combine the refitted average
+with that subject's own departure from it. Their first dimension follows
+\code{boot$ok}, so the same usable replicates can be selected again.
 }
 \examples{
 \donttest{
@@ -96,5 +103,5 @@ summary(b)
 
 }
 \seealso{
-\code{\link[=hsdt]{hsdt()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_tests]{usdt_tests()}}
 }

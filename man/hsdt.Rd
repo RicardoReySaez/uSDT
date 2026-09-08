@@ -23,36 +23,58 @@ hsdt(
 \item{data}{A \code{usdt_data} object from \code{\link[=usdt_data_long]{usdt_data_long()}} or
 \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.}
 
-\item{estimation}{Estimation method. Only \code{"frequentist"} is available:
-maximum likelihood through \code{lme4::glmer()}.}
+\item{estimation}{Estimation method. Only \code{"frequentist"} is available, and
+it fits the model by maximum likelihood.}
 
-\item{fix_criteria}{\code{"auto"} fixes to zero every criterion the data show to
-be zero by construction, which a Meyen median split under deviation coding
-guarantees. \code{"none"} estimates them all.}
+\item{fix_criteria}{What to do with the criteria. \code{"auto"} fixes to zero
+every criterion that the data make zero by construction, which happens
+after a median split under deviation coding. \code{"none"} estimates all of
+them.}
 
 \item{level}{Confidence level.}
 
-\item{optimizer}{Optimizer passed to \code{lme4::glmerControl()}. Other optimizers
-are tried when the model does not converge or reaches a singular fit.}
+\item{optimizer}{Optimizer given to \code{lme4::glmerControl()}. The function
+tries other optimizers when this one does not converge or reaches a
+singular fit.}
 
-\item{...}{Named arguments passed unchanged to every \code{lme4::glmer()} call.
-The formula, data, family, optimizer and \code{nAGQ = 1} remain fixed by uSDT.
-Print and summary methods ignore this argument.}
+\item{...}{Named arguments passed on to every \code{lme4::glmer()} call. The
+formula, the data, the family, the optimizer and \code{nAGQ = 1} stay under the
+control of the package. The print and summary methods ignore this
+argument.}
 
-\item{object}{A \code{hsdt} object.}
+\item{object}{An \code{hsdt} object.}
 
-\item{x}{A \code{hsdt} object.}
+\item{x}{An \code{hsdt} object.}
 }
 \value{
-An object of class \code{hsdt}: a list with the fitted model
-(\code{fit}), the hypothesis table (\code{tests}), the extracted parameters
-(\code{pars}), the formula information (\code{design}) and the diagnostics
-(\code{diagnostics}).
+An object of class \code{hsdt}. It holds the fitted model in \code{fit}, the
+three hypothesis tests in \code{tests}, the estimates they are built from in
+\code{pars}, a description of the model formula in \code{design}, and the fitting
+diagnostics in \code{diagnostics}. Use \code{summary()} to read it.
 }
 \description{
-Fits the binomial probit mixed model in which the sensitivities of the
-direct and indirect tasks are correlated random effects, and tests the three
-hypotheses of the unconscious-processing design.
+Fits the model to prepared data and tests the three hypotheses of the
+unconscious processing design. Every subject has one sensitivity in each
+task, and the model allows the two sensitivities to correlate across
+subjects. Estimation uses \code{lme4::glmer()}.
+}
+\details{
+The model works on counts of signal responses. It uses a probit link, so its
+parameters keep the usual signal detection meaning. The fixed effects give
+the average sensitivity of each task, and any criterion that is estimated.
+The random effects give the departure of each subject from those averages,
+and the two sensitivities share one covariance, which is what makes the
+latent correlation available.
+
+The three hypotheses come out of that covariance and the two averages. H1 is
+the difference between the average sensitivities. H2 is their correlation
+across subjects. H3 is the regression of the indirect sensitivity on the
+direct one, and its intercept is the sensitivity expected in the indirect
+task from a subject whose direct sensitivity is zero. See \code{\link[=usdt_tests]{usdt_tests()}}.
+
+Some datasets do not carry enough information for H2 and H3. The function
+still returns the fit and warns, and \code{\link[=usdt_boot]{usdt_boot()}} can then provide
+intervals by simulation.
 }
 \examples{
 \donttest{
@@ -71,5 +93,5 @@ summary(m)
 
 }
 \seealso{
-\code{\link[=usdt_data_long]{usdt_data_long()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
+\code{\link[=usdt_data_long]{usdt_data_long()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
 }

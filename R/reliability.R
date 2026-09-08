@@ -1,70 +1,63 @@
 # reliability.R
 # This script estimates reliability for each task.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 #' Reliability of the direct and indirect measures
 #'
-#' Estimates how much of the spread in `d'` reflects real differences between
-#' subjects rather than trial noise, from a fitted model.
+#' Estimates how much of the spread in `d'` comes from real differences between
+#' subjects, and how much comes from the noise of a limited number of trials. A
+#' value close to one means that the task separates subjects well. A value
+#' close to zero means that most of the observed spread is measurement error.
 #'
-#' @param object A fitted `hsdt` object, optionally returned by
-#'   [usdt_boot()]. The summary method takes the resulting
-#'   `usdt_reliability` object.
+#' @param object An `hsdt` object from [hsdt()], which may also carry the
+#'   results of [usdt_boot()]. The summary method takes the
+#'   `usdt_reliability` object that this function returns.
 #'
-#' @return An object of class `usdt_reliability`. Its `tasks` data frame holds
-#'   the group-level estimate and its components for each task. Its `subjects`
-#'   data frame holds each subject's `d'`, measurement variance and reliability.
-#'   Bootstrap summaries and replicates are added when they are available.
+#' @return An object of class `usdt_reliability`. Its `tasks` data frame gives
+#'   one reliability per task, with the two variances it comes from. Its
+#'   `subjects` data frame gives the `d'`, the measurement variance and the
+#'   reliability of every subject. Bootstrap intervals appear in both when they
+#'   are available.
 #'
 #' @details
-#' For subject `j` and task `t` the reported quantity is
-#' `tau2_t / (tau2_t + v_tj)`, where `tau2_t` is the between-subject variance of
-#' the sensitivity estimated by the model and `v_tj` is the variance of the
-#' sensitivity that subject's own cells could support on their own.
+#' For subject `j` in task `t` the reported value is
+#' `tau2_t / (tau2_t + v_tj)`. The first term, `tau2_t`, is the variance of the
+#' sensitivity between subjects, which the model estimates. The second term,
+#' `v_tj`, is the variance of the sensitivity that the trials of that subject
+#' can support on their own.
 #'
-#' `v_tj` comes from the expected Fisher information of the binomial probit. A
-#' cell contributes `n * dnorm(eta)^2 / (p * (1 - p))`, so precision depends on
-#' where the subject sits on the response curve: two subjects with the same
-#' number of trials need not be equally precise. The criterion is profiled out
-#' rather than held fixed, which discounts the information lost to estimating it
-#' as well. When a criterion is fixed to zero there is nothing to profile, and
-#' the same calculation uses it.
+#' `v_tj` depends on the number of trials and on the position of the subject on
+#' the response curve. A cell contributes `n * dnorm(eta)^2 / (p * (1 - p))`,
+#' so two subjects with the same number of trials can differ in precision. The
+#' calculation also discounts the information spent on estimating the
+#' criterion. When the model has fixed a criterion to zero there is nothing to
+#' discount, and the same formula applies.
 #'
-#' The population covariance never enters `v_tj`, so this reliability does not
-#' borrow strength from the other task. That is what separates it from the
-#' precision of the conditional modes, which is smaller because the model does
-#' borrow. A reliability of 0.83 means the direct information available for that
-#' subject's sensitivity matches a reliability of 0.83 against the estimated
-#' spread across subjects. It is *not* a statement about the precision of the
-#' conditional mode that [plot.hsdt()] draws.
+#' This measure looks at each task alone and never uses the other task, so it
+#' describes the information the data of one subject actually carry. The
+#' estimates drawn by [plot.hsdt()] are more precise than this, because the
+#' model there does borrow information across subjects and tasks.
 #'
-#' The group-level value replaces `v_tj` by its mean. It is a genuine variance
-#' ratio: for a subject drawn at random the variance of one measurement is
-#' `tau2_t + E(v_tj)`, so the ratio answers what share of the spread of a single
-#' measurement is real. It is not the average of the subject reliabilities,
-#' which answers a different question. The mean weights every subject equally,
-#' which is the right target only when the subjects are the population of
-#' interest.
+#' The value reported for a whole task replaces `v_tj` by its average. For a
+#' subject drawn at random, the variance of a single measurement is
+#' `tau2_t + E(v_tj)`, so the ratio says which share of that spread is real.
+#' Averaging the reliabilities of the individual subjects would answer a
+#' different question. The average over subjects treats them all as equally
+#' important, which suits a sample that represents the population of interest.
 #'
-#' The weights are evaluated at each subject's fitted linear predictor, which
-#' includes their conditional modes. The estimand does not involve the
-#' population covariance, but this plug-in does depend on it indirectly, and so
-#' does `tau2_t`.
+#' `v_tj` is the classical sampling variance of `d'` of Gourevitch and Galanter
+#' (1967), which [sdt_moments()] reports as `var_gg`. It also equals the
+#' standard error that a probit regression would give for the sensitivity of
+#' that subject alone. The three are the same formula, evaluated at different
+#' points. `var_gg` uses the observed rates of the subject, while `v_tj` uses
+#' the rates that the hierarchical model predicts.
 #'
-#' `v_tj` is not a new quantity. The profiled information reduces exactly to the
-#' Gourevitch-Galanter variance of `d'`, which [sdt_moments()] reports as
-#' `var_gg`, and which is equally the error variance a probit GLM would give for
-#' the sensitivity if it were fitted to that subject and task alone. The three
-#' are one formula. What separates them is the point of evaluation: `var_gg` and
-#' the separate GLM sit at the subject's own rates, while `v_tj` sits at the
-#' rates the mixed model implies for them.
-#'
-#' When `object` contains a usable bootstrap, the function recalculates the
-#' reliability from every retained refit. Each replicate uses its own
-#' sensitivity variance and its own subject estimates. Percentile intervals
-#' remain available at a boundary. Normal and basic intervals use the logit
-#' scale and are unavailable when reliability reaches zero or one.
+#' When `object` carries a usable bootstrap, the function recomputes the
+#' reliability in every retained replicate, each one with its own variance and
+#' its own subject estimates. Percentile intervals remain available at a
+#' boundary. Normal and basic intervals work on the logit scale, so they are
+#' missing when a reliability reaches zero or one.
 #'
 #' @references
 #' Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter

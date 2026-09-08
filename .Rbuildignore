@@ -2,7 +2,6 @@
 ^basis$
 ^data-raw$
 ^dev$
-^PLAN\.md$
 ^manual-tests$
 ^.*\.Rproj$
 ^\.Rproj\.user$
@@ -11,3 +10,7 @@
 ^Rplots\.pdf$
 ^\.claude$
 ^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.Rprofile$

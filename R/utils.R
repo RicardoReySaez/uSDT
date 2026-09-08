@@ -1,7 +1,7 @@
 # utils.R
 # This script provides shared tools for the package.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-09-2026
+# Last modified: 08-09-2026
 
 # Messages
 

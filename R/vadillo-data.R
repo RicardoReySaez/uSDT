@@ -1,7 +1,7 @@
 #' Awareness data from a probabilistic cuing experiment
 #'
 #' Trial-level direct-awareness data from Experiment 2 of Vadillo et al.
-#' (2024). The object reproduces the source CSV file without filtering or
+#' (2025). The object reproduces the source CSV file without filtering or
 #' recoding and can be used as the `direct` input to [usdt_data_tasks()].
 #'
 #' @format A data frame with 6,656 rows, 104 participants, and 10 variables:
@@ -17,7 +17,7 @@
 #'   \item{`color`}{Colour condition.}
 #'   \item{`set.size`}{Set-size condition.}
 #' }
-#' @source Vadillo, M. A., Malejka, S., & Shanks, D. R. (2024). Mapping the
+#' @source Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the
 #'   reliability multiverse of contextual cuing. *Journal of Experimental
 #'   Psychology: Learning, Memory, and Cognition*. \doi{10.1037/xlm0001410}.
 #'   Data retrieved from \url{https://osf.io/jp3gx/}.
@@ -28,7 +28,7 @@
 
 #' Cuing data from a probabilistic cuing experiment
 #'
-#' Trial-level indirect-task data from Experiment 2 of Vadillo et al. (2024).
+#' Trial-level indirect-task data from Experiment 2 of Vadillo et al. (2025).
 #' The object reproduces the source CSV file without filtering or recoding and
 #' can be used as the `indirect` input to [usdt_data_tasks()].
 #'
@@ -48,7 +48,7 @@
 #'   \item{`color`}{Colour condition.}
 #'   \item{`set.size`}{Set-size condition.}
 #' }
-#' @source Vadillo, M. A., Malejka, S., & Shanks, D. R. (2024). Mapping the
+#' @source Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the
 #'   reliability multiverse of contextual cuing. *Journal of Experimental
 #'   Psychology: Learning, Memory, and Cognition*. \doi{10.1037/xlm0001410}.
 #'   Data retrieved from \url{https://osf.io/jp3gx/}.

@@ -1,44 +1,46 @@
 # dichotomize.R
 # This script turns a continuous measure into a binary response.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
-#' Meyen median-split dichotomization
+#' Turn a continuous measure into a binary response
 #'
-#' Dichotomizes a continuous measure (typically response times) with a median
-#' split computed **within subject, pooling conditions**, following Meyen
-#' et al. (2022). This places a continuous indirect measure on the same
-#' sensitivity scale as a binary direct measure.
+#' Splits a continuous measure, usually response times, at each subject's own
+#' median. The median uses all the trials of that subject, without separating
+#' the conditions. The binary result can then be analysed on the same
+#' sensitivity scale as a direct task that already gives binary responses. The
+#' procedure follows Meyen et al. (2022).
 #'
 #' @param x Numeric vector with the continuous measure, usually response times.
-#' @param by Grouping vector identifying the subject. The median is
-#'   computed within each group across all of that subject's trials.
-#' @param signal Which side of the median counts as a *signal* response.
-#'   `"faster"` (the default) suits priming and cueing tasks, where the signal
-#'   condition speeds responses up. Use `"slower"` for tasks in which the
-#'   signal condition slows responses down, such as interference paradigms.
-#' @param ties How to handle trials falling exactly on the median. `"noise"`
-#'   (the default) assigns them the noise response, reproducing
-#'   `as.integer(median(rt) > rt)`. `"random"` assigns them at random so that
-#'   the split is as close to 50/50 as the number of trials allows.
+#' @param by Vector identifying the subject of each value in `x`. Every subject
+#'   receives their own median.
+#' @param signal Which side of the median counts as a signal response. Use
+#'   `"faster"` when the signal condition speeds responses up, as in priming
+#'   and cueing tasks. Use `"slower"` when the signal condition slows responses
+#'   down, as in interference tasks.
+#' @param ties What to do with trials that fall exactly on the median.
+#'   `"noise"` gives them the noise response. `"random"` assigns them at
+#'   random, which keeps the split as close to even as the data allow.
 #'
-#' @return An integer vector of the same length as `x`, with `1` for signal
-#'   responses and `0` for noise responses. `NA` in `x` propagates.
+#' @return An integer vector as long as `x`, with `1` for signal responses and
+#'   `0` for noise responses. Missing values in `x` stay missing.
 #'
 #' @details
-#' With an odd number of trials an exact 50/50 split is impossible: the median
-#' is itself an observed value. `ties = "noise"` then yields a proportion of
-#' `(n - 1) / (2n)` rather than `0.5`, and the criterion is no longer exactly
-#' zero. The deviation is negligible in practice (it is `1 / (2n)`), but
-#' `ties = "random"` removes it by rounding up or down at random, which is
-#' unbiased across subjects.
+#' A subject with an odd number of trials cannot be split into two equal
+#' halves, because the median is one of the observed values. With
+#' `ties = "noise"` that subject gets a proportion of `(n - 1) / (2n)` signal
+#' responses instead of 0.5, so the criterion moves slightly away from zero.
+#' The difference is `1 / (2n)` and rarely matters. Setting `ties = "random"`
+#' removes it, because rounding up or down at random is unbiased across
+#' subjects.
 #'
 #' @references
 #' Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 #' (2022). Advancing research on unconscious priming: When can scientists claim
-#' an indirect task advantage? *Journal of Experimental Psychology: General*.
+#' an indirect task advantage? *Journal of Experimental Psychology: General*,
+#' 151(1), 65-81. \doi{10.1037/xge0001065}
 #'
 #' @examples
 #' rt   <- c(320, 410, 295, 500, 380, 450)

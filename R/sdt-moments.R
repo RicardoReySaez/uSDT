@@ -1,53 +1,61 @@
 # sdt-moments.R
 # This script calculates signal detection measures for each subject.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 08-09-2026
 
 # Public functions
 
-#' Signal detection parameters by the method of moments
+#' Signal detection measures for each subject
 #'
-#' Computes hit and false-alarm rates, d' and the criterion for each
-#' subject, optionally with the sampling variance of d'.
+#' Computes the hit rate, the false-alarm rate, d' and the criterion of every
+#' subject, without fitting a model. It can also add the sampling variance of
+#' d'. These descriptive values are useful to inspect the data before fitting,
+#' and to compare with the model estimates afterwards.
 #'
-#' @param data Either a `usdt_data` object, in which case both tasks are
-#'   processed and a `task` column is returned, or a plain data frame with one
-#'   row per trial.
-#' @param subject_col,condition_col,response_col Column names, for a plain data
-#'   frame. Ignored when `data` is a `usdt_data` object.
-#' @param condition_levels,response_levels Role mappings, as
-#'   `c(signal = ..., noise = ...)`. Guessed with a message when omitted.
-#' @param coding `"deviation"` returns the classical criterion
-#'   `c = -(z(HR) + z(FAR)) / 2`, measured from the midpoint of the two
-#'   distributions. `"treatment"` returns `lambda = -z(FAR)`, measured from the
-#'   noise distribution. These are the same two parameterisations the model
-#'   uses, and they are related by `lambda = c + d'/2`. Taken from the object
-#'   when `data` is a `usdt_data`.
-#' @param correction How to handle rates of exactly 0 or 1, which send `d'` to
-#'   infinity. `"hautus"` adds 0.5 to all four cells **of the affected
-#'   subject only**; `"none"` leaves the infinities in place.
+#' @param data A `usdt_data` object, or a plain data frame with one row per
+#'   trial. With a `usdt_data` object the function processes both tasks and
+#'   adds a `task` column.
+#' @param subject_col,condition_col,response_col Names of the columns that hold
+#'   the subject, the condition and the response. They are needed only for a
+#'   plain data frame.
+#' @param condition_levels,response_levels Which value plays each role, as
+#'   `c(signal = ..., noise = ...)`. The function guesses them and reports its
+#'   choice when they are missing.
+#' @param coding Which criterion to report. `"deviation"` gives the classical
+#'   criterion `c = -(z(HR) + z(FAR)) / 2`, measured from the midpoint between
+#'   the two distributions. `"treatment"` gives `lambda = -z(FAR)`, measured
+#'   from the noise distribution. The two are related by `lambda = c + d'/2`.
+#'   A `usdt_data` object supplies its own coding.
+#' @param correction What to do with rates of exactly 0 or 1, which make `d'`
+#'   infinite. `"hautus"` adds 0.5 to the four counts of the affected subject.
+#'   `"none"` leaves the infinite values in place.
 #' @param variances If `TRUE`, adds the sampling variance of `d'` from
-#'   Gourevitch & Galanter (1967) and from Miller (1996), plus the implied
-#'   standard error.
+#'   Gourevitch and Galanter (1967) and from Miller (1996), together with the
+#'   standard error that follows from the second one.
 #'
-#' @return A data frame with one row per subject (per task, when given a
-#'   `usdt_data` object).
+#' @return A data frame with one row per subject, or one row per subject and
+#'   task when `data` is a `usdt_data` object. It holds the four response
+#'   counts (`hit`, `miss`, `fa`, `cr`), the two rates (`hr`, `far`) and their
+#'   probit values (`zhr`, `zfar`), then `dprime`, `criterion`, and `corrected`
+#'   to mark the subjects that received the edge correction. With
+#'   `variances = TRUE` it also holds `var_gg`, `var_miller`, `e_miller` and
+#'   `se_dprime`.
 #'
 #' @details
-#' The edge correction is applied per subject rather than to the whole
-#' sample. Correcting everybody because one person hit the ceiling would shift
-#' every other estimate for no reason.
+#' The edge correction applies only to the subjects that need it. Applying it
+#' to the whole sample would change the estimates of every other subject as
+#' well, and those estimates are already usable.
 #'
-#' The Miller calculation uses the observed hit and false-alarm rates as its
-#' binomial probabilities. It assigns the rates `0.5 / n` and
-#' `(n - 0.5) / n` to hypothetical samples at a boundary. The calculation
-#' always uses the original number of trials.
+#' The Miller variance treats the observed hit and false-alarm rates as
+#' binomial probabilities. Samples that reach a rate of 0 or 1 receive the
+#' values `0.5 / n` and `(n - 0.5) / n`. The number of trials stays the
+#' original one throughout.
 #'
-#' `var_gg` is the expected Fisher information of the two probit cells with the
-#' criterion profiled out, so it is also the error variance a probit GLM would
-#' report for `d'` on those cells alone. [usdt_reliability()] uses that same
-#' formula, evaluated at the rates the hierarchical model implies rather than at
-#' the observed ones.
+#' `var_gg` comes from the expected information of the two probit cells, with
+#' the criterion treated as a nuisance parameter. It equals the standard error
+#' that a probit regression would give for `d'` if it were fitted to that
+#' subject alone. [usdt_reliability()] uses the same formula, but evaluates it
+#' at the rates the hierarchical model predicts instead of the observed ones.
 #'
 #' @references
 #' Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter

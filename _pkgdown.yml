@@ -1,0 +1,110 @@
+# _pkgdown.yml
+# This file configures the uSDT website built by pkgdown.
+# Author: Ricardo Rey-Sáez
+# Last modified: 05-09-2026
+
+url: https://ricardoreysaez.github.io/uSDT/
+
+template:
+  bootstrap: 5
+
+  # The light switch adds a light / dark / auto selector to the navbar. It uses
+  # the Bootstrap 5.3 colour modes, so the palette below sets the light values
+  # and the `-dark` variables set the ones that replace them in dark mode.
+  light-switch: true
+
+  # Syntax highlighting needs one theme per colour mode.
+  theme: atom-one-light
+  theme-dark: atom-one-dark
+
+  bslib:
+    # A pine green taken from the signal curve of the logo. It carries the
+    # links, the active navbar item, and the tint pkgdown mixes into the navbar.
+    primary: "#0F7250"
+
+    # Serif headings over a neutral sans keep long methodological prose
+    # readable while still marking the structure of a page.
+    base_font:    { google: "Inter" }
+    heading_font: { google: "Source Serif 4" }
+    code_font:    { google: "JetBrains Mono" }
+
+    # Light mode. The background is a warm off-white rather than pure white:
+    # it lowers the contrast of large text blocks without dulling the code.
+    body-bg: "#FCFCFB"
+    body-color: "#23272B"
+    border-color: "#E4E5E1"
+
+    # Dark mode. A slightly blue charcoal, close to the hexagon of the logo,
+    # with a lighter green so links keep their contrast against it. Bootstrap
+    # has no dark counterpart for `primary` itself, so pkgdown/extra.scss
+    # redefines that custom property for the other accents.
+    body-bg-dark: "#14171A"
+    body-color-dark: "#C8CFD3"
+    border-color-dark: "#2B3035"
+    link-color-dark: "#57C68F"
+
+    # Restrained corners and a comfortable measure for body text.
+    border-radius: "0.25rem"
+    line-height-base: 1.65
+
+navbar:
+  structure:
+    left:  [reference, articles, news]
+    right: [search, github, lightswitch]
+
+home:
+  title: uSDT • Hierarchical SDT models for unconscious processing
+  description: >
+    Fit hierarchical signal detection theory models to paired direct and
+    indirect measures, and test whether the indirect measure retains
+    sensitivity where the direct one has none.
+
+articles:
+- title: Tutorials
+  navbar: ~
+  contents:
+  - uSDT-tutorial
+
+reference:
+- title: Prepare the data
+  desc: Build paired task data and dichotomize continuous responses.
+  contents:
+  - usdt_data
+  - meyen_split
+
+- title: Estimate descriptive SDT measures
+  desc: Calculate subject-level SDT quantities without fitting a model.
+  contents:
+  - sdt_moments
+
+- title: Fit the hierarchical model
+  desc: Estimate the paired sensitivities with a binomial probit mixed model.
+  contents:
+  - hsdt
+
+- title: Test hypotheses and bootstrap uncertainty
+  desc: >
+    sensitivity_diff() compares mean sensitivities; latent_cor() estimates
+    their latent correlation; latent_regression() estimates the intercept
+    and slope. usdt_tests() collects all three hypotheses. usdt_boot()
+    adds parametric bootstrap inference to a fitted uSDT model.
+  contents:
+  - usdt_hypotheses
+  - usdt_boot
+
+- title: Visualize the fit and estimate reliability
+  desc: Compare observed and fitted estimates and quantify measurement reliability.
+  contents:
+  - plot.hsdt
+  - usdt_reliability
+
+- title: Simulate data
+  desc: Generate model-based data for simulation studies and power assessment.
+  contents:
+  - usdt_simulate
+
+- title: Example datasets
+  desc: Trial-level data from Experiment 2 of Vadillo, Malejka and Shanks (2025).
+  contents:
+  - vadillo_awareness
+  - vadillo_cuing

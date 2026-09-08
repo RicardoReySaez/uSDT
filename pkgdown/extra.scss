@@ -1,0 +1,256 @@
+// extra.scss
+// This file refines the pkgdown defaults for the uSDT website.
+// Author: Ricardo Rey-Sáez
+// Last modified: 05-09-2026
+//
+// pkgdown appends this file after Bootstrap has been compiled, so it can only
+// hold rules, not variable defaults. Everything below is therefore written
+// against the Bootstrap CSS custom properties (`--bs-*`), which is also what
+// makes it follow the light switch: the browser resolves them again whenever
+// the colour mode changes, so a single rule serves both modes.
+
+/* Accent colour in dark mode =============================================== */
+
+// Bootstrap has no Sass variable that gives `$primary` a second value for dark
+// mode, so the pine green of the light palette would otherwise carry every
+// accent onto a near-black page, where it sits at about 3:1 against the
+// background. Redefining the custom property is what the colour modes are for:
+// each accent below, and the navbar tint pkgdown mixes from `--bs-primary`,
+// picks up the lighter green without a second rule.
+[data-bs-theme="dark"] {
+  --bs-primary: #57C68F;
+  --bs-primary-rgb: 87, 198, 143;
+}
+
+/* Typography =============================================================== */
+
+// Serif headings against a sans body. The negative tracking keeps the serif
+// from looking loose at the sizes pkgdown uses for h1 and h2.
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6 {
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+
+h1, .h1 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+// pkgdown makes h3 and below bold to separate them from the body. A serif at
+// full bold is heavy, so semibold does the same work more quietly.
+h3, .h3,
+h4, .h4,
+h5, .h5 {
+  font-weight: 600;
+}
+
+// The page title carries the rule on its own; the extra space below it stops
+// the first paragraph from crowding the line.
+.page-header {
+  margin-top: 2rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.page-header h1 {
+  font-size: 2.25rem;
+}
+
+// Long methodological prose reads better slightly narrower than the column.
+main p,
+main li {
+  text-wrap: pretty;
+}
+
+// Links stay quiet in running text and only commit to an underline on hover,
+// which keeps paragraphs full of function names from turning into stripes.
+main a:not(.btn):not(.anchor) {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+  text-decoration-color: RGBA(var(--bs-primary-rgb), 0.35);
+  transition: text-decoration-color 150ms ease-in-out;
+}
+
+main a:not(.btn):not(.anchor):hover {
+  text-decoration-color: RGBA(var(--bs-primary-rgb), 0.9);
+}
+
+/* Code ===================================================================== */
+
+// The print methods of uSDT draw box-drawing rules and align their tables with
+// spaces, so the monospace stack needs fonts that actually carry those glyphs.
+// The fallbacks are the ones present by default on Windows, macOS and Linux.
+code, kbd, pre, samp,
+pre code {
+  font-family: "JetBrains Mono", "Cascadia Mono", "SFMono-Regular", "Menlo",
+               "DejaVu Sans Mono", "Consolas", "Liberation Mono", monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
+}
+
+// A slightly smaller code size keeps an 80-column console block inside the
+// content column instead of pushing it into a horizontal scrollbar.
+pre {
+  font-size: 0.825rem;
+  line-height: 1.5;
+  border: 1px solid var(--bs-border-color);
+  background-color: color-mix(in oklab, var(--bs-body-bg) 96%, var(--bs-body-color));
+}
+
+// Inline code is a name, not a block: no border, just enough tint to separate
+// it from the prose around it.
+:not(pre) > code {
+  font-size: 0.875em;
+  padding: 0.1em 0.32em;
+  border-radius: 0.2rem;
+  background-color: RGBA(var(--bs-body-color-rgb), 0.055);
+}
+
+// Output blocks are the model summaries. They keep the same frame as the
+// source blocks but a flatter background, so a page alternates input and
+// output without either dominating.
+pre:not(.sourceCode):not([class*="language-"]) {
+  background-color: transparent;
+  color: RGBA(var(--bs-body-color-rgb), 0.82);
+}
+
+/* Figures ================================================================== */
+
+// pkgdown already inverts rendered plots in dark mode, which is what lets the
+// white panel of a ggplot sit on a dark page without glaring. It then also
+// dims the ones inside a reference example to two thirds opacity and restores
+// them on hover. That softening was meant for images that are not inverted;
+// applied on top of the inversion it only makes the statistics harder to read,
+// so example plots stay at full strength here.
+[data-bs-theme="dark"] pre .r-plt.img img {
+  opacity: 1;
+}
+
+// Rounded corners, so a figure matches the code blocks it sits between.
+main img.r-plt,
+main .figure img,
+pre .r-plt.img img {
+  border-radius: var(--bs-border-radius);
+}
+
+/* Tables =================================================================== */
+
+// Horizontal rules only. Vertical borders add lines without adding structure.
+main table {
+  font-size: 0.925rem;
+  border-collapse: collapse;
+}
+
+main table > thead {
+  border-bottom: 2px solid var(--bs-border-color);
+}
+
+main table > thead th {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+main table > tbody > tr {
+  border-bottom: 1px solid RGBA(var(--bs-body-color-rgb), 0.08);
+}
+
+main table > tbody > tr:last-child {
+  border-bottom: none;
+}
+
+main table th,
+main table td {
+  padding: 0.4rem 0.75rem 0.4rem 0;
+}
+
+/* Sidebar and table of contents ============================================ */
+
+// The table of contents is a map, not a second navigation bar, so it sits a
+// step back from the body text and marks only the section being read.
+#toc .nav a {
+  color: RGBA(var(--bs-body-color-rgb), 0.68);
+  padding: 0.18rem 0 0.18rem 0.75rem;
+  border-left: 2px solid transparent;
+  transition: color 150ms ease-in-out, border-color 150ms ease-in-out;
+}
+
+#toc .nav a:hover {
+  color: var(--bs-body-color);
+  border-left-color: RGBA(var(--bs-primary-rgb), 0.4);
+}
+
+#toc .nav a.active {
+  color: var(--bs-primary);
+  border-left-color: var(--bs-primary);
+  font-weight: 500;
+}
+
+// Home page sidebar headings, which name the blocks of links and authors.
+aside h2 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: RGBA(var(--bs-body-color-rgb), 0.55);
+  margin-top: 1.75rem;
+}
+
+aside {
+  font-size: 0.925rem;
+}
+
+/* Home page ================================================================ */
+
+// The logo is the strongest object on the page; a little air around it stops
+// the first paragraph from wrapping tight against the hexagon.
+.template-home img.logo {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Reference index ========================================================== */
+
+// Each section of the reference index gets a rule and a quiet description, so
+// the page reads as a grouped list rather than one long table. Both rules stay
+// inside `main`: the sidebar heading is an h2 too, and it belongs to the
+// sidebar block above.
+.template-reference-index main h2 {
+  border-bottom: 1px solid var(--bs-border-color);
+  padding-bottom: 0.4rem;
+  margin-top: 2.5rem;
+  font-size: 1.4rem;
+}
+
+.template-reference-index main .section > p {
+  color: RGBA(var(--bs-body-color-rgb), 0.7);
+  max-width: 42rem;
+}
+
+.ref-index tbody > tr > td.ref-desc {
+  color: RGBA(var(--bs-body-color-rgb), 0.75);
+}
+
+/* Blockquotes ============================================================== */
+
+// Used in the articles for asides about what a result does and does not mean.
+main blockquote {
+  border-left: 3px solid RGBA(var(--bs-primary-rgb), 0.5);
+  padding: 0.25rem 0 0.25rem 1rem;
+  margin: 1.5rem 0;
+  color: RGBA(var(--bs-body-color-rgb), 0.8);
+}
+
+main blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Footer =================================================================== */
+
+footer {
+  border-top: 1px solid var(--bs-border-color);
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  font-size: 0.875rem;
+  color: RGBA(var(--bs-body-color-rgb), 0.6);
+}

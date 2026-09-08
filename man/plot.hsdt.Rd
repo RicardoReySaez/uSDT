@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{plot.hsdt}
 \alias{plot.hsdt}
-\title{Plot a fitted uSDT model}
+\title{Plot a fitted hierarchical SDT model}
 \usage{
 \method{plot}{hsdt}(
   x,
@@ -16,85 +16,87 @@
 \arguments{
 \item{x}{A fitted \code{hsdt} object.}
 
-\item{type}{Plot to create. \code{"regression"} separates the naive regression of
-the observed sensitivities from the model-implied latent regression and
-shows the shrinkage between them. \code{"shrinkage"} compares observed d' values
-with the conditional d' estimates from the model. \code{"caterpillar"} compares
-their intervals against zero for both tasks. \code{"roc"} draws the
-equal-variance ROC curves implied by both task sensitivities.}
+\item{type}{Which plot to draw. \code{"regression"} compares the regression of
+the observed sensitivities with the one the model implies. \code{"shrinkage"}
+joins the observed \verb{d'} of each subject to the estimate the model gives
+them. \code{"caterpillar"} shows the sensitivity of every subject with its
+interval, next to zero. \code{"roc"} draws the ROC curves that follow from the
+two sensitivities.}
 
-\item{subject_id}{Optional subject identifier for \code{type = "roc"}. The
-default draws the population curves with random effects set to zero.}
+\item{subject_id}{Subject to draw in an ROC plot. Without it the plot shows
+the curves of an average subject.}
 
-\item{band}{Show the uncertainty band in a regression or ROC plot. A
-regression plot bands the latent line, and a population ROC plot bands both
-curves, with a delta-method interval or with the bootstrap interval when
-\code{x} comes from \code{\link[=usdt_boot]{usdt_boot()}}. A subject ROC plot uses the conditional
-uncertainty from \code{lme4::ranef()}.}
+\item{band}{Show the uncertainty band in a regression or ROC plot.}
 
-\item{population_reference}{Show the population curves as thin dashed lines
-behind a subject ROC plot.}
+\item{population_reference}{Add the average curves as thin dashed lines
+behind the curves of one subject in an ROC plot.}
 
-\item{...}{Reserved for options used by future plot types.}
+\item{...}{Reserved for future plot types.}
 }
 \value{
-A \code{ggplot} object. Its \code{data} component contains the values shown by
-the selected plot.
+A \code{ggplot} object. Its \code{data} component holds the values that the
+selected plot shows.
 }
 \description{
-Creates a plot from a fitted \code{hsdt} object.
+Draws one of four plots from a fitted model. They show the relation between
+the two tasks, how much the model corrects the observed values, the
+sensitivity of each subject, and the implied ROC curves.
 }
-\details{
-The regression plot uses two panels with common axes. The first contains the
-observed sensitivities and their naive least-squares regression, which trial
-noise in the direct measure attenuates towards zero. The second connects
-those observed values to their conditional model estimates and draws the
-latent line implied by the fitted random-effects distribution. The latent
-line is not a regression fitted to the conditional estimates. It is
-\code{gamma_I + beta1 * (x - gamma_D)}, whose slope divides the latent covariance
-by the latent variance and so removes that attenuation. Its value at
-\code{x = 0} is the intercept H3 reports: the indirect sensitivity expected of a
-subject with no direct sensitivity. Each panel gives the fitted intercept and
-slope with their p-values. The observed band is the usual confidence interval
-for the least-squares mean. The latent band is the pointwise delta-method
-interval, or the pointwise bootstrap interval once \code{\link[=usdt_boot]{usdt_boot()}} has run.
-The marker at \code{x = 0} reads that same latent band, so it always agrees with
-the \code{"intercept"} row of the hypothesis table.
+\section{The regression plot}{
+The plot has two panels that share their axes. The left panel shows the
+observed sensitivities and the ordinary regression line through them. Trial
+noise in the direct task pulls the slope of that line towards zero, so it
+understates the relation between the tasks.
 
-The observed values come from \code{\link[=sdt_moments]{sdt_moments()}} with the Hautus correction.
-The model values add each subject's conditional random slope to its task
-fixed effect. A line joins both pairs of values for each subject.
+The right panel joins each observed value to the estimate the model gives
+that subject, and draws the line \code{gamma_I + beta1 * (x - gamma_D)}. Its
+slope divides the covariance of the two sensitivities by the variance of the
+direct one, which removes the effect of trial noise. The value of this line
+at \code{x = 0} is the intercept that H3 reports, the sensitivity expected in the
+indirect task from a subject with no direct sensitivity. The marker at
+\code{x = 0} reads the same band, so it always agrees with the hypothesis table.
 
-The grey contours describe the observed values. The coloured contour
-describes the conditional model values. These contours help show the
-bivariate shrinkage produced by the correlated sensitivity effects.
-
-The caterpillar plot uses Miller standard errors for the observed d' values.
-Their intervals use the normal approximation. The model intervals cover the
-subject's whole sensitivity, so they carry the uncertainty of every fitted
-parameter: the task average, the variance components, and that subject's
-departure from the average, together with the covariances among them. The
-covariance with the task average is negative, which keeps the result below
-the sum in quadrature of the separate standard errors, so these intervals
-end up only slightly wider than the conditional deviations \code{lme4::ranef()}
-returns on their own. These intervals are unavailable when the joint
-covariance cannot be estimated safely. The percentage in the lower-right
-corner of each panel is the descriptive proportion of the displayed
-intervals that include zero at the selected confidence level.
-
-The ROC plot uses the equal-variance SDT identity
-\code{HR = pnorm(qnorm(FAR) + dprime)}. Its point marks the fitted criterion for
-each task. The population curve describes a typical subject whose random
-effects are zero, rather than a curve marginalised over the random-effects
-distribution. Subject curves use partially pooled conditional modes.
-
-The population Wald band transforms the fixed-effect interval for d'. When
-bootstrap results are available, the band instead transforms every usable
-fixed-effect replicate and applies the interval type selected in
-\code{\link[=usdt_boot]{usdt_boot()}}. Subject bands condition on the fitted fixed effects and
-variance parameters. All curves are model-implied; binary responses identify
-one operating point per task rather than an empirical multicriterion ROC.
+Each panel gives its intercept and slope with the corresponding p-values.
+The band of the observed line is the usual confidence interval of a
+least-squares fit. The band of the model line comes from the delta method,
+or from the replicates once \code{\link[=usdt_boot]{usdt_boot()}} has run.
 }
+
+\section{The shrinkage plot}{
+The observed values come from \code{\link[=sdt_moments]{sdt_moments()}} with the Hautus correction,
+and the model values add the departure of each subject to the average of
+their task. A line joins the two values of every subject. The grey contours
+describe the observed values and the coloured contour describes the model
+values, which makes visible how much the model pulls the extreme subjects
+towards the centre.
+}
+
+\section{The caterpillar plot}{
+The intervals of the observed values use Miller standard errors and a normal
+approximation. The model intervals cover the whole sensitivity of the
+subject, so they carry the uncertainty of the task average, of the variance
+components, and of the departure of that subject, along with the relations
+among them. They are therefore only slightly wider than the departures that
+\code{lme4::ranef()} returns alone. They become unavailable when the model cannot
+estimate its full covariance safely. The percentage in the lower right
+corner of each panel describes how many of the intervals shown include zero.
+}
+
+\section{The ROC plot}{
+The curves follow the equal-variance identity
+\code{HR = pnorm(qnorm(FAR) + dprime)}, and the point on each curve marks the
+fitted criterion of that task. The average curves describe a subject whose
+departures are zero. The curves of one subject use the estimates the model
+gives that subject.
+
+The band of an average curve transforms the interval of the sensitivity, or
+the bootstrap replicates when they exist, using the interval type chosen in
+\code{\link[=usdt_boot]{usdt_boot()}}. The band of a subject holds the average and the variance
+components fixed. Every curve comes from the model. A binary response gives
+one point per task, so these plots do not show an ROC curve measured across
+several criteria.
+}
+
 \examples{
 \donttest{
 set.seed(1)

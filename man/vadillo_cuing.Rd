@@ -23,7 +23,7 @@ A data frame with 39,936 rows, 104 participants, and 13 variables:
 }
 }
 \source{
-Vadillo, M. A., Malejka, S., & Shanks, D. R. (2024). Mapping the
+Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the
 reliability multiverse of contextual cuing. \emph{Journal of Experimental
 Psychology: Learning, Memory, and Cognition}. \doi{10.1037/xlm0001410}.
 Data retrieved from \url{https://osf.io/jp3gx/}.
@@ -32,7 +32,7 @@ Data retrieved from \url{https://osf.io/jp3gx/}.
 vadillo_cuing
 }
 \description{
-Trial-level indirect-task data from Experiment 2 of Vadillo et al. (2024).
+Trial-level indirect-task data from Experiment 2 of Vadillo et al. (2025).
 The object reproduces the source CSV file without filtering or recoding and
 can be used as the \code{indirect} input to \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.
 }

@@ -1,144 +1,126 @@
 # data.R
-# This script prepares direct and indirect task data for uSDT models.
+# Prepare direct and indirect task data for uSDT models
 # Author: Ricardo Rey-Sáez
 # Last modified: 08-09-2026
 
 # Public functions
 
-#' Prepare the data of a direct and an indirect task
+#' Prepare data for hierarchical SDT models
 #'
-#' Both functions build the same object. Use `usdt_data_tasks()` when each task
-#' has its own data frame, and `usdt_data_long()` when a single data frame
-#' holds both tasks together with a column that identifies them.
+#' Formats direct and indirect task data into a standardized structure for
+#' [hsdt()]. Use `usdt_data_tasks()` when tasks are stored in separate data
+#' frames, or `usdt_data_long()` when both tasks are kept in a single data frame
+#' with a column that identifies each task.
 #'
-#' The functions count the responses of every subject in each condition, check
-#' that the two tasks describe the same subjects, and record how each column
-#' was read. Printing the result shows all of that, so the coding can be
-#' checked before the model runs.
+#' The functions count responses for each subject and condition, check that the
+#' same subjects appear in both tasks, and print a summary table so you can
+#' verify the column settings before fitting the model.
 #'
-#' @param direct,indirect The data frame of each task, for `usdt_data_tasks()`.
-#'   `usdt_data_long()` ignores them and uses `task_levels` instead.
-#' @param data A single data frame holding both tasks, for `usdt_data_long()`.
-#' @param task_col Name of the column that identifies the task, for
-#'   `usdt_data_long()`.
-#' @param task_levels Which value of `task_col` belongs to each task, as
+#' @param direct,indirect Data frames for each task (used in `usdt_data_tasks()`).
+#' @param data A single data frame with both tasks (used in `usdt_data_long()`).
+#' @param task_col Name of the column that identifies the task in `data`.
+#' @param task_levels Named vector mapping task labels, like
 #'   `c(direct = "D", indirect = "I")`.
-#' @param subject_col Name of the column that identifies the subject.
-#' @param condition_col Name of the column that holds the signal and noise
-#'   condition. It is not needed when the data arrive as an SDT table through
-#'   `sdt_cols`.
-#' @param condition_levels Which value of `condition_col` plays each role, as
-#'   `c(signal = "old", noise = "new")`. The function guesses them and reports
-#'   its choice when they are missing.
-#' @param response_col Name of the column that holds the response. It can be a
-#'   binary response, or a continuous measure such as response times when the
-#'   task is dichotomized.
-#' @param response_levels Which value of `response_col` counts as a signal
-#'   response, as `c(signal = 1, noise = 0)`. A task that is dichotomized takes
-#'   the side of the median instead, as
-#'   `c(signal = "faster", noise = "slower")`. The function guesses them and
-#'   reports its choice when they are missing.
-#' @param successes_col,trials_col Names of the columns that hold data already
-#'   summed up, the number or proportion of signal responses and the number of
-#'   trials. Give these instead of `response_col`.
-#' @param successes_type Format of `successes_col`. Use `"counts"` for counts
-#'   and `"proportions"` for proportions. `"auto"` recognises clear cases and
-#'   asks for an explicit choice when every value is zero or one.
-#' @param sdt_cols Names of the columns of an SDT table, as
-#'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`. Give these instead of
-#'   `condition_col` and `response_col`.
-#' @param dichotomize Which tasks need the median split of [meyen_split()].
-#'   Name them with `"none"`, `"direct"`, `"indirect"` or `"both"`, or give one
-#'   logical value per task, as `list(direct = FALSE, indirect = TRUE)`.
-#' @param ties What to do with trials that fall exactly on the median. See
-#'   [meyen_split()].
-#' @param coding How the condition enters the model. See Details.
-#' @param labels Display names for the two tasks. They only affect printed
-#'   output.
+#' @param subject_col Name of the column that identifies participants.
+#' @param condition_col Name of the column for signal and noise conditions.
+#'   Not needed when using `sdt_cols`.
+#' @param condition_levels Named vector mapping condition labels, like
+#'   `c(signal = "old", noise = "new")`. Guessed automatically if left empty.
+#' @param response_col Name of the column with responses. Can be binary choices
+#'   or continuous values (like response times) to split at the median.
+#' @param response_levels Named vector mapping responses, like
+#'   `c(signal = 1, noise = 0)` or `c(signal = "faster", noise = "slower")`.
+#'   Guessed automatically if left empty.
+#' @param successes_col,trials_col Names of columns with pre-calculated counts
+#'   or proportions of signal responses and total trials. Use these instead of
+#'   `response_col`.
+#' @param successes_type Format of `successes_col`: `"counts"`, `"proportions"`,
+#'   or `"auto"`.
+#' @param sdt_cols Named vector for SDT table columns, like
+#'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`.
+#' @param dichotomize Which tasks to split at the median using [meyen_split()].
+#'   Use `"none"`, `"direct"`, `"indirect"`, `"both"`, or a list like
+#'   `list(direct = FALSE, indirect = TRUE)`.
+#' @param ties How to handle trials that fall exactly on the median.
+#'   See [meyen_split()].
+#' @param coding How condition is coded in the model: `"deviation"`
+#'   (-0.5, 0.5) or `"treatment"` (0, 1). See Details.
+#' @param labels Optional names for the tasks in printed output.
 #'
-#' @return An object of class `usdt_data`. Its `agg` element is the data frame
-#'   of counts that the model uses, with one row per subject, task and
-#'   condition. Its `meta` element records how every column was read, which
-#'   tasks were split at the median, and the descriptive summaries shown when
-#'   the object is printed. Pass the object to [hsdt()].
+#' @return An object of class `usdt_data`. The `$agg` table contains the counts
+#'   used by [hsdt()], and `$meta` contains setup details and summaries.
 #'
 #' @details
-#' # One value or one per task
+#' # Settings per task
 #'
-#' The two tasks rarely come from the same experimental design, so every
-#' argument that names a column, a level or a format accepts two forms. Give
-#' one value and both tasks use it. Give one value per task and each task is
-#' read on its own.
+#' Arguments for columns and levels take either a single value (used for both
+#' tasks) or a list with separate settings for each task:
 #'
-#' ```
-#' subject_col      = "subj"                       # both tasks
-#' condition_col    = list(direct   = "condition",
-#'                         indirect = "cue")       # one per task
-#' condition_levels = list(
-#'   direct   = c(signal = "old",  noise = "new"),
-#'   indirect = c(signal = "cued", noise = "uncued"))
+#' ```r
+#' condition_col    = list(direct = "cond", indirect = "cue")
+#' condition_levels = list(direct   = c(signal = "old", noise = "new"),
+#'                         indirect = c(signal = "congruent", noise = "incongruent"))
 #' dichotomize      = list(direct = FALSE, indirect = TRUE)
 #' ```
 #'
-#' This applies to `subject_col`, `condition_col`, `condition_levels`,
-#' `response_col`, `response_levels`, `successes_col`, `trials_col`,
-#' `successes_type`, `sdt_cols`, `dichotomize` and `ties`. The two tasks may
-#' therefore use different columns, different values inside those columns, and
-#' even different formats, with one task given trial by trial and the other as
-#' an SDT table. Use `list()` rather than `c()` when the value of a task is
-#' itself a vector, as happens with the `*_levels` and `sdt_cols` arguments.
-#'
-#' Only `coding` works differently. It describes the model itself, so it always
-#' applies to both tasks at once.
+#' This works for all column and level arguments, so you can combine trial-level
+#' data in one task with summary tables in the other.
 #'
 #' # Condition coding
 #'
-#' The two codings answer different questions and give different intercepts.
-#' Under `"deviation"` the condition takes the values -0.5 and +0.5, and the
-#' intercept is `-c`, the criterion measured from the midpoint between the
-#' signal and noise distributions. Under `"treatment"` the condition takes the
-#' values 0 and 1, and the intercept is `z(FAR)`, the criterion measured from
-#' the noise distribution. The two intercepts are related by
-#' `intercept_treatment = intercept_deviation - d'/2`.
+#' Under `"deviation"` coding (-0.5 vs. +0.5), the intercept is \eqn{-c}, the
+#' criterion measured from the point between the two distributions. Under
+#' `"treatment"` coding (0 vs. 1), the intercept is \eqn{z(\mathrm{FAR})}, the
+#' criterion measured from the noise distribution.
 #'
-#' The choice matters for a task that was split at the median. The split leaves
-#' each subject with half signal responses, so with balanced conditions the
-#' deviation intercept is exactly zero and needs no estimation. The treatment
-#' intercept equals `-d'/2` instead, which is not zero and has to be estimated.
-#' The object records this in `criterion_zero`, and [hsdt()] uses it to decide.
+#' When a task is split at the median, deviation coding sets the group
+#' criterion to zero in balanced designs, so the model does not need to
+#' estimate it.
 #'
-#' @seealso [meyen_split()], [hsdt()], [sdt_moments()]
+#' @seealso [hsdt()], [meyen_split()], [sdt_moments()]
 #'
 #' @examples
-#' set.seed(1)
-#' df <- usdt_simulate(n_subj = 30, n_trials = 80)
-#'
-#' # Both tasks share every column name and every level here.
-#' d  <- usdt_data_long(df, task_col = "task",
-#'                      task_levels   = c(direct = "D", indirect = "I"),
-#'                      subject_col   = "subj",
-#'                      condition_col = "cond",
-#'                      condition_levels = c(signal = 1, noise = 0),
-#'                      response_col  = "response",
-#'                      response_levels  = c(signal = 1, noise = 0))
-#' d
-#'
-#' # When they do not, each task gets its own column and its own levels.
-#' aware <- df[df$task == "D", ]
-#' cuing <- df[df$task == "I", ]
-#' names(aware)[names(aware) == "cond"] <- "seen"
-#' names(cuing)[names(cuing) == "cond"] <- "cue"
-#' aware$seen <- ifelse(aware$seen == 1, "old",  "new")
-#' cuing$cue  <- ifelse(cuing$cue  == 1, "cued", "uncued")
-#'
-#' usdt_data_tasks(
-#'   direct = aware, indirect = cuing,
+#' # 1. Tasks in separate data frames
+#' # Direct task: binary choices (old/new)
+#' # Indirect task: response times (split at the median)
+#' d_separate <- usdt_data_tasks(
+#'   direct   = vadillo_awareness,
+#'   indirect = vadillo_cuing,
 #'   subject_col      = "subj",
-#'   condition_col    = list(direct = "seen", indirect = "cue"),
-#'   condition_levels = list(direct   = c(signal = "old",  noise = "new"),
-#'                           indirect = c(signal = "cued", noise = "uncued")),
+#'   condition_col    = "condition",
+#'   condition_levels = c(signal = "old", noise = "new"),
+#'   response_col     = list(direct = "judged.old", indirect = "rt"),
+#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
+#'                           indirect = c(signal = "faster", noise = "slower")),
+#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' )
+#' d_separate
+#'
+#' # 2. Tasks combined in a single long data frame
+#' long <- rbind(
+#'   data.frame(task      = "D",
+#'              subj      = vadillo_awareness$subj,
+#'              condition = vadillo_awareness$condition,
+#'              response  = vadillo_awareness$judged.old),
+#'   data.frame(task      = "I",
+#'              subj      = vadillo_cuing$subj,
+#'              condition = vadillo_cuing$condition,
+#'              response  = vadillo_cuing$rt)
+#' )
+#'
+#' d_long <- usdt_data_long(
+#'   long,
+#'   task_col         = "task",
+#'   task_levels      = c(direct = "D", indirect = "I"),
+#'   subject_col      = "subj",
+#'   condition_col    = "condition",
+#'   condition_levels = c(signal = "old", noise = "new"),
 #'   response_col     = "response",
-#'   response_levels  = c(signal = 1, noise = 0))
+#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
+#'                           indirect = c(signal = "faster", noise = "slower")),
+#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' )
+#' d_long
 #'
 #' @name usdt_data
 NULL

@@ -5,7 +5,7 @@
 \alias{usdt_data_tasks}
 \alias{usdt_data_long}
 \alias{print.usdt_data}
-\title{Prepare the data of a direct and an indirect task}
+\title{Prepare data for hierarchical SDT models}
 \usage{
 usdt_data_tasks(
   direct,
@@ -47,59 +47,50 @@ usdt_data_long(
 \method{print}{usdt_data}(x, ...)
 }
 \arguments{
-\item{direct, indirect}{The data frame of each task, for \code{usdt_data_tasks()}.
-\code{usdt_data_long()} ignores them and uses \code{task_levels} instead.}
+\item{direct, indirect}{Data frames for each task (used in \code{usdt_data_tasks()}).}
 
-\item{subject_col}{Name of the column that identifies the subject.}
+\item{subject_col}{Name of the column that identifies participants.}
 
-\item{condition_col}{Name of the column that holds the signal and noise
-condition. It is not needed when the data arrive as an SDT table through
-\code{sdt_cols}.}
+\item{condition_col}{Name of the column for signal and noise conditions.
+Not needed when using \code{sdt_cols}.}
 
-\item{condition_levels}{Which value of \code{condition_col} plays each role, as
-\code{c(signal = "old", noise = "new")}. The function guesses them and reports
-its choice when they are missing.}
+\item{condition_levels}{Named vector mapping condition labels, like
+\code{c(signal = "old", noise = "new")}. Guessed automatically if left empty.}
 
-\item{response_col}{Name of the column that holds the response. It can be a
-binary response, or a continuous measure such as response times when the
-task is dichotomized.}
+\item{response_col}{Name of the column with responses. Can be binary choices
+or continuous values (like response times) to split at the median.}
 
-\item{response_levels}{Which value of \code{response_col} counts as a signal
-response, as \code{c(signal = 1, noise = 0)}. A task that is dichotomized takes
-the side of the median instead, as
-\code{c(signal = "faster", noise = "slower")}. The function guesses them and
-reports its choice when they are missing.}
+\item{response_levels}{Named vector mapping responses, like
+\code{c(signal = 1, noise = 0)} or \code{c(signal = "faster", noise = "slower")}.
+Guessed automatically if left empty.}
 
-\item{successes_col, trials_col}{Names of the columns that hold data already
-summed up, the number or proportion of signal responses and the number of
-trials. Give these instead of \code{response_col}.}
+\item{successes_col, trials_col}{Names of columns with pre-calculated counts
+or proportions of signal responses and total trials. Use these instead of
+\code{response_col}.}
 
-\item{successes_type}{Format of \code{successes_col}. Use \code{"counts"} for counts
-and \code{"proportions"} for proportions. \code{"auto"} recognises clear cases and
-asks for an explicit choice when every value is zero or one.}
+\item{successes_type}{Format of \code{successes_col}: \code{"counts"}, \code{"proportions"},
+or \code{"auto"}.}
 
-\item{sdt_cols}{Names of the columns of an SDT table, as
-\code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}. Give these instead of
-\code{condition_col} and \code{response_col}.}
+\item{sdt_cols}{Named vector for SDT table columns, like
+\code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}.}
 
-\item{dichotomize}{Which tasks need the median split of \code{\link[=meyen_split]{meyen_split()}}.
-Name them with \code{"none"}, \code{"direct"}, \code{"indirect"} or \code{"both"}, or give one
-logical value per task, as \code{list(direct = FALSE, indirect = TRUE)}.}
+\item{dichotomize}{Which tasks to split at the median using \code{\link[=meyen_split]{meyen_split()}}.
+Use \code{"none"}, \code{"direct"}, \code{"indirect"}, \code{"both"}, or a list like
+\code{list(direct = FALSE, indirect = TRUE)}.}
 
-\item{ties}{What to do with trials that fall exactly on the median. See
-\code{\link[=meyen_split]{meyen_split()}}.}
+\item{ties}{How to handle trials that fall exactly on the median.
+See \code{\link[=meyen_split]{meyen_split()}}.}
 
-\item{coding}{How the condition enters the model. See Details.}
+\item{coding}{How condition is coded in the model: \code{"deviation"}
+(-0.5, 0.5) or \code{"treatment"} (0, 1). See Details.}
 
-\item{labels}{Display names for the two tasks. They only affect printed
-output.}
+\item{labels}{Optional names for the tasks in printed output.}
 
-\item{data}{A single data frame holding both tasks, for \code{usdt_data_long()}.}
+\item{data}{A single data frame with both tasks (used in \code{usdt_data_long()}).}
 
-\item{task_col}{Name of the column that identifies the task, for
-\code{usdt_data_long()}.}
+\item{task_col}{Name of the column that identifies the task in \code{data}.}
 
-\item{task_levels}{Which value of \code{task_col} belongs to each task, as
+\item{task_levels}{Named vector mapping task labels, like
 \code{c(direct = "D", indirect = "I")}.}
 
 \item{x}{A \code{usdt_data} object.}
@@ -107,98 +98,88 @@ output.}
 \item{...}{Ignored.}
 }
 \value{
-An object of class \code{usdt_data}. Its \code{agg} element is the data frame
-of counts that the model uses, with one row per subject, task and
-condition. Its \code{meta} element records how every column was read, which
-tasks were split at the median, and the descriptive summaries shown when
-the object is printed. Pass the object to \code{\link[=hsdt]{hsdt()}}.
+An object of class \code{usdt_data}. The \verb{$agg} table contains the counts
+used by \code{\link[=hsdt]{hsdt()}}, and \verb{$meta} contains setup details and summaries.
 }
 \description{
-Both functions build the same object. Use \code{usdt_data_tasks()} when each task
-has its own data frame, and \code{usdt_data_long()} when a single data frame
-holds both tasks together with a column that identifies them.
+Formats direct and indirect task data into a standardized structure for
+\code{\link[=hsdt]{hsdt()}}. Use \code{usdt_data_tasks()} when tasks are stored in separate data
+frames, or \code{usdt_data_long()} when both tasks are kept in a single data frame
+with a column that identifies each task.
 }
 \details{
-The functions count the responses of every subject in each condition, check
-that the two tasks describe the same subjects, and record how each column
-was read. Printing the result shows all of that, so the coding can be
-checked before the model runs.
+The functions count responses for each subject and condition, check that the
+same subjects appear in both tasks, and print a summary table so you can
+verify the column settings before fitting the model.
 }
-\section{One value or one per task}{
-The two tasks rarely come from the same experimental design, so every
-argument that names a column, a level or a format accepts two forms. Give
-one value and both tasks use it. Give one value per task and each task is
-read on its own.
+\section{Settings per task}{
+Arguments for columns and levels take either a single value (used for both
+tasks) or a list with separate settings for each task:
 
-\if{html}{\out{<div class="sourceCode">}}\preformatted{subject_col      = "subj"                       # both tasks
-condition_col    = list(direct   = "condition",
-                        indirect = "cue")       # one per task
-condition_levels = list(
-  direct   = c(signal = "old",  noise = "new"),
-  indirect = c(signal = "cued", noise = "uncued"))
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{condition_col    = list(direct = "cond", indirect = "cue")
+condition_levels = list(direct   = c(signal = "old", noise = "new"),
+                        indirect = c(signal = "congruent", noise = "incongruent"))
 dichotomize      = list(direct = FALSE, indirect = TRUE)
 }\if{html}{\out{</div>}}
 
-This applies to \code{subject_col}, \code{condition_col}, \code{condition_levels},
-\code{response_col}, \code{response_levels}, \code{successes_col}, \code{trials_col},
-\code{successes_type}, \code{sdt_cols}, \code{dichotomize} and \code{ties}. The two tasks may
-therefore use different columns, different values inside those columns, and
-even different formats, with one task given trial by trial and the other as
-an SDT table. Use \code{list()} rather than \code{c()} when the value of a task is
-itself a vector, as happens with the \verb{*_levels} and \code{sdt_cols} arguments.
-
-Only \code{coding} works differently. It describes the model itself, so it always
-applies to both tasks at once.
+This works for all column and level arguments, so you can combine trial-level
+data in one task with summary tables in the other.
 }
 
 \section{Condition coding}{
-The two codings answer different questions and give different intercepts.
-Under \code{"deviation"} the condition takes the values -0.5 and +0.5, and the
-intercept is \code{-c}, the criterion measured from the midpoint between the
-signal and noise distributions. Under \code{"treatment"} the condition takes the
-values 0 and 1, and the intercept is \code{z(FAR)}, the criterion measured from
-the noise distribution. The two intercepts are related by
-\verb{intercept_treatment = intercept_deviation - d'/2}.
+Under \code{"deviation"} coding (-0.5 vs. +0.5), the intercept is \eqn{-c}, the
+criterion measured from the point between the two distributions. Under
+\code{"treatment"} coding (0 vs. 1), the intercept is \eqn{z(\mathrm{FAR})}, the
+criterion measured from the noise distribution.
 
-The choice matters for a task that was split at the median. The split leaves
-each subject with half signal responses, so with balanced conditions the
-deviation intercept is exactly zero and needs no estimation. The treatment
-intercept equals \verb{-d'/2} instead, which is not zero and has to be estimated.
-The object records this in \code{criterion_zero}, and \code{\link[=hsdt]{hsdt()}} uses it to decide.
+When a task is split at the median, deviation coding sets the group
+criterion to zero in balanced designs, so the model does not need to
+estimate it.
 }
 
 \examples{
-set.seed(1)
-df <- usdt_simulate(n_subj = 30, n_trials = 80)
-
-# Both tasks share every column name and every level here.
-d  <- usdt_data_long(df, task_col = "task",
-                     task_levels   = c(direct = "D", indirect = "I"),
-                     subject_col   = "subj",
-                     condition_col = "cond",
-                     condition_levels = c(signal = 1, noise = 0),
-                     response_col  = "response",
-                     response_levels  = c(signal = 1, noise = 0))
+# 1. Tasks in separate data frames
+# Direct task: binary choices (old/new)
+# Indirect task: response times (split at the median)
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
 d
 
-# When they do not, each task gets its own column and its own levels.
-aware <- df[df$task == "D", ]
-cuing <- df[df$task == "I", ]
-names(aware)[names(aware) == "cond"] <- "seen"
-names(cuing)[names(cuing) == "cond"] <- "cue"
-aware$seen <- ifelse(aware$seen == 1, "old",  "new")
-cuing$cue  <- ifelse(cuing$cue  == 1, "cued", "uncued")
+# 2. Tasks combined in a single long data frame
+long <- rbind(
+  data.frame(task      = "D",
+             subj      = vadillo_awareness$subj,
+             condition = vadillo_awareness$condition,
+             response  = vadillo_awareness$judged.old),
+  data.frame(task      = "I",
+             subj      = vadillo_cuing$subj,
+             condition = vadillo_cuing$condition,
+             response  = vadillo_cuing$rt)
+)
 
-usdt_data_tasks(
-  direct = aware, indirect = cuing,
+usdt_data_long(
+  long,
+  task_col         = "task",
+  task_levels      = c(direct = "D", indirect = "I"),
   subject_col      = "subj",
-  condition_col    = list(direct = "seen", indirect = "cue"),
-  condition_levels = list(direct   = c(signal = "old",  noise = "new"),
-                          indirect = c(signal = "cued", noise = "uncued")),
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
   response_col     = "response",
-  response_levels  = c(signal = 1, noise = 0))
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
 
 }
 \seealso{
-\code{\link[=meyen_split]{meyen_split()}}, \code{\link[=hsdt]{hsdt()}}, \code{\link[=sdt_moments]{sdt_moments()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=meyen_split]{meyen_split()}}, \code{\link[=sdt_moments]{sdt_moments()}}
 }

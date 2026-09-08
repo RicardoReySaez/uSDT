@@ -53,5 +53,5 @@ meyen_split(rt, by = subj)
 Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 (2022). Advancing research on unconscious priming: When can scientists claim
 an indirect task advantage? \emph{Journal of Experimental Psychology: General},
-151(1), 65--81. <10.1037/xge0001065>
+151(1), 65--81. \doi{10.1037/xge0001065}
 }

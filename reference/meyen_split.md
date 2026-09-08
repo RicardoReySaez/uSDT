@@ -58,7 +58,8 @@ probabilistically to avoid any systematic directional bias.
 Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 (2022). Advancing research on unconscious priming: When can scientists
 claim an indirect task advantage? *Journal of Experimental Psychology:
-General*, 151(1), 65–81. \<10.1037/xge0001065\>
+General*, 151(1), 65–81.
+[doi:10.1037/xge0001065](https://doi.org/10.1037/xge0001065)
 
 ## Examples
 

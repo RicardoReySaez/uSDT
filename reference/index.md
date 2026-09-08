@@ -7,7 +7,7 @@ Build paired task data and dichotomize continuous responses.
 - [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_data.md)
   [`usdt_data_long()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_data.md)
   [`print(`*`<usdt_data>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/usdt_data.md)
-  : Prepare the data of a direct and an indirect task
+  : Prepare data for hierarchical SDT models
 - [`meyen_split()`](https://ricardoreysaez.github.io/uSDT/reference/meyen_split.md)
   : Dichotomize response times into binary choices
 

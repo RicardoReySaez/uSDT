@@ -9,7 +9,7 @@ Build paired task data and dichotomize continuous responses.
   [`print(`*`<usdt_data>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/usdt_data.md)
   : Prepare the data of a direct and an indirect task
 - [`meyen_split()`](https://ricardoreysaez.github.io/uSDT/reference/meyen_split.md)
-  : Turn a continuous measure into a binary response
+  : Dichotomize response times into binary choices
 
 ## Estimate descriptive SDT measures
 

@@ -1,10 +1,11 @@
-# Turn a continuous measure into a binary response
+# Dichotomize response times into binary choices
 
-Splits a continuous measure, usually response times, at each subject's
-own median. The median uses all the trials of that subject, without
-separating the conditions. The binary result can then be analysed on the
-same sensitivity scale as a direct task that already gives binary
-responses. The procedure follows Meyen et al. (2022).
+Splits response times (or other continuous measures) at each subject's
+overall median, following the preprocessing approach of Meyen et al.
+(2022). The median is calculated across all trials for each participant
+without distinguishing between stimulus conditions or other covariates.
+This produces a binary outcome that allows response times to be mapped
+onto a Signal Detection Theory sensitivity metric (\\d'\\).
 
 ## Usage
 
@@ -16,48 +17,48 @@ meyen_split(x, by, signal = c("faster", "slower"), ties = c("noise", "random"))
 
 - x:
 
-  Numeric vector with the continuous measure, usually response times.
+  Numeric vector of continuous values, typically response times.
 
 - by:
 
-  Vector identifying the subject of each value in `x`. Every subject
-  receives their own median.
+  Vector identifying the subject for each observation in `x`. Medians
+  are computed independently for each participant.
 
 - signal:
 
-  Which side of the median counts as a signal response. Use `"faster"`
-  when the signal condition speeds responses up, as in priming and
-  cueing tasks. Use `"slower"` when the signal condition slows responses
-  down, as in interference tasks.
+  Character string specifying which side of the median will be treated
+  as the "signal" response under an SDT framework. Use `"faster"` when
+  the target condition speeds up responses (e.g., facilitatory priming,
+  spatial cueing) or `"slower"` when it slows responses down (e.g.,
+  interference, Stroop-like effects).
 
 - ties:
 
-  What to do with trials that fall exactly on the median. `"noise"`
-  gives them the noise response. `"random"` assigns them at random,
-  which keeps the split as close to even as the data allow.
+  How to handle trials that match the subject's median exactly.
+  `"noise"` assigns them to the noise category (0). `"random"` breaks
+  ties at random, keeping cell proportions as balanced as possible.
 
 ## Value
 
-An integer vector as long as `x`, with `1` for signal responses and `0`
-for noise responses. Missing values in `x` stay missing.
+An integer vector of `0`s (noise response) and `1`s (signal response)
+matching the length of `x`. Missing values (`NA`) are preserved.
 
 ## Details
 
-A subject with an odd number of trials cannot be split into two equal
-halves, because the median is one of the observed values. With
-`ties = "noise"` that subject gets a proportion of `(n - 1) / (2n)`
-signal responses instead of 0.5, so the criterion moves slightly away
-from zero. The difference is `1 / (2n)` and rarely matters. Setting
-`ties = "random"` removes it, because rounding up or down at random is
-unbiased across subjects.
+With an odd number of trials (\\n\\), a dataset cannot be split into two
+equal halves because the median falls exactly on an observed trial.
+Setting `ties = "noise"` assigns this middle trial to noise, producing a
+signal proportion of \\(n - 1) / (2\cdot n)\\ and slightly shifting the
+response criterion. In practice, this difference (\\1 / (2\cdot n)\\) is
+negligible, but setting `ties = "random"` resolves ties
+probabilistically to avoid any systematic directional bias.
 
 ## References
 
 Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 (2022). Advancing research on unconscious priming: When can scientists
 claim an indirect task advantage? *Journal of Experimental Psychology:
-General*, 151(1), 65-81.
-[doi:10.1037/xge0001065](https://doi.org/10.1037/xge0001065)
+General*, 151(1), 65–81. \<10.1037/xge0001065\>
 
 ## Examples
 

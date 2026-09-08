@@ -1,9 +1,9 @@
 # Signal detection measures for each subject
 
-Computes the hit rate, the false-alarm rate, d' and the criterion of
-every subject, without fitting a model. It can also add the sampling
-variance of d'. These descriptive values are useful to inspect the data
-before fitting, and to compare with the model estimates afterwards.
+Computes empirical hit rates, false-alarm rates, sensitivity (\\d'\\),
+and response criteria for each participant without fitting a model. It
+can also calculate sampling variances, standard errors, and expected
+values for \\d'\\.
 
 ## Usage
 
@@ -25,83 +25,91 @@ sdt_moments(
 
 - data:
 
-  A `usdt_data` object, or a plain data frame with one row per trial.
-  With a `usdt_data` object the function processes both tasks and adds a
-  `task` column.
+  A `usdt_data` object or a standard trial-level data frame. When given
+  a `usdt_data` object, the function processes both tasks and includes a
+  `task` column in the output.
 
 - subject_col, condition_col, response_col:
 
-  Names of the columns that hold the subject, the condition and the
-  response. They are needed only for a plain data frame.
+  Column names for subject, condition, and response variables. Only
+  required when `data` is a plain data frame.
 
 - condition_levels, response_levels:
 
-  Which value plays each role, as `c(signal = ..., noise = ...)`. The
-  function guesses them and reports its choice when they are missing.
+  Named vectors mapping condition and response labels, like
+  `c(signal = "old", noise = "new")`. Required for a plain data frame. A
+  `usdt_data` object supplies its own roles and needs neither.
 
 - coding:
 
-  Which criterion to report. `"deviation"` gives the classical criterion
-  `c = -(z(HR) + z(FAR)) / 2`, measured from the midpoint between the
-  two distributions. `"treatment"` gives `lambda = -z(FAR)`, measured
-  from the noise distribution. The two are related by
-  `lambda = c + d'/2`. A `usdt_data` object supplies its own coding.
+  Criterion definition to report: `"deviation"` measures the criterion
+  from the midpoint between the signal and noise distributions, whereas
+  `"treatment"` measures it from the noise distribution. A `usdt_data`
+  object supplies its own coding.
 
 - correction:
 
-  What to do with rates of exactly 0 or 1, which make `d'` infinite.
-  `"hautus"` adds 0.5 to the four counts of the affected subject.
-  `"none"` leaves the infinite values in place.
+  Handling of extreme rates (0 or 1) that make \\d'\\ infinite.
+  `"hautus"` adds 0.5 to all four cell counts for affected participants.
+  `"none"` leaves infinite values in place.
 
 - variances:
 
-  If `TRUE`, adds the sampling variance of `d'` from Gourevitch and
-  Galanter (1967) and from Miller (1996), together with the standard
-  error that follows from the second one.
+  Logical. If `TRUE`, computes the sampling variance of \\d'\\ from
+  Gourevitch and Galanter (1967) and Miller (1996), each with its own
+  standard error, as well as the expected value of \\d'\\ under Miller's
+  distribution.
 
 ## Value
 
-A data frame with one row per subject, or one row per subject and task
-when `data` is a `usdt_data` object. It holds the four response counts
-(`hit`, `miss`, `fa`, `cr`), the two rates (`hr`, `far`) and their
-probit values (`zhr`, `zfar`), then `dprime`, `criterion`, and
-`corrected` to mark the subjects that received the edge correction. With
-`variances = TRUE` it also holds `var_gg`, `var_miller`, `e_miller` and
-`se_dprime`.
+A data frame with one row per subject (or per subject and task for
+`usdt_data` inputs) containing:
+
+- `hit`, `miss`, `fa`, `cr`: Raw response counts.
+
+- `hr`, `far`: Observed hit and false-alarm rates.
+
+- `zhr`, `zfar`: Probit-transformed rates.
+
+- `dprime`, `criterion`: Descriptive SDT estimates.
+
+- `corrected`: Logical flag indicating whether the participant received
+  an edge correction.
+
+- `var_gg`, `se_gg`: Asymptotic variance and standard error from
+  Gourevitch and Galanter (1967), present when `variances = TRUE`.
+
+- `var_miller`, `se_miller`, `expected_dprime`: Moments from Miller
+  (1996), present when `variances = TRUE`.
 
 ## Details
 
-The edge correction applies only to the subjects that need it. Applying
-it to the whole sample would change the estimates of every other subject
-as well, and those estimates are already usable.
+Edge corrections apply only to participants with extreme rates (0 or 1)
+rather than the whole sample, leaving well-defined rates unchanged.
 
-The Miller variance treats the observed hit and false-alarm rates as
-binomial probabilities. Samples that reach a rate of 0 or 1 receive the
-values `0.5 / n` and `(n - 0.5) / n`. The number of trials stays the
-original one throughout.
-
-`var_gg` comes from the expected information of the two probit cells,
-with the criterion treated as a nuisance parameter. It equals the
-standard error that a probit regression would give for `d'` if it were
-fitted to that subject alone.
-[`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
-uses the same formula, but evaluates it at the rates the hierarchical
-model predicts instead of the observed ones.
+When requested, the sampling variance of \\d'\\ is estimated using the
+asymptotic approximation of Gourevitch and Galanter (1967) and the
+binomial-distribution approach of Miller (1996). See Suero et al. (2017)
+for a comparison between the two approaches.
 
 ## References
 
 Gourevitch, V., & Galanter, E. (1967). A significance test for one
-parameter isosensitivity functions. *Psychometrika*.
+parameter isosensitivity functions. *Psychometrika*, 32(1), 25–33.
+[doi:10.1007/BF02289402](https://doi.org/10.1007/BF02289402)
 
 Hautus, M. J. (1995). Corrections for extreme proportions and their
-biasing effects on estimated values of d'. *Behavior Research Methods*.
+biasing effects on estimated values of \\d'\\. *Behavior Research
+Methods, Instruments, & Computers*, 27(1), 46–51.
+[doi:10.3758/BF03203619](https://doi.org/10.3758/BF03203619)
 
-Miller, J. (1996). The sampling distribution of d'. *Perception &
-Psychophysics*.
+Miller, J. (1996). The sampling distribution of \\d'\\. *Perception &
+Psychophysics*, 58(1), 65–72.
+[doi:10.3758/BF03205476](https://doi.org/10.3758/BF03205476)
 
 Suero, M., Privado, J., & Botella, J. (2017). Methods to estimate the
 variance of some indices of the signal detection theory: A simulation
-study. *Psicologica*.
+study. *Psicologica*, 38(1), 77–109.
 
 ## See also
 
@@ -110,26 +118,62 @@ study. *Psicologica*.
 ## Examples
 
 ``` r
-set.seed(1)
-df <- usdt_simulate(n_subj = 20, n_trials = 80)
-head(sdt_moments(df[df$task == "D", ],
-                 subject_col   = "subj",
-                 condition_col = "cond",
-                 condition_levels = c(signal = 1, noise = 0),
-                 response_col  = "response",
-                 response_levels  = c(signal = 1, noise = 0)))
-#>   subj hit miss fa cr    hr   far        zhr       zfar      dprime   criterion
-#> 1    1  27   13 20 20 0.675 0.500  0.4537622  0.0000000  0.45376219 -0.22688110
-#> 2   10  24   16 15 25 0.600 0.375  0.2533471 -0.3186394  0.57198647  0.03264613
-#> 3   11  30   10  8 32 0.750 0.200  0.6744898 -0.8416212  1.51611098  0.08356574
-#> 4   12  23   17  9 31 0.575 0.225  0.1891184 -0.7554150  0.94453345  0.28314830
-#> 5   13  25   15 14 26 0.625 0.350  0.3186394 -0.3853205  0.70395983  0.03334055
-#> 6   14  16   24 17 23 0.400 0.425 -0.2533471 -0.1891184 -0.06422868  0.22123276
-#>   corrected
-#> 1     FALSE
-#> 2     FALSE
-#> 3     FALSE
-#> 4     FALSE
-#> 5     FALSE
-#> 6     FALSE
+# 1. From a prepared usdt_data object (both tasks at once)
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+
+head(sdt_moments(d))
+#>     task subj hit miss fa cr      hr     far        zhr        zfar      dprime
+#> 1 Direct 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241  0.31561452
+#> 2 Direct 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007  0.27223968
+#> 3 Direct 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211  0.08143725
+#> 4 Direct 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641  0.97755282
+#> 5 Direct 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216 -0.50071975
+#> 6 Direct 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936 -0.24022695
+#>     criterion corrected
+#> 1 -0.07939485     FALSE
+#> 2 -0.53836991     FALSE
+#> 3 -0.27792074     FALSE
+#> 4  0.00000000     FALSE
+#> 5 -0.32877229     FALSE
+#> 6 -0.19852589     FALSE
+
+# 2. From raw trials with sampling variances and standard errors
+head(sdt_moments(vadillo_awareness,
+                 subject_col      = "subj",
+                 condition_col    = "condition",
+                 condition_levels = c(signal = "old", noise = "new"),
+                 response_col     = "judged.old",
+                 response_levels  = c(signal = 1, noise = 0),
+                 variances        = TRUE))
+#>   subj hit miss fa cr      hr     far        zhr        zfar      dprime
+#> 1 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241  0.31561452
+#> 2 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007  0.27223968
+#> 3 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211  0.08143725
+#> 4 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641  0.97755282
+#> 5 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216 -0.50071975
+#> 6 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936 -0.24022695
+#>     criterion corrected     var_gg     se_gg var_miller se_miller
+#> 1 -0.07939485     FALSE 0.09930004 0.3151191  0.1049949 0.3240291
+#> 2 -0.53836991     FALSE 0.11009703 0.3318087  0.1207283 0.3474598
+#> 3 -0.27792074     FALSE 0.10104010 0.3178681  0.1073747 0.3276808
+#> 4  0.00000000     FALSE 0.10713629 0.3273168  0.1160479 0.3406581
+#> 5 -0.32877229     FALSE 0.10470577 0.3235827  0.1128152 0.3358798
+#> 6 -0.19852589     FALSE 0.10013446 0.3164403  0.1061461 0.3258007
+#>   expected_dprime
+#> 1      0.32409622
+#> 2      0.28275954
+#> 3      0.08381293
+#> 4      1.00624073
+#> 5     -0.51642519
+#> 6     -0.24693939
 ```

@@ -68,8 +68,8 @@ print(x, ...)
 - condition_levels:
 
   Named vector mapping condition labels, like
-  `c(signal = "old", noise = "new")`. Guessed automatically if left
-  empty.
+  `c(signal = "old", noise = "new")`. Required: which label is the
+  signal and the noise.
 
 - response_col:
 
@@ -78,9 +78,10 @@ print(x, ...)
 
 - response_levels:
 
-  Named vector mapping responses, like `c(signal = 1, noise = 0)` or
-  `c(signal = "faster", noise = "slower")`. Guessed automatically if
-  left empty.
+  Named vector mapping responses, like `c(signal = 1, noise = 0)`. For a
+  task named in `dichotomize` it names the side of the median instead,
+  as `c(signal = "faster", noise = "slower")` or the reverse. Required
+  in both cases.
 
 - successes_col, trials_col:
 

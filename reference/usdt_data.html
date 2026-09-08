@@ -117,7 +117,8 @@ Not needed when using <code>sdt_cols</code>.</p></dd>
 
 <dt id="arg-condition-levels">condition_levels<a class="anchor" aria-label="anchor" href="#arg-condition-levels"></a></dt>
 <dd><p>Named vector mapping condition labels, like
-<code>c(signal = "old", noise = "new")</code>. Guessed automatically if left empty.</p></dd>
+<code>c(signal = "old", noise = "new")</code>. Required: which label is the signal and
+the noise.</p></dd>
 
 
 <dt id="arg-response-col">response_col<a class="anchor" aria-label="anchor" href="#arg-response-col"></a></dt>
@@ -127,8 +128,9 @@ or continuous values (like response times) to split at the median.</p></dd>
 
 <dt id="arg-response-levels">response_levels<a class="anchor" aria-label="anchor" href="#arg-response-levels"></a></dt>
 <dd><p>Named vector mapping responses, like
-<code>c(signal = 1, noise = 0)</code> or <code>c(signal = "faster", noise = "slower")</code>.
-Guessed automatically if left empty.</p></dd>
+<code>c(signal = 1, noise = 0)</code>. For a task named in <code>dichotomize</code> it names the
+side of the median instead, as <code>c(signal = "faster", noise = "slower")</code> or
+the reverse. Required in both cases.</p></dd>
 
 
 <dt id="arg-successes-col-trials-col">successes_col, trials_col<a class="anchor" aria-label="anchor" href="#arg-successes-col-trials-col"></a></dt>

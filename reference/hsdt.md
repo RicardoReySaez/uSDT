@@ -184,6 +184,6 @@ summary(m)
 m$design$formula
 #> cbind(y, n - y) ~ 0 + c_D + d_D + d_I + (0 + c_D | subj) + (0 + 
 #>     d_D + d_I | subj)
-#> <environment: 0x55737577c700>
+#> <environment: 0x5614e8c757a8>
 # }
 ```

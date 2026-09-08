@@ -40,7 +40,7 @@ parametric bootstrap inference to a fitted uSDT model.
   [`latent_regression()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_hypotheses.md)
   : Test the three core hypotheses of a hierarchical SDT model
 - [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_boot.md)
-  : Bootstrap intervals for a hierarchical SDT model
+  : Parametric bootstrap intervals for hierarchical SDT models
 
 ## Visualize the fit and estimate reliability
 
@@ -48,11 +48,11 @@ Compare observed and fitted estimates and quantify measurement
 reliability.
 
 - [`plot(`*`<hsdt>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/plot.hsdt.md)
-  : Plot a fitted hierarchical SDT model
+  : Diagnostic and analytical plots for hierarchical SDT models
 - [`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
   [`summary(`*`<usdt_reliability>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
   [`print(`*`<usdt_reliability>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
-  : Reliability of the direct and indirect measures
+  : Reliability of direct and indirect task measures
 
 ## Simulate data
 

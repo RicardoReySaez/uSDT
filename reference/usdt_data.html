@@ -230,7 +230,7 @@ estimate it.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># 1. Tasks in separate data frames</span></span></span>
 <span class="r-in"><span><span class="co"># Direct task: binary choices (old/new)</span></span></span>
 <span class="r-in"><span><span class="co"># Indirect task: response times (split at the median)</span></span></span>
-<span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu">usdt_data_tasks</span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">d_separate</span> <span class="op">&lt;-</span> <span class="fu">usdt_data_tasks</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  direct   <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span></span>
 <span class="r-in"><span>  indirect <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span></span>
 <span class="r-in"><span>  subject_col      <span class="op">=</span> <span class="st">"subj"</span>,</span></span>
@@ -241,7 +241,7 @@ estimate it.</p>
 <span class="r-in"><span>                          indirect <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  dichotomize      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="cn">FALSE</span>, indirect <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">d</span></span></span>
+<span class="r-in"><span><span class="va">d_separate</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ── Data summary ──────────────────────────────────────────────────────────────── </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Input:          2 data frames (usdt_data_tasks)</span>
@@ -280,7 +280,7 @@ estimate it.</p>
 <span class="r-in"><span>             response  <span class="op">=</span> <span class="va">vadillo_cuing</span><span class="op">$</span><span class="va">rt</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">usdt_data_long</span><span class="op">(</span></span></span>
+<span class="r-in"><span><span class="va">d_long</span> <span class="op">&lt;-</span> <span class="fu">usdt_data_long</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">long</span>,</span></span>
 <span class="r-in"><span>  task_col         <span class="op">=</span> <span class="st">"task"</span>,</span></span>
 <span class="r-in"><span>  task_levels      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="st">"D"</span>, indirect <span class="op">=</span> <span class="st">"I"</span><span class="op">)</span>,</span></span>
@@ -292,6 +292,7 @@ estimate it.</p>
 <span class="r-in"><span>                          indirect <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  dichotomize      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="cn">FALSE</span>, indirect <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">d_long</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ── Data summary ──────────────────────────────────────────────────────────────── </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Input:          1 long data frame (usdt_data_long)</span>

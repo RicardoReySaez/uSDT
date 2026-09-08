@@ -1,9 +1,9 @@
-# Test the three hypotheses of a hierarchical SDT model
+# Test the three core hypotheses of a hierarchical SDT model
 
-Computes the difference between the average sensitivities of the two
-tasks, their correlation across subjects, and the regression of the
-indirect sensitivity on the direct one. `usdt_tests()` returns the three
-together, and the other three functions return one each.
+Evaluates the difference between average task sensitivities (H1), their
+correlation across subjects (H2), and the regression of indirect
+sensitivity on direct sensitivity (H3). `usdt_tests()` computes all
+three together, while individual functions compute them separately.
 
 ## Usage
 
@@ -21,52 +21,62 @@ latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 
 - fit:
 
-  A fitted model, either an `hsdt` object or a `glmerMod` from
+  A fitted model: an `hsdt` object or a `glmerMod` from
   [`lme4::glmer()`](https://rdrr.io/pkg/lme4/man/glmer.html).
 
 - direct, indirect:
 
-  Names of the two sensitivity terms in the model.
+  Character strings naming the sensitivity terms in the model. Defaults
+  match the internal naming of
+  [`hsdt()`](https://ricardoreysaez.github.io/uSDT/reference/hsdt.md).
+  For custom models, both terms must be fixed effects and share a common
+  random-effects grouping by subject.
 
 - level:
 
-  Confidence level.
+  Confidence level for intervals (default is 0.95).
 
 ## Value
 
-A data frame with one row per quantity. The columns are `term`,
-`estimate`, `se`, `statistic`, `p.value`, `conf.low`, `conf.high` and
-`ci_method`. Two further columns, `status` and `reason`, mark the
-results that the data cannot support and explain why. `usdt_tests()`
-adds a `hypothesis` column with the values `H1`, `H2` and `H3`.
+A data frame with columns `term`, `estimate`, `se`, `statistic`,
+`p.value`, `conf.low`, `conf.high`, and `ci_method`. Columns `status`
+and `reason` flag unsupported estimates (e.g., singular fits).
+`usdt_tests()` includes an extra `hypothesis` column (`H1`, `H2`, `H3`).
 
 ## Details
 
-[`hsdt()`](https://ricardoreysaez.github.io/uSDT/reference/hsdt.md)
-already runs these tests, so most users read them in its summary.
-Calling them directly is useful for a model fitted by hand, because they
-accept any `glmerMod` in which the two sensitivities are fixed effects
-and share a random-effects term.
+These tests run automatically inside
+[`hsdt()`](https://ricardoreysaez.github.io/uSDT/reference/hsdt.md) and
+appear in its summary. Calling them directly is especially useful when
+fitting custom models with
+[`lme4::glmer()`](https://rdrr.io/pkg/lme4/man/glmer.html), allowing you
+to test these hypotheses while controlling for additional covariates
+(e.g., set size, experimental groups).
 
-H1 compares the two average sensitivities. A clear difference means that
-the direct task measures more than the indirect one, or the reverse.
+## The three hypotheses
 
-H2 gives the correlation between the two sensitivities across subjects.
-It asks whether the subjects who are sensitive in one task are also the
-sensitive ones in the other.
+- **H1 (Mean difference):** Tests whether average sensitivity differs
+  between the direct and indirect tasks.
 
-H3 regresses the indirect sensitivity on the direct one. Its intercept
-is the sensitivity expected in the indirect task from a subject whose
-direct sensitivity is zero, which is the test for unconscious
-processing.
+- **H2 (Correlation):** Tests the correlation between task sensitivities
+  across participants using a Fisher-\\z\\ transformed interval.
 
-H1 and the two regression terms use Wald intervals. The correlation uses
-a Fisher-z interval, so its limits stay between -1 and 1.
+- **H3 (Latent regression):** Regresses indirect sensitivity onto direct
+  sensitivity. The intercept represents expected indirect performance
+  when direct sensitivity is zero (\\d'\_{\mathrm{Direct}} = 0\\),
+  testing for unconscious processing.
 
-The slope of H3 is zero exactly when the covariance between the two
-sensitivities is zero, and so is the correlation of H2. The two
-therefore state the same null hypothesis, and both report the same test
-on that covariance.
+Because both the correlation (H2) and regression slope (H3) are zero if
+and only if the covariance between sensitivities is zero, they evaluate
+the same association and share identical test statistics.
+
+## Custom models with covariates
+
+To adjust tests for additional factors, specify the model directly using
+[`lme4::glmer()`](https://rdrr.io/pkg/lme4/man/glmer.html). As long as
+the two sensitivity terms are included as fixed effects and correlated
+across subjects via random slopes, `usdt_tests()` will compute the
+latent tests conditional on those covariates.
 
 ## See also
 
@@ -77,26 +87,96 @@ on that covariance.
 
 ``` r
 # \donttest{
-set.seed(1)
-df <- usdt_simulate(n_subj = 40, n_trials = 100)
-d  <- usdt_data_long(df, task_col = "task",
-                     task_levels      = c(direct = "D", indirect = "I"),
-                     subject_col      = "subj",
-                     condition_col    = "cond",
-                     condition_levels = c(signal = 1, noise = 0),
-                     response_col     = "response",
-                     response_levels  = c(signal = 1, noise = 0))
+# 1. Standard model via hsdt()
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+
 m <- hsdt(d)
-usdt_tests(m$fit)
-#>   hypothesis                      term  estimate         se statistic
-#> 1         H1 d'(direct) - d'(indirect) 0.4673093 0.09034982 5.1722222
-#> 2         H2               correlation 0.4679562 0.20065656 1.9258246
-#> 3         H3                 intercept 0.1006160 0.13438542 0.7487121
-#> 4         H3                     slope 0.3075323 0.14596629 1.9258246
-#>        p.value     conf.low conf.high ci_method status reason
-#> 1 2.313262e-07  0.290226956 0.6443917      Wald     ok   <NA>
-#> 2 5.412628e-02  0.003902169 0.7661747  Fisher-z     ok   <NA>
-#> 3 4.540307e-01 -0.162774588 0.3640066     delta     ok   <NA>
-#> 4 5.412628e-02  0.021443616 0.5936210      Wald     ok   <NA>
+
+# All three tests at once
+usdt_tests(m)
+#>   hypothesis                      term   estimate         se statistic
+#> 1         H1 d'(direct) - d'(indirect) 0.10712457 0.03537881 3.0279299
+#> 2         H2               correlation 0.49116444 0.51904281 1.0090130
+#> 3         H3                 intercept 0.04446212 0.11597753 0.3833684
+#> 4         H3                     slope 0.35605319 0.48703535 1.0090130
+#>       p.value    conf.low conf.high ci_method status reason
+#> 1 0.002462352  0.03778337 0.1764658      Wald     ok   <NA>
+#> 2 0.312968398 -0.66579834 0.9543447  Fisher-z     ok   <NA>
+#> 3 0.701446664 -0.18284967 0.2717739     delta     ok   <NA>
+#> 4 0.312968398 -0.59851856 1.3106249      Wald     ok   <NA>
+
+# Or one test at a time
+sensitivity_diff(m)   # H1
+#>                        term  estimate         se statistic     p.value
+#> 1 d'(direct) - d'(indirect) 0.1071246 0.03537881   3.02793 0.002462352
+#>     conf.low conf.high ci_method status reason
+#> 1 0.03778337 0.1764658      Wald     ok   <NA>
+latent_cor(m)         # H2
+#>          term  estimate        se statistic   p.value   conf.low conf.high
+#> 1 correlation 0.4911644 0.5190428  1.009013 0.3129684 -0.6657983 0.9543447
+#>   ci_method status reason
+#> 1  Fisher-z     ok   <NA>
+latent_regression(m)  # H3
+#>        term   estimate        se statistic   p.value   conf.low conf.high
+#> 1 intercept 0.04446212 0.1159775 0.3833684 0.7014467 -0.1828497 0.2717739
+#> 2     slope 0.35605319 0.4870354 1.0090130 0.3129684 -0.5985186 1.3106249
+#>   ci_method status reason
+#> 1     delta     ok   <NA>
+#> 2      Wald     ok   <NA>
+
+
+# 2. Custom model with covariates via glmer()
+# Controlling for display set size across both tasks
+trials <- rbind(
+  data.frame(vadillo_awareness[c("subj", "condition", "set.size")],
+             task = "D", resp = vadillo_awareness$judged.old),
+  data.frame(vadillo_cuing[c("subj", "condition", "set.size")],
+             task = "I", resp = meyen_split(vadillo_cuing$rt,
+                                            by = vadillo_cuing$subj))
+)
+
+# Deviation contrasts (-0.5 vs 0.5); `direct` flags the direct task
+trials <- within(trials, {
+  cond   <- ifelse(condition == "old", 0.5, -0.5)
+  size   <- ifelse(set.size == "set size 16", 0.5, -0.5)
+  direct <- as.integer(task == "D")
+})
+
+# Standard glmer formula: indirect criterion is omitted (fixed at 0
+# by the median split). Random effects estimate the direct criterion
+# and correlated task sensitivities across subjects.
+fit <- lme4::glmer(
+  resp ~ 0 + direct + task:size + task:cond +
+    (0 + direct | subj) + (0 + task:cond | subj),
+  data = trials, family = binomial("probit"),
+  control = lme4::glmerControl(optimizer = "bobyqa")
+)
+
+# Check the names lme4 assigned to the sensitivity terms
+names(lme4::fixef(fit))
+#> [1] "direct"     "taskD:size" "taskI:size" "taskD:cond" "taskI:cond"
+
+# Evaluate hypotheses conditional on set size
+usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
+#>   hypothesis                      term   estimate         se statistic
+#> 1         H1 d'(direct) - d'(indirect) 0.11543872 0.03708874 3.1125005
+#> 2         H2               correlation 0.38197036 0.39480466 0.9806745
+#> 3         H3                 intercept 0.07360717 0.07328775 1.0043583
+#> 4         H3                     slope 0.24018109 0.28657808 0.9806745
+#>       p.value    conf.low conf.high ci_method status reason
+#> 1 0.001855097  0.04274613 0.1881313      Wald     ok   <NA>
+#> 2 0.326753304 -0.46496183 0.8638579  Fisher-z     ok   <NA>
+#> 3 0.315205936 -0.07003419 0.2172485     delta     ok   <NA>
+#> 4 0.326753304 -0.32150163 0.8018638      Wald     ok   <NA>
 # }
 ```

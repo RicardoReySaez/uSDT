@@ -110,7 +110,7 @@ parametric bootstrap inference to a fitted uSDT model.
   [`sensitivity_diff()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_hypotheses.md)
   [`latent_cor()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_hypotheses.md)
   [`latent_regression()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_hypotheses.md)
-  : Test the three hypotheses of a hierarchical SDT model
+  : Test the three core hypotheses of a hierarchical SDT model
 - [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_boot.md)
   : Bootstrap intervals for a hierarchical SDT model
 

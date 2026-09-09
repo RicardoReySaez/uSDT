@@ -281,13 +281,13 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   delta <- .usdt_chars()$delta
   titles <- c(
     H1 = sprintf("Group-level sensitivity difference (%sd' = %s d' - %s d')",
-                 delta, lab[["direct"]], lab[["indirect"]]),
+                 delta, lab[["indirect"]], lab[["direct"]]),
     H2 = "Correlation between sensitivities across tasks",
     H3 = sprintf("Latent regression of %s d' on %s d'",
                  lab[["indirect"]], lab[["direct"]])
   )
   names <- c(correlation = "rho", intercept = "Intercept", slope = "Slope")
-  names[["d'(direct) - d'(indirect)"]] <- paste0(delta, "d' (D - I)")
+  names[["d'(indirect) - d'(direct)"]] <- paste0(delta, "d' (I - D)")
 
   for (hypothesis in c("H1", "H2", "H3")) {
     rows <- t[t$hypothesis == hypothesis, , drop = FALSE]

@@ -208,9 +208,9 @@ The summary breaks the model into two primary structural components before prese
 The bottom section of the model output tests three complementary questions often raised in the unconscious processing literature. You can inspect these results directly in the main summary or extract them as a standalone table with `fit_uSDT$tests`.
 
 #### H1: Group-level sensitivity difference ($\Delta d'$)
-The first hypothesis asks whether the two tasks differ in their average sensitivity. In unconscious perception paradigms, finding that indirect sensitivity clearly exceeds direct sensitivity ($\Delta d' < 0$) is sometimes taken as an indirect-task advantage—suggesting that the indirect measure picks up signal that conscious report misses. 
+The first hypothesis asks whether the two tasks differ in their average sensitivity. In unconscious perception paradigms, finding that indirect sensitivity clearly exceeds direct sensitivity ($\Delta d' > 0$) is sometimes taken as an indirect-task advantage—suggesting that the indirect measure picks up signal that conscious report misses. 
 
-In our sample, the difference is positive and significantly different from zero ($\Delta d' = 0.11$, 95% CI $[0.04, 0.18]$, $p = .002$). Direct recognition was significantly stronger than indirect contextual cuing, so we find no evidence of an indirect-task advantage.
+In our sample, the difference is negative and significantly different from zero ($\Delta d' = -0.11$, 95% CI $[-0.18, -0.04]$, $p = .002$). Direct recognition was significantly stronger than indirect contextual cuing, so we find no evidence of an indirect-task advantage.
 
 #### H2: Latent correlation between tasks ($\rho$)
 The second test examines individual differences: do participants with stronger conscious recognition also display larger cuing effects? In some theoretical accounts, an indirect effect that operates independently of conscious awareness would predict a weak or near-zero correlation between both measures.

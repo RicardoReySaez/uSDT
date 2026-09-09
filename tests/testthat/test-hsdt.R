@@ -152,7 +152,7 @@ test_that("the printed model uses the classical criterion sign", {
   expect_match(line, estimate, fixed = TRUE)
   expect_match(line, sprintf("%.2f", z), fixed = TRUE)
   expect_output(summary(m), "cor\\(c\\)")
-  expect_output(summary(m), paste0(.usdt_chars()$delta, "d' \\(D - I\\)"))
+  expect_output(summary(m), paste0(.usdt_chars()$delta, "d' \\(I - D\\)"))
 })
 
 test_that("the model plots use the expected subject sensitivities", {
@@ -362,7 +362,7 @@ test_that("the hypotheses are internally consistent", {
 
   # The difference compares the two fixed effects.
   expect_equal(t$estimate[t$hypothesis == "H1"],
-               e[["gamma_D"]] - e[["gamma_I"]], tolerance = 1e-10,
+               e[["gamma_I"]] - e[["gamma_D"]], tolerance = 1e-10,
                ignore_attr = TRUE)
 })
 

@@ -167,20 +167,20 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 # This function tests the group-level sensitivity difference.
 .diff_rows <- function(p, level) {
   e <- p$est
-  est  <- e[["gamma_D"]] - e[["gamma_I"]]
+  est  <- e[["gamma_I"]] - e[["gamma_D"]]
   V <- p$fixed_vcov
   if (is.null(V) || !all(p$fixed_names %in% rownames(V))) {
-    return(.row_na("d'(direct) - d'(indirect)", est,
+    return(.row_na("d'(indirect) - d'(direct)", est,
                    "the fixed-effects covariance is unavailable"))
   }
   V <- V[p$fixed_names, p$fixed_names, drop = FALSE]
-  se <- .delta_se(c(1, -1), V)
+  se <- .delta_se(c(-1, 1), V)
   if (is.na(se)) {
-    return(.row_na("d'(direct) - d'(indirect)", est,
+    return(.row_na("d'(indirect) - d'(direct)", est,
                    "the fixed-effects standard error is invalid"))
   }
   w <- .wald(est, se, level)
-  .row("d'(direct) - d'(indirect)", est, se, w$statistic, w$p.value,
+  .row("d'(indirect) - d'(direct)", est, se, w$statistic, w$p.value,
        w$conf.low, w$conf.high, w$ci_method)
 }
 

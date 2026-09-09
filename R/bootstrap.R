@@ -296,7 +296,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     }
 
     stats::setNames(
-      c(gamma_D - gamma_I, rho, gamma_I - slope * gamma_D, slope,
+      c(gamma_I - gamma_D, rho, gamma_I - slope * gamma_D, slope,
         as.numeric(opt_ok && !length(messages)),
         as.numeric(lme4::isSingular(f, tol = 1e-4)),
         as.numeric(boundary), s2_D, s2_I,
@@ -386,7 +386,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 
 # This function adds bootstrap results to the hypothesis table.
 .boot_tests <- function(tests, t, level, type) {
-  map <- c("d'(direct) - d'(indirect)" = "diff", correlation = "rho",
+  map <- c("d'(indirect) - d'(direct)" = "diff", correlation = "rho",
            intercept = "intercept", slope = "slope")
 
   for (i in seq_len(nrow(tests))) {

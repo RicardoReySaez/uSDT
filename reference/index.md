@@ -54,13 +54,6 @@ reliability.
   [`print(`*`<usdt_reliability>`*`)`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
   : Reliability of direct and indirect task measures
 
-## Simulate data
-
-Generate model-based data for simulation studies and power assessment.
-
-- [`usdt_simulate()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_simulate.md)
-  : Simulate data from a hierarchical SDT model
-
 ## Example datasets
 
 Trial-level data from Experiment 2 of Vadillo, Malejka and Shanks

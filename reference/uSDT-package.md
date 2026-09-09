@@ -61,8 +61,19 @@ Useful links:
 
 ## Author
 
-**Maintainer**: Ricardo Rey-Saez <ricardoreysaez95@gmail.com>
+**Maintainer**: Ricardo Rey-Sáez <ricardoreysaez95@gmail.com>
+([ORCID](https://orcid.org/0000-0001-6739-2035))
 
 Authors:
 
-- Ricardo Rey-Saez <ricardoreysaez95@gmail.com>
+- Ricardo Rey-Sáez <ricardoreysaez95@gmail.com>
+  ([ORCID](https://orcid.org/0000-0001-6739-2035))
+
+- Alicia Franco-Martínez <aliciafranco96@gmail.com>
+  ([ORCID](https://orcid.org/0000-0002-9710-1240))
+
+- Francisco Garre-Frutos <fgfrutos@gmail.com>
+  ([ORCID](https://orcid.org/0000-0001-9810-186X))
+
+- Miguel Vadillo <mgl.vadillo@gmail.com>
+  ([ORCID](https://orcid.org/0000-0001-8421-816X))

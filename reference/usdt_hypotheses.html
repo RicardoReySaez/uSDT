@@ -147,23 +147,23 @@ compute the latent tests conditional on those covariates.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># All three tests at once</span></span></span>
 <span class="r-in"><span><span class="fu">usdt_tests</span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   hypothesis                      term   estimate         se statistic</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1         H1 d'(direct) - d'(indirect) 0.10712457 0.03537881 3.0279299</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2         H2               correlation 0.49116444 0.51904281 1.0090130</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3         H3                 intercept 0.04446212 0.11597753 0.3833684</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4         H3                     slope 0.35605319 0.48703535 1.0090130</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       p.value    conf.low conf.high ci_method status reason</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.002462352  0.03778337 0.1764658      Wald     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.312968398 -0.66579834 0.9543447  Fisher-z     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.701446664 -0.18284967 0.2717739     delta     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.312968398 -0.59851856 1.3106249      Wald     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   hypothesis                      term    estimate         se  statistic</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1         H1 d'(indirect) - d'(direct) -0.10712457 0.03537881 -3.0279299</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         H2               correlation  0.49116444 0.51904281  1.0090130</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3         H3                 intercept  0.04446212 0.11597753  0.3833684</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4         H3                     slope  0.35605319 0.48703535  1.0090130</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       p.value   conf.low   conf.high ci_method status reason</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.002462352 -0.1764658 -0.03778337      Wald     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.312968398 -0.6657983  0.95434470  Fisher-z     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.701446664 -0.1828497  0.27177390     delta     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.312968398 -0.5985186  1.31062494      Wald     ok   &lt;NA&gt;</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Or one test at a time</span></span></span>
 <span class="r-in"><span><span class="fu">sensitivity_diff</span><span class="op">(</span><span class="va">m</span><span class="op">)</span>   <span class="co"># H1</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                        term  estimate         se statistic     p.value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 d'(direct) - d'(indirect) 0.1071246 0.03537881   3.02793 0.002462352</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     conf.low conf.high ci_method status reason</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.03778337 0.1764658      Wald     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                        term   estimate         se statistic     p.value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 d'(indirect) - d'(direct) -0.1071246 0.03537881  -3.02793 0.002462352</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     conf.low   conf.high ci_method status reason</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.1764658 -0.03778337      Wald     ok   &lt;NA&gt;</span>
 <span class="r-in"><span><span class="fu">latent_cor</span><span class="op">(</span><span class="va">m</span><span class="op">)</span>         <span class="co"># H2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          term  estimate        se statistic   p.value   conf.low conf.high</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1 correlation 0.4911644 0.5190428  1.009013 0.3129684 -0.6657983 0.9543447</span>
@@ -211,16 +211,16 @@ compute the latent tests conditional on those covariates.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Evaluate hypotheses conditional on set size</span></span></span>
 <span class="r-in"><span><span class="fu">usdt_tests</span><span class="op">(</span><span class="va">fit</span>, direct <span class="op">=</span> <span class="st">"taskD:cond"</span>, indirect <span class="op">=</span> <span class="st">"taskI:cond"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   hypothesis                      term   estimate         se statistic</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1         H1 d'(direct) - d'(indirect) 0.11543437 0.03708830 3.1124202</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2         H2               correlation 0.38202740 0.39477464 0.9808754</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3         H3                 intercept 0.07359722 0.07328274 1.0042913</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4         H3                     slope 0.24022425 0.28657427 0.9808754</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       p.value    conf.low conf.high ci_method status reason</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.001855602  0.04274264 0.1881261      Wald     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.326654191 -0.46489171 0.8638691  Fisher-z     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.315238231 -0.07003431 0.2172287     delta     ok   &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.326654191 -0.32145100 0.8018995      Wald     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   hypothesis                      term    estimate         se  statistic</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1         H1 d'(indirect) - d'(direct) -0.11543872 0.03708874 -3.1125005</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2         H2               correlation  0.38197036 0.39480466  0.9806745</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3         H3                 intercept  0.07360717 0.07328775  1.0043583</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4         H3                     slope  0.24018109 0.28657808  0.9806745</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       p.value    conf.low   conf.high ci_method status reason</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.001855097 -0.18813131 -0.04274613      Wald     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.326753304 -0.46496183  0.86385791  Fisher-z     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.315205936 -0.07003419  0.21724852     delta     ok   &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.326753304 -0.32150163  0.80186381      Wald     ok   &lt;NA&gt;</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

@@ -268,9 +268,9 @@ summary(fit_uSDT)
 
     ── Hypotheses ──────────────────────────────────────────────────────────────────
 
-    H1: Group-level sensitivity difference (Δd' = Direct d' - Indirect d')
+    H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
       Parameter       Estimate       SE  95% CI                   z   p-value
-      Δd' (D - I)      0.1071   0.0354  [  0.038,  0.176]     3.03      .002
+      Δd' (I - D)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
 
     H2: Correlation between sensitivities across tasks
       Parameter       Estimate       SE  95% CI                   z   p-value
@@ -318,12 +318,12 @@ standalone table with `fit_uSDT$tests`.
 
 The first hypothesis asks whether the two tasks differ in their average
 sensitivity. In unconscious perception paradigms, finding that indirect
-sensitivity clearly exceeds direct sensitivity (\Delta d' \< 0) is
+sensitivity clearly exceeds direct sensitivity (\Delta d' \> 0) is
 sometimes taken as an indirect-task advantage—suggesting that the
 indirect measure picks up signal that conscious report misses.
 
-In our sample, the difference is positive and significantly different
-from zero (\Delta d' = 0.11, 95% CI \[0.04, 0.18\], p = .002). Direct
+In our sample, the difference is negative and significantly different
+from zero (\Delta d' = -0.11, 95% CI \[-0.18, -0.04\], p = .002). Direct
 recognition was significantly stronger than indirect contextual cuing,
 so we find no evidence of an indirect-task advantage.
 

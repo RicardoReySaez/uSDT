@@ -163,9 +163,9 @@ summary(m)
 #> 
 #> ── Hypotheses ──────────────────────────────────────────────────────────────────
 #> 
-#> H1: Group-level sensitivity difference (Δd' = Direct d' - Indirect d')
+#> H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
 #>   Parameter       Estimate       SE  95% CI                   z   p-value
-#>   Δd' (D - I)      0.1071   0.0354  [  0.038,  0.176]     3.03      .002
+#>   Δd' (I - D)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
 #> 
 #> H2: Correlation between sensitivities across tasks
 #>   Parameter       Estimate       SE  95% CI                   z   p-value
@@ -184,6 +184,6 @@ summary(m)
 m$design$formula
 #> cbind(y, n - y) ~ 0 + c_D + d_D + d_I + (0 + c_D | subj) + (0 + 
 #>     d_D + d_I | subj)
-#> <environment: 0x555d47522078>
+#> <environment: 0x558c634bdc60>
 # }
 ```

@@ -195,9 +195,9 @@ parametric bootstrap intervals can be calculated using <code><a href="usdt_boot.
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ── Hypotheses ──────────────────────────────────────────────────────────────────</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> H1: Group-level sensitivity difference (Δd' = Direct d' - Indirect d')</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter       Estimate       SE  95% CI                   z   p-value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Δd' (D - I)      0.1071   0.0354  [  0.038,  0.176]     3.03      .002</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Δd' (I - D)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> H2: Correlation between sensitivities across tasks</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter       Estimate       SE  95% CI                   z   p-value</span>
@@ -216,7 +216,7 @@ parametric bootstrap intervals can be calculated using <code><a href="usdt_boot.
 <span class="r-in"><span><span class="va">m</span><span class="op">$</span><span class="va">design</span><span class="op">$</span><span class="va">formula</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cbind(y, n - y) ~ 0 + c_D + d_D + d_I + (0 + c_D | subj) + (0 + </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     d_D + d_I | subj)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x555d47522078&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: 0x558c634bdc60&gt;</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

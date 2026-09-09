@@ -104,23 +104,23 @@ m <- hsdt(d)
 
 # All three tests at once
 usdt_tests(m)
-#>   hypothesis                      term   estimate         se statistic
-#> 1         H1 d'(direct) - d'(indirect) 0.10712457 0.03537881 3.0279299
-#> 2         H2               correlation 0.49116444 0.51904281 1.0090130
-#> 3         H3                 intercept 0.04446212 0.11597753 0.3833684
-#> 4         H3                     slope 0.35605319 0.48703535 1.0090130
-#>       p.value    conf.low conf.high ci_method status reason
-#> 1 0.002462352  0.03778337 0.1764658      Wald     ok   <NA>
-#> 2 0.312968398 -0.66579834 0.9543447  Fisher-z     ok   <NA>
-#> 3 0.701446664 -0.18284967 0.2717739     delta     ok   <NA>
-#> 4 0.312968398 -0.59851856 1.3106249      Wald     ok   <NA>
+#>   hypothesis                      term    estimate         se  statistic
+#> 1         H1 d'(indirect) - d'(direct) -0.10712457 0.03537881 -3.0279299
+#> 2         H2               correlation  0.49116444 0.51904281  1.0090130
+#> 3         H3                 intercept  0.04446212 0.11597753  0.3833684
+#> 4         H3                     slope  0.35605319 0.48703535  1.0090130
+#>       p.value   conf.low   conf.high ci_method status reason
+#> 1 0.002462352 -0.1764658 -0.03778337      Wald     ok   <NA>
+#> 2 0.312968398 -0.6657983  0.95434470  Fisher-z     ok   <NA>
+#> 3 0.701446664 -0.1828497  0.27177390     delta     ok   <NA>
+#> 4 0.312968398 -0.5985186  1.31062494      Wald     ok   <NA>
 
 # Or one test at a time
 sensitivity_diff(m)   # H1
-#>                        term  estimate         se statistic     p.value
-#> 1 d'(direct) - d'(indirect) 0.1071246 0.03537881   3.02793 0.002462352
-#>     conf.low conf.high ci_method status reason
-#> 1 0.03778337 0.1764658      Wald     ok   <NA>
+#>                        term   estimate         se statistic     p.value
+#> 1 d'(indirect) - d'(direct) -0.1071246 0.03537881  -3.02793 0.002462352
+#>     conf.low   conf.high ci_method status reason
+#> 1 -0.1764658 -0.03778337      Wald     ok   <NA>
 latent_cor(m)         # H2
 #>          term  estimate        se statistic   p.value   conf.low conf.high
 #> 1 correlation 0.4911644 0.5190428  1.009013 0.3129684 -0.6657983 0.9543447
@@ -168,15 +168,15 @@ names(lme4::fixef(fit))
 
 # Evaluate hypotheses conditional on set size
 usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
-#>   hypothesis                      term   estimate         se statistic
-#> 1         H1 d'(direct) - d'(indirect) 0.11543437 0.03708830 3.1124202
-#> 2         H2               correlation 0.38202740 0.39477464 0.9808754
-#> 3         H3                 intercept 0.07359722 0.07328274 1.0042913
-#> 4         H3                     slope 0.24022425 0.28657427 0.9808754
-#>       p.value    conf.low conf.high ci_method status reason
-#> 1 0.001855602  0.04274264 0.1881261      Wald     ok   <NA>
-#> 2 0.326654191 -0.46489171 0.8638691  Fisher-z     ok   <NA>
-#> 3 0.315238231 -0.07003431 0.2172287     delta     ok   <NA>
-#> 4 0.326654191 -0.32145100 0.8018995      Wald     ok   <NA>
+#>   hypothesis                      term    estimate         se  statistic
+#> 1         H1 d'(indirect) - d'(direct) -0.11543872 0.03708874 -3.1125005
+#> 2         H2               correlation  0.38197036 0.39480466  0.9806745
+#> 3         H3                 intercept  0.07360717 0.07328775  1.0043583
+#> 4         H3                     slope  0.24018109 0.28657808  0.9806745
+#>       p.value    conf.low   conf.high ci_method status reason
+#> 1 0.001855097 -0.18813131 -0.04274613      Wald     ok   <NA>
+#> 2 0.326753304 -0.46496183  0.86385791  Fisher-z     ok   <NA>
+#> 3 0.315205936 -0.07003419  0.21724852     delta     ok   <NA>
+#> 4 0.326753304 -0.32150163  0.80186381      Wald     ok   <NA>
 # }
 ```

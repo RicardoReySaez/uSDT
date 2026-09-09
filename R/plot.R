@@ -39,9 +39,14 @@
 #' line. When direct task reliability is low, trial-level sampling noise
 #' attenuates this observed slope toward zero. The right panel plots the latent
 #' regression line (\eqn{d'_I} on \eqn{d'_D}) from H3, correcting for
-#' measurement error. The value of this line at \eqn{d'_D = 0} marks the
-#' intercept testing for unconscious processing. Confidence bands are computed
-#' via the delta method or bootstrap replicates when [usdt_boot()] is present.
+#' measurement error. The value of each line at \eqn{d'_D = 0} marks the
+#' intercept testing for unconscious processing, and both panels display it the
+#' same way: an open circle at the point estimate with a vertical line spanning
+#' its confidence interval. The observed marker is the least-squares intercept
+#' and the latent marker is its measurement-error-corrected counterpart, so the
+#' two panels place the same hypothesis side by side. Confidence bands are
+#' computed via the delta method or bootstrap replicates when [usdt_boot()] is
+#' present.
 #'
 #' # Shrinkage plot (`type = "shrinkage"`)
 #'
@@ -215,8 +220,11 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   naive_fit <- if (naive_ok) {
     stats::lm(observed_indirect ~ observed_direct, data = points)
   } else NULL
+  # Zero joins the observed grid for the same reason it joins the latent one:
+  # the value of the line there is the quantity both panels put on trial.
+  naive_span <- if (naive_ok) range(c(0, points$observed_direct)) else numeric(0)
   naive_x <- if (naive_ok) {
-    seq(min(points$observed_direct), max(points$observed_direct), length.out = 127L)
+    sort(unique(c(seq(naive_span[1L], naive_span[2L], length.out = 127L), 0)))
   } else numeric(0)
   naive_line <- data.frame(
     x = naive_x, fit = rep(NA_real_, length(naive_x)),
@@ -242,6 +250,12 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       naive_line$fit <- as.numeric(prediction)
     }
   }
+
+  # Read at zero, the observed band returns the least-squares intercept and its
+  # interval, so marker and ribbon agree exactly as they do in the latent panel.
+  naive_origin <- if (naive_ok) {
+    naive_line[match(0, naive_x), , drop = FALSE]
+  } else naive_line[0L, , drop = FALSE]
 
   # The latent line is only drawn over the central fitted population range,
   # plus zero because its value there is the hypothesis of interest.
@@ -284,6 +298,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
        observed_points = observed_panel, model_points = model_panel,
        naive_line = naive_line, naive_intercept = naive_coef[["intercept"]],
        naive_slope = naive_coef[["slope"]], naive_p = naive_p,
+       naive_origin = naive_origin,
        line = latent$line, slope = latent$slope, intercept = latent$intercept,
        method = latent$method, reason = latent$reason, origin = origin,
        annotations = annotations, panels = panels)
@@ -295,8 +310,11 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   values <- .regression_data(object, band)
   labels <- object$data$meta$labels
   origin <- values$origin
+  naive_origin <- values$naive_origin
   banded <- values$method != "none"
   naive <- is.finite(values$naive_slope)
+  naive_banded <- band && naive && nrow(naive_origin) == 1L &&
+    all(is.finite(c(naive_origin$conf.low, naive_origin$conf.high)))
 
   background <- "#FFFFFF"
   observed_colour <- "#A8AEB3"
@@ -380,14 +398,33 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     inherit.aes = FALSE, colour = latent_colour, linewidth = 1.05
   )
 
-  # The intercept is the quantity H3 tests, so it gets its own marker. Its
-  # limits are the band read at zero, which keeps marker and ribbon identical.
+  # The intercept is the quantity H3 tests, so it gets its own marker in both
+  # panels: the attenuated observed one and the corrected latent one answer the
+  # same question, and drawing them alike makes the contrast the reader's to
+  # make. Their limits are each band read at zero, which keeps every marker
+  # identical to the ribbon it sits in.
+  if (naive_banded) {
+    plot <- plot + ggplot2::geom_linerange(
+      data = naive_origin,
+      ggplot2::aes(x = .data[["x"]], ymin = .data[["conf.low"]],
+                   ymax = .data[["conf.high"]]),
+      inherit.aes = FALSE, colour = naive_colour, linewidth = 1
+    )
+  }
   if (banded && all(is.finite(c(origin$conf.low, origin$conf.high)))) {
     plot <- plot + ggplot2::geom_linerange(
       data = origin,
       ggplot2::aes(x = .data[["x"]], ymin = .data[["conf.low"]],
                    ymax = .data[["conf.high"]]),
       inherit.aes = FALSE, colour = latent_colour, linewidth = 1
+    )
+  }
+  if (naive && nrow(naive_origin) == 1L && is.finite(naive_origin$fit)) {
+    plot <- plot + ggplot2::geom_point(
+      data = naive_origin,
+      ggplot2::aes(x = .data[["x"]], y = .data[["fit"]]),
+      inherit.aes = FALSE, shape = 21, size = 3.2, stroke = 1.05,
+      colour = naive_colour, fill = background
     )
   }
 
@@ -405,7 +442,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   caption <- .wrap_caption(
     "Segments show shrinkage from observed to conditional model estimates. ",
     "The latent line is implied by the fitted random-effects distribution, ",
-    "not fitted to the green points.\n", band_note,
+    "not fitted to the green points.\n",
+    "An open circle marks the intercept of each panel at zero. ", band_note,
     " P-values test the intercept and slope against zero; p < .05 indicates ",
     "significance."
   )

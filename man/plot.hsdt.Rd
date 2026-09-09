@@ -57,9 +57,14 @@ The left panel shows observed \eqn{d'} values and an ordinary least-squares
 line. When direct task reliability is low, trial-level sampling noise
 attenuates this observed slope toward zero. The right panel plots the latent
 regression line (\eqn{d'_I} on \eqn{d'_D}) from H3, correcting for
-measurement error. The value of this line at \eqn{d'_D = 0} marks the
-intercept testing for unconscious processing. Confidence bands are computed
-via the delta method or bootstrap replicates when \code{\link[=usdt_boot]{usdt_boot()}} is present.
+measurement error. The value of each line at \eqn{d'_D = 0} marks the
+intercept testing for unconscious processing, and both panels display it the
+same way: an open circle at the point estimate with a vertical line spanning
+its confidence interval. The observed marker is the least-squares intercept
+and the latent marker is its measurement-error-corrected counterpart, so the
+two panels place the same hypothesis side by side. Confidence bands are
+computed via the delta method or bootstrap replicates when \code{\link[=usdt_boot]{usdt_boot()}} is
+present.
 }
 
 \section{Shrinkage plot (\code{type = "shrinkage"})}{

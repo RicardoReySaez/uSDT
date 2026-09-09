@@ -259,6 +259,11 @@ test_that("the regression plot separates observed and model relationships", {
   expect_equal(values$naive_slope, unname(stats::coef(naive)[2L]))
   expect_equal(unname(values$naive_p),
                unname(summary(naive)$coefficients[, "Pr(>|t|)"]))
+  expect_identical(nrow(values$naive_origin), 1L)
+  expect_identical(values$naive_origin$x, 0)
+  expect_equal(values$naive_origin$fit, unname(stats::coef(naive)[1L]))
+  expect_equal(unname(unlist(values$naive_origin[c("conf.low", "conf.high")])),
+               unname(stats::confint(naive, level = m$level)["(Intercept)", ]))
   expect_equal(values$intercept,
                latent$estimate[latent$term == "intercept"])
   expect_equal(values$slope, latent$estimate[latent$term == "slope"])

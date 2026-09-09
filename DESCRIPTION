@@ -2,9 +2,23 @@ Package: uSDT
 Type: Package
 Title: Hierarchical Signal Detection Theory Models for Unconscious Processing
 Version: 0.1.0
-Authors@R: person("Ricardo", "Rey-Saez",
-                  email = "ricardoreysaez95@gmail.com",
-                  role  = c("aut", "cre"))
+Authors@R: c(
+    person("Ricardo", "Rey-Sáez",
+           email   = "ricardoreysaez95@gmail.com",
+           role    = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-6739-2035")),
+    person("Alicia", "Franco-Martínez",
+           email   = "aliciafranco96@gmail.com",
+           role    = "aut",
+           comment = c(ORCID = "0000-0002-9710-1240")),
+    person("Francisco", "Garre-Frutos",
+           email   = "fgfrutos@gmail.com",
+           role    = "aut",
+           comment = c(ORCID = "0000-0001-9810-186X")),
+    person("Miguel", "Vadillo",
+           email   = "mgl.vadillo@gmail.com",
+           role    = "aut",
+           comment = c(ORCID = "0000-0001-8421-816X")))
 Description: Fits hierarchical signal detection theory (SDT) models to paired
     direct and indirect measures, the design used to test for unconscious
     processing. Continuous indirect measures (typically response times) are

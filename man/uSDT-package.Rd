@@ -54,11 +54,14 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Ricardo Rey-Saez \email{ricardoreysaez95@gmail.com}
+\strong{Maintainer}: Ricardo Rey-Sáez \email{ricardoreysaez95@gmail.com} (\href{https://orcid.org/0000-0001-6739-2035}{ORCID})
 
 Authors:
 \itemize{
-  \item Ricardo Rey-Saez \email{ricardoreysaez95@gmail.com}
+  \item Ricardo Rey-Sáez \email{ricardoreysaez95@gmail.com} (\href{https://orcid.org/0000-0001-6739-2035}{ORCID})
+  \item Alicia Franco-Martínez \email{aliciafranco96@gmail.com} (\href{https://orcid.org/0000-0002-9710-1240}{ORCID})
+  \item Francisco Garre-Frutos \email{fgfrutos@gmail.com} (\href{https://orcid.org/0000-0001-9810-186X}{ORCID})
+  \item Miguel Vadillo \email{mgl.vadillo@gmail.com} (\href{https://orcid.org/0000-0001-8421-816X}{ORCID})
 }
 
 }

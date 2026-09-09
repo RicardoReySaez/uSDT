@@ -77,9 +77,14 @@ axes. The left panel shows observed \\d'\\ values and an ordinary
 least-squares line. When direct task reliability is low, trial-level
 sampling noise attenuates this observed slope toward zero. The right
 panel plots the latent regression line (\\d'\_I\\ on \\d'\_D\\) from H3,
-correcting for measurement error. The value of this line at \\d'\_D =
-0\\ marks the intercept testing for unconscious processing. Confidence
-bands are computed via the delta method or bootstrap replicates when
+correcting for measurement error. The value of each line at \\d'\_D =
+0\\ marks the intercept testing for unconscious processing, and both
+panels display it the same way: an open circle at the point estimate
+with a vertical line spanning its confidence interval. The observed
+marker is the least-squares intercept and the latent marker is its
+measurement-error-corrected counterpart, so the two panels place the
+same hypothesis side by side. Confidence bands are computed via the
+delta method or bootstrap replicates when
 [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_boot.md)
 is present.
 

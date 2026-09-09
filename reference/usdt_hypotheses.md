@@ -169,14 +169,14 @@ names(lme4::fixef(fit))
 # Evaluate hypotheses conditional on set size
 usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
 #>   hypothesis                      term    estimate         se  statistic
-#> 1         H1 d'(indirect) - d'(direct) -0.11543872 0.03708874 -3.1125005
-#> 2         H2               correlation  0.38197036 0.39480466  0.9806745
-#> 3         H3                 intercept  0.07360717 0.07328775  1.0043583
-#> 4         H3                     slope  0.24018109 0.28657808  0.9806745
+#> 1         H1 d'(indirect) - d'(direct) -0.11543437 0.03708830 -3.1124202
+#> 2         H2               correlation  0.38202740 0.39477464  0.9808754
+#> 3         H3                 intercept  0.07359722 0.07328274  1.0042913
+#> 4         H3                     slope  0.24022425 0.28657427  0.9808754
 #>       p.value    conf.low   conf.high ci_method status reason
-#> 1 0.001855097 -0.18813131 -0.04274613      Wald     ok   <NA>
-#> 2 0.326753304 -0.46496183  0.86385791  Fisher-z     ok   <NA>
-#> 3 0.315205936 -0.07003419  0.21724852     delta     ok   <NA>
-#> 4 0.326753304 -0.32150163  0.80186381      Wald     ok   <NA>
+#> 1 0.001855602 -0.18812610 -0.04274264      Wald     ok   <NA>
+#> 2 0.326654191 -0.46489171  0.86386911  Fisher-z     ok   <NA>
+#> 3 0.315238231 -0.07003431  0.21722875     delta     ok   <NA>
+#> 4 0.326654191 -0.32145100  0.80189950      Wald     ok   <NA>
 # }
 ```

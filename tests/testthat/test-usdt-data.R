@@ -6,7 +6,7 @@
 # This function creates a small data set for both input routes.
 make_binary <- function(seed = 1L, n_subj = 30L, n_trials = 60L) {
   set.seed(seed)
-  usdt_simulate(n_subj = n_subj, n_trials = n_trials)
+  make_trials(n_subj = n_subj, n_trials = n_trials)
 }
 
 # This function keeps the common input options in one place.
@@ -92,7 +92,7 @@ test_that("the two codings differ only where they should", {
 
 test_that("a Meyen-split task has its criterion fixed under deviation coding only", {
   set.seed(5)
-  df <- usdt_simulate(n_subj = 40L, n_trials = 100L, rt = TRUE)
+  df <- make_trials(n_subj = 40L, n_trials = 100L, rt = TRUE)
   # The median split replaces this temporary response.
   df$response[df$task == "I"] <- 0L
 
@@ -125,7 +125,7 @@ test_that("a Meyen-split task has its criterion fixed under deviation coding onl
 
 test_that("the formula follows the criterion decision", {
   set.seed(6)
-  df <- usdt_simulate(n_subj = 30L, n_trials = 60L)
+  df <- make_trials(n_subj = 30L, n_trials = 60L)
   d  <- long_args(df)
 
   # Both criteria are estimated when no task was dichotomized.
@@ -242,7 +242,7 @@ test_that("aggregated values are validated before conversion", {
 
 test_that("a factor cannot be used as a response time", {
   set.seed(7)
-  df <- usdt_simulate(n_subj = 20L, n_trials = 60L, rt = TRUE)
+  df <- make_trials(n_subj = 20L, n_trials = 60L, rt = TRUE)
   direct <- df[df$task == "D", ]
   indirect <- df[df$task == "I", ]
   indirect$rt <- factor(indirect$rt)
@@ -272,7 +272,7 @@ test_that("missing signal and noise roles are an error, never a guess", {
 
   # A median-split task names the side of the median, and must still name it.
   set.seed(1)
-  rt <- usdt_simulate(n_subj = 30L, n_trials = 60L, rt = TRUE)
+  rt <- make_trials(n_subj = 30L, n_trials = 60L, rt = TRUE)
   expect_error(
     long_args(rt,
               response_col    = c(direct = "response", indirect = "rt"),

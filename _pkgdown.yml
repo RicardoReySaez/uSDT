@@ -99,11 +99,6 @@ reference:
   - plot.hsdt
   - usdt_reliability
 
-- title: Simulate data
-  desc: Generate model-based data for simulation studies and power assessment.
-  contents:
-  - usdt_simulate
-
 - title: Example datasets
   desc: Trial-level data from Experiment 2 of Vadillo, Malejka and Shanks (2025).
   contents:

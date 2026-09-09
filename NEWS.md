@@ -32,8 +32,7 @@ First release.
 * `usdt_reliability()` estimates task reliability from the fitted between-subject
   sensitivity variance and trial-level measurement variance.
 
-## Simulation and example data
+## Example data
 
-* `usdt_simulate()` generates data from the model for simulation studies.
 * `vadillo_awareness` and `vadillo_cuing` provide trial-level data from
   Experiment 2 of Vadillo, Malejka and Shanks (2025).

@@ -6,8 +6,8 @@
 # This function fits a stable model for the comparisons below.
 fit_reference <- function(seed = 4L, ...) {
   set.seed(seed)
-  df <- usdt_simulate(n_subj = 60L, n_trials = 120L, gamma_D = 0.8,
-                      gamma_I = 0.35, sd_D = 0.5, sd_I = 0.3, rho = 0.5)
+  df <- make_trials(n_subj = 60L, n_trials = 120L, gamma_D = 0.8,
+                    gamma_I = 0.35, sd_D = 0.5, sd_I = 0.3, rho = 0.5)
   d  <- usdt_data_long(df, task_col = "task",
                        task_levels      = c(direct = "D", indirect = "I"),
                        subject_col      = "subj",
@@ -407,8 +407,8 @@ test_that("the layer-2 functions agree with the fitted table", {
 test_that("a boundary fit returns stable hypothesis rows", {
   # Very little direct variation makes the slope hard to identify.
   set.seed(12)
-  df <- usdt_simulate(n_subj = 40L, n_trials = 100L, gamma_D = 0.6,
-                      gamma_I = 0.2, sd_D = 0.02, sd_I = 0.05, rho = 0.3)
+  df <- make_trials(n_subj = 40L, n_trials = 100L, gamma_D = 0.6,
+                    gamma_I = 0.2, sd_D = 0.02, sd_I = 0.05, rho = 0.3)
   d  <- usdt_data_long(df, task_col = "task",
                        task_levels      = c(direct = "D", indirect = "I"),
                        subject_col      = "subj",

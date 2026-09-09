@@ -6,7 +6,7 @@
 # Both criteria are estimated here.
 fitted_example <- function() {
   set.seed(21)
-  trials <- usdt_simulate(n_subj = 24L, n_trials = 60L)
+  trials <- make_trials(n_subj = 24L, n_trials = 60L)
   data <- usdt_data_long(
     trials,
     task_col = "task",
@@ -23,7 +23,7 @@ fitted_example <- function() {
 # A Meyen split removes the indirect criterion.
 split_example <- function() {
   set.seed(21)
-  trials <- usdt_simulate(n_subj = 24L, n_trials = 60L, rt = TRUE)
+  trials <- make_trials(n_subj = 24L, n_trials = 60L, rt = TRUE)
   data <- suppressMessages(usdt_data_long(
     trials,
     task_col = "task",

@@ -42,7 +42,7 @@
 
 # Imports
 
-#' @importFrom stats qnorm pnorm rnorm rbinom median sd ave setNames
+#' @importFrom stats qnorm pnorm median sd ave setNames
 #' @importFrom stats aggregate as.formula binomial complete.cases formula
 #' @importFrom stats getCall model.frame quantile reshape update vcov family
 #' @importFrom utils head tail modifyList

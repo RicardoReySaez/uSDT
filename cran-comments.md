@@ -4,6 +4,10 @@ This is a new submission.
 
 ## Test environments
 
+* win-builder, R 4.6.1, Windows Server 2022 x64
+* win-builder, R-devel 2026-09-09 r90510, Windows Server 2022 x64
+* macOS builder, R 4.6.1 Patched 2026-07-27 r90311, macOS 26.6,
+  aarch64-apple-darwin23
 * Local: Windows 11 x64, R 4.6.0, `R CMD check --as-cran`
 * GitHub Actions, defined in `.github/workflows/R-CMD-check.yaml`:
   * macOS-latest, R release
@@ -12,16 +16,13 @@ This is a new submission.
   * ubuntu-latest, R release
   * ubuntu-latest, R oldrel-1
 
-<!-- Before submitting:
-     1. Confirm the GitHub Actions matrix above is green for the commit
-        being submitted.
-     2. Run devtools::check_win_devel(), devtools::check_win_release() and
-        devtools::check_mac_release(), and add their results here.
-     3. Delete this comment block. -->
-
 ## R CMD check results
 
-0 errors | 0 warnings | 2 notes
+0 errors | 0 warnings | 1 note
+
+The macOS builder reports `Status: OK`. Both win-builder runs report the single
+note below, which the macOS builder does not produce because it does not run
+the CRAN incoming feasibility check.
 
 ### NOTE: checking CRAN incoming feasibility
 
@@ -29,18 +30,23 @@ This is a new submission.
 Maintainer: 'Ricardo Rey-Sáez <ricardoreysaez95@gmail.com>'
 
 New submission
+
+Possibly misspelled words in DESCRIPTION:
+  Meyen (26:58)
+  SDT (23:57)
+  al (26:67)
+  et (26:64)
 ```
 
-This is the first release of uSDT, so the note is expected.
+This is the first release of uSDT, so the new submission part is expected.
 
-### NOTE: checking HTML version of manual
+The four flagged words are spelled correctly:
 
-```
-Skipping checking math rendering: package 'V8' unavailable
-```
-
-The local check machine does not have V8 installed. The note does not appear
-where V8 is available.
+* Meyen is the surname of the first author of the work cited in the
+  Description, Meyen et al. (2022) <doi:10.1037/xge0001065>.
+* et and al belong to that same citation.
+* SDT is the standard abbreviation of signal detection theory. The
+  Description writes the term out in full before abbreviating it.
 
 ## Notes on the examples
 

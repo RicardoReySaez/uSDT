@@ -23,8 +23,27 @@ knitr::opts_chunk$set(
   out.width  = "100%",
   dpi        = 150
 )
-options(width = 80)
-invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", "en_US.UTF-8")))
+
+# The printed output rules the tables with box characters in a UTF-8 locale
+# and falls back to ASCII when there is none, so the vignette asks for UTF-8
+# to read the same wherever it is built. It only asks when the session is not
+# already there, and the last chunk puts the width and the locale back as they
+# were.
+old_options <- options(width = 80)
+old_ctype   <- Sys.getlocale("LC_CTYPE")
+
+if (!isTRUE(l10n_info()[["UTF-8"]])) {
+  for (loc in c("en_US.UTF-8", "C.UTF-8", "English_United States.utf8")) {
+    suppressWarnings(Sys.setlocale("LC_CTYPE", loc))
+    if (isTRUE(l10n_info()[["UTF-8"]])) break
+  }
+  # Windows accepts locale names it does not actually have, so trust
+  # l10n_info() rather than the return value, and undo the attempts when none
+  # of the names produced a UTF-8 session.
+  if (!isTRUE(l10n_info()[["UTF-8"]])) {
+    invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
+  }
+}
 ```
 
 ```{r}
@@ -341,3 +360,10 @@ Spearman, C. (1904). The proof and measurement of association between two things
 Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the reliability
 multiverse of contextual cuing. *Journal of Experimental Psychology: Learning,
 Memory, and Cognition*, 51(6), 910-927. <https://doi.org/10.1037/xlm0001410>
+
+```{r}
+#| label: cleanup
+#| include: false
+options(old_options)
+invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
+```

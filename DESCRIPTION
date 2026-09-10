@@ -22,14 +22,14 @@ Authors@R: c(
 Description: Fits hierarchical signal detection theory (SDT) models to paired
     direct and indirect measures, the design used to test for unconscious
     processing. Continuous indirect measures (typically response times) are
-    dichotomized with the within-subject median split of Meyen et al.
-    (2022) so that both tasks are placed on a common sensitivity scale. The
-    package estimates a binomial probit mixed model in which the two
-    sensitivities are correlated random effects, and tests the three
-    hypotheses of interest: the group-level difference between sensitivities,
-    their latent correlation, and the latent regression of the indirect on the
-    direct measure, whose intercept is the test for unconscious processing.
-    Frequentist estimation uses 'lme4'.
+    dichotomized with the within-subject median split of Meyen et al. (2022)
+    <doi:10.1037/xge0001065> so that both tasks are placed on a common
+    sensitivity scale. The package estimates a binomial probit mixed model in
+    which the two sensitivities are correlated random effects, and tests the
+    three hypotheses of interest: the group-level difference between
+    sensitivities, their latent correlation, and the latent regression of the
+    indirect on the direct measure, whose intercept is the test for
+    unconscious processing. Frequentist estimation uses 'lme4'.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

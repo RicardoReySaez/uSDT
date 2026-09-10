@@ -14,3 +14,4 @@
 ^docs$
 ^pkgdown$
 ^\.Rprofile$
+^cran-comments\.md$

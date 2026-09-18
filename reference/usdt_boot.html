@@ -93,7 +93,8 @@ and automatically stops when finished.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
-<dd><p>Random seed for reproducibility.</p></dd>
+<dd><p>Random seed for reproducibility. With the default <code>NULL</code>, no
+seed is set and the bootstrap continues the current random number stream.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
@@ -143,8 +144,7 @@ centered bootstrap distribution using standard finite-sample adjustment
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="co"># Contextual cuing data from Vadillo et al. (2025)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Contextual cuing data from Vadillo et al. (2025)</span></span></span>
 <span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="usdt_data.html">usdt_data_tasks</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  direct   <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span></span>
 <span class="r-in"><span>  indirect <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span></span>
@@ -158,19 +158,72 @@ centered bootstrap distribution using standard finite-sample adjustment
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># Run parametric bootstrap with 500 replicates. Refitting this model 500</span></span></span>
-<span class="r-in"><span><span class="co"># times takes several minutes, so this block is not run by R CMD check</span></span></span>
+<span class="r-in"><span><span class="co"># times takes several minutes</span></span></span>
 <span class="r-in"><span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu">usdt_boot</span><span class="op">(</span><span class="va">m</span>, nsim <span class="op">=</span> <span class="fl">500</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect updated summary with bootstrap intervals and p-values</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">b</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ── Model summary ─────────────────────────────────────────────────────────────── </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Subjects:       104</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Observations:   416 aggregated rows (46,592 trials)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Family:         binomial (probit)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Coding:         deviation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Estimation:     lme4::glmer (bobyqa)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Convergence:    TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Bootstrap:      500 usable replicates (508 attempts; 190 at the boundary)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ── Fixed effects ───────────────────────────────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter      Task       Estimate       SE  95% CI                   z   p-value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   criterion      Direct      -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   d'             Direct       0.2354   0.0335  [  0.170,  0.301]     7.03     &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   d'             Indirect     0.1283   0.0153  [  0.098,  0.158]     8.41     &lt;.001</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ── Random effects ──────────────────────────────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter      Task       Estimate       SE  95% CI            </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   sd(criterion)  Direct       0.2473   0.0246  [  0.203,  0.301]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   sd(d')         Direct       0.1219   0.0666  [  0.042,  0.356]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   sd(d')         Indirect     0.0883   0.0190  [  0.058,  0.135]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cor(d')        both         0.4912   0.5202  [ -1.000,  1.000]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ── Hypotheses ──────────────────────────────────────────────────────────────────</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Δd' (I - D)       -0.1071   0.0346  [ -0.174, -0.038]                 .004</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> H2: Correlation between sensitivities across tasks</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   rho                 0.4912   0.5202  [ -1.000,  1.000]                 .483</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> H3: Latent regression of Indirect d' on Direct d'</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Intercept           0.0445   0.8949  [ -1.125,  0.670]                 .685</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Slope               0.3561   3.9094  [ -2.224,  5.438]                 .441</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Check fit diagnostics across bootstrap replicates</span></span></span>
 <span class="r-in"><span><span class="va">b</span><span class="op">$</span><span class="va">boot</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"usable"</span>, <span class="st">"attempted"</span>, <span class="st">"retained"</span>, <span class="st">"failures"</span><span class="op">)</span><span class="op">]</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $usable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 500</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $attempted</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 508</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $retained</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> singular boundary </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      187      190 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $failures</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    non_finite non_converged </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             7             1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
@@ -179,7 +232,7 @@ centered bootstrap distribution using standard finite-sample adjustment
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Ricardo Rey-Sáez, Alicia Franco-Martínez, Francisco Garre-Frutos, Miguel Vadillo.</p>
+  <p>Developed by Ricardo Rey-Sáez, Francisco Garre-Frutos, Alicia Franco-Martínez, Miguel Vadillo.</p>
 </div>
 
 <div class="pkgdown-footer-right">

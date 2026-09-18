@@ -45,7 +45,8 @@ usdt_boot(
 
 - seed:
 
-  Random seed for reproducibility.
+  Random seed for reproducibility. With the default `NULL`, no seed is
+  set and the bootstrap continues the current random number stream.
 
 - progress:
 
@@ -104,7 +105,6 @@ centered bootstrap distribution using standard finite-sample adjustment
 ## Examples
 
 ``` r
-# \donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -119,17 +119,70 @@ d <- usdt_data_tasks(
 )
 
 m <- hsdt(d)
-# }
 
-if (FALSE) { # \dontrun{
+# \donttest{
 # Run parametric bootstrap with 500 replicates. Refitting this model 500
-# times takes several minutes, so this block is not run by R CMD check
+# times takes several minutes
 b <- usdt_boot(m, nsim = 500, seed = 1)
 
 # Inspect updated summary with bootstrap intervals and p-values
 summary(b)
+#> ── Model summary ─────────────────────────────────────────────────────────────── 
+#> 
+#>   Subjects:       104
+#>   Observations:   416 aggregated rows (46,592 trials)
+#>   Family:         binomial (probit)
+#>   Coding:         deviation
+#>   Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
+#>   Estimation:     lme4::glmer (bobyqa)
+#>   Convergence:    TRUE
+#>   Bootstrap:      500 usable replicates (508 attempts; 190 at the boundary)
+#> 
+#> ── Fixed effects ───────────────────────────────────────────────────────────────
+#> 
+#>   Parameter      Task       Estimate       SE  95% CI                   z   p-value
+#>   criterion      Direct      -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
+#>   d'             Direct       0.2354   0.0335  [  0.170,  0.301]     7.03     <.001
+#>   d'             Indirect     0.1283   0.0153  [  0.098,  0.158]     8.41     <.001
+#> 
+#> ── Random effects ──────────────────────────────────────────────────────────────
+#> 
+#>   Parameter      Task       Estimate       SE  95% CI            
+#>   sd(criterion)  Direct       0.2473   0.0246  [  0.203,  0.301]
+#>   sd(d')         Direct       0.1219   0.0666  [  0.042,  0.356]
+#>   sd(d')         Indirect     0.0883   0.0190  [  0.058,  0.135]
+#>   cor(d')        both         0.4912   0.5202  [ -1.000,  1.000]
+#> 
+#> ── Hypotheses ──────────────────────────────────────────────────────────────────
+#> 
+#> H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+#>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
+#>   Δd' (I - D)       -0.1071   0.0346  [ -0.174, -0.038]                 .004
+#> 
+#> H2: Correlation between sensitivities across tasks
+#>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
+#>   rho                 0.4912   0.5202  [ -1.000,  1.000]                 .483
+#> 
+#> H3: Latent regression of Indirect d' on Direct d'
+#>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
+#>   Intercept           0.0445   0.8949  [ -1.125,  0.670]                 .685
+#>   Slope               0.3561   3.9094  [ -2.224,  5.438]                 .441
 
 # Check fit diagnostics across bootstrap replicates
 b$boot[c("usable", "attempted", "retained", "failures")]
-} # }
+#> $usable
+#> [1] 500
+#> 
+#> $attempted
+#> [1] 508
+#> 
+#> $retained
+#> singular boundary 
+#>      187      190 
+#> 
+#> $failures
+#>    non_finite non_converged 
+#>             7             1 
+#> 
+# }
 ```

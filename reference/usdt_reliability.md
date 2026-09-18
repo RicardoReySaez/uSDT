@@ -87,7 +87,6 @@ parameter isosensitivity functions. *Psychometrika*, 32(1), 25–33.
 ## Examples
 
 ``` r
-# \donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -118,5 +117,4 @@ head(r$subjects)
 #> 4 Direct 2004 0.3175052 0.09908257   0.1303224
 #> 5 Direct 2005 0.1444723 0.10037192   0.1288640
 #> 6 Direct 2006 0.1733643 0.09926182   0.1301177
-# }
 ```

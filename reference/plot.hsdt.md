@@ -119,7 +119,6 @@ criteria.
 ## Examples
 
 ``` r
-# \donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -152,5 +151,4 @@ plot(fit, type = "roc")
 
 plot(fit, type = "roc", subject_id = "2001", population_reference = TRUE)
 
-# }
 ```

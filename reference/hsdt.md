@@ -118,7 +118,6 @@ parametric bootstrap intervals can be calculated using
 ## Examples
 
 ``` r
-# \donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -184,6 +183,5 @@ summary(m)
 m$design$formula
 #> cbind(y, n - y) ~ 0 + c_D + d_D + d_I + (0 + c_D | subj) + (0 + 
 #>     d_D + d_I | subj)
-#> <environment: 0x55f745442ee8>
-# }
+#> <environment: 0x558cca061538>
 ```

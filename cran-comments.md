@@ -16,10 +16,10 @@ This is a resubmission of a new package. In this version I have:
 ## Test environments
 
 * win-builder, R 4.6.1, Windows Server 2022 x64
-* win-builder, R-devel 2026-09-09 r90510, Windows Server 2022 x64
+* win-builder, R-devel 2026-09-16 r90549, Windows Server 2022 x64
 * macOS builder, R 4.6.1 Patched 2026-07-27 r90311, macOS 26.6,
   aarch64-apple-darwin23
-* Local: Windows 11 x64, R 4.6.0, `R CMD check --as-cran`
+* Local: Windows 11 x64, R 4.5.0, `R CMD check --as-cran`
 * GitHub Actions, defined in `.github/workflows/R-CMD-check.yaml`:
   * macOS-latest, R release
   * windows-latest, R release

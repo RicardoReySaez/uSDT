@@ -70,7 +70,6 @@ compute the latent tests conditional on those covariates.
 }
 
 \examples{
-\donttest{
 # 1. Standard model via hsdt()
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -94,7 +93,7 @@ sensitivity_diff(m)   # H1
 latent_cor(m)         # H2
 latent_regression(m)  # H3
 
-
+\donttest{
 # 2. Custom model with covariates via glmer()
 # Controlling for display set size across both tasks
 trials <- rbind(

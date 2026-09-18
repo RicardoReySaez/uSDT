@@ -87,7 +87,6 @@ individual, with points marking the estimated response criteria.
 }
 
 \examples{
-\donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -115,7 +114,6 @@ plot(fit, type = "caterpillar")
 # 4. Model-implied ROC curves
 plot(fit, type = "roc")
 plot(fit, type = "roc", subject_id = "2001", population_reference = TRUE)
-}
 
 }
 \seealso{

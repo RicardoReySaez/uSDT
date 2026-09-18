@@ -81,7 +81,6 @@ singular boundaries. In these cases, the function issues a warning, and
 parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}.
 }
 \examples{
-\donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -102,7 +101,6 @@ summary(m)
 
 # Inspect the model formula (indirect criterion omitted by default)
 m$design$formula
-}
 
 }
 \seealso{

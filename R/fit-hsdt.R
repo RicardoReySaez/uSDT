@@ -1,7 +1,7 @@
 # fit-hsdt.R
 # Fit hierarchical Signal Detection Theory models
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 18-09-2026
 
 # Public functions
 
@@ -55,7 +55,6 @@
 #' @seealso [usdt_data_tasks()], [usdt_tests()], [usdt_boot()], [plot.hsdt()]
 #'
 #' @examples
-#' \donttest{
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
 #'   direct   = vadillo_awareness,
@@ -76,7 +75,6 @@
 #'
 #' # Inspect the model formula (indirect criterion omitted by default)
 #' m$design$formula
-#' }
 #'
 #' @export
 hsdt <- function(data,

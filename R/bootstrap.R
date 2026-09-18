@@ -1,7 +1,7 @@
 # bootstrap.R
 # Parametric bootstrap for fitted uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 18-09-2026
 
 # Public functions
 
@@ -22,7 +22,8 @@
 #'   and automatically stops when finished.
 #' @param max_attempts Maximum number of refits to attempt. Defaults to
 #'   `2 * nsim`.
-#' @param seed Random seed for reproducibility.
+#' @param seed Random seed for reproducibility. With the default `NULL`, no
+#'   seed is set and the bootstrap continues the current random number stream.
 #' @param progress Logical. Display a progress bar during fitting (defaults to
 #'   `TRUE` in interactive sessions).
 #' @param level Confidence level for intervals (default is 0.95).
@@ -58,7 +59,6 @@
 #' @seealso [hsdt()], [usdt_tests()]
 #'
 #' @examples
-#' \donttest{
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
 #'   direct   = vadillo_awareness,
@@ -73,11 +73,10 @@
 #' )
 #'
 #' m <- hsdt(d)
-#' }
 #'
-#' \dontrun{
+#' \donttest{
 #' # Run parametric bootstrap with 500 replicates. Refitting this model 500
-#' # times takes several minutes, so this block is not run by R CMD check
+#' # times takes several minutes
 #' b <- usdt_boot(m, nsim = 500, seed = 1)
 #'
 #' # Inspect updated summary with bootstrap intervals and p-values
@@ -134,8 +133,6 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   # The seed starts one continuous sequence across all batches.
   if (!is.null(seed)) {
     set.seed(seed)
-  } else if (!exists(".Random.seed", envir = .GlobalEnv)) {
-    stats::runif(1)
   }
 
   # The progress bar counts usable samples.

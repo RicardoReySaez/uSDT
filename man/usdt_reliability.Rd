@@ -60,7 +60,6 @@ intervals for reliability are computed automatically across all retained
 samples.
 }
 \examples{
-\donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -79,7 +78,6 @@ r
 
 # Participant-level estimates (one row per subject and task)
 head(r$subjects)
-}
 
 }
 \references{

@@ -1,7 +1,7 @@
 # hypotheses.R
 # Hypothesis tests for hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 18-09-2026
 
 # Public functions
 
@@ -56,7 +56,6 @@
 #' @seealso [hsdt()], [usdt_boot()]
 #'
 #' @examples
-#' \donttest{
 #' # 1. Standard model via hsdt()
 #' d <- usdt_data_tasks(
 #'   direct   = vadillo_awareness,
@@ -80,7 +79,7 @@
 #' latent_cor(m)         # H2
 #' latent_regression(m)  # H3
 #'
-#'
+#' \donttest{
 #' # 2. Custom model with covariates via glmer()
 #' # Controlling for display set size across both tasks
 #' trials <- rbind(

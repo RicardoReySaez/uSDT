@@ -27,7 +27,8 @@ and automatically stops when finished.}
 \item{max_attempts}{Maximum number of refits to attempt. Defaults to
 \code{2 * nsim}.}
 
-\item{seed}{Random seed for reproducibility.}
+\item{seed}{Random seed for reproducibility. With the default \code{NULL}, no
+seed is set and the bootstrap continues the current random number stream.}
 
 \item{progress}{Logical. Display a progress bar during fitting (defaults to
 \code{TRUE} in interactive sessions).}
@@ -73,7 +74,6 @@ centered bootstrap distribution using standard finite-sample adjustment
 (\eqn{(k + 1) / (B + 1)}), ensuring \eqn{p}-values never equal zero.
 }
 \examples{
-\donttest{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
   direct   = vadillo_awareness,
@@ -88,11 +88,10 @@ d <- usdt_data_tasks(
 )
 
 m <- hsdt(d)
-}
 
-\dontrun{
+\donttest{
 # Run parametric bootstrap with 500 replicates. Refitting this model 500
-# times takes several minutes, so this block is not run by R CMD check
+# times takes several minutes
 b <- usdt_boot(m, nsim = 500, seed = 1)
 
 # Inspect updated summary with bootstrap intervals and p-values

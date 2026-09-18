@@ -1,7 +1,7 @@
 # reliability.R
 # Estimate task-level and subject-level reliability for uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 18-09-2026
 
 #' Reliability of direct and indirect task measures
 #'
@@ -51,7 +51,6 @@
 #' @seealso [hsdt()], [usdt_boot()], [sdt_moments()]
 #'
 #' @examples
-#' \donttest{
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
 #'   direct   = vadillo_awareness,
@@ -70,7 +69,6 @@
 #'
 #' # Participant-level estimates (one row per subject and task)
 #' head(r$subjects)
-#' }
 #'
 #' @export
 usdt_reliability <- function(object) {

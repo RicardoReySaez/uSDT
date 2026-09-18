@@ -1,7 +1,7 @@
 # plot.R
 # Visualize results from fitted hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 18-09-2026
 
 #' Diagnostic and analytical plots for hierarchical SDT models
 #'
@@ -70,7 +70,6 @@
 #' @seealso [hsdt()], [sdt_moments()], [usdt_boot()]
 #'
 #' @examples
-#' \donttest{
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
 #'   direct   = vadillo_awareness,
@@ -98,7 +97,6 @@
 #' # 4. Model-implied ROC curves
 #' plot(fit, type = "roc")
 #' plot(fit, type = "roc", subject_id = "2001", population_reference = TRUE)
-#' }
 #'
 #' @export
 plot.hsdt <- function(x, type = c("regression", "shrinkage",

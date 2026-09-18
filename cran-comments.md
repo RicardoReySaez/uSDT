@@ -1,6 +1,17 @@
 # CRAN comments for uSDT 0.1.0
 
-This is a new submission.
+## Resubmission
+
+This is a resubmission of a new package. In this version I have:
+
+* Replaced `\dontrun{}` with `\donttest{}` in the example of `usdt_boot()`.
+* Unwrapped every example that runs in less than five seconds. Only the two
+  blocks described in "Notes on the examples" remain in `\donttest{}`.
+* Removed the code in `usdt_boot()` that created `.Random.seed` in the global
+  environment when it did not exist. The function now changes the random seed
+  only through `set.seed()`, when the user supplies `seed`, which defaults to
+  `NULL`.
+* Changed the order of the authors in `Authors@R`.
 
 ## Test environments
 
@@ -50,13 +61,15 @@ The four flagged words are spelled correctly:
 
 ## Notes on the examples
 
-Examples that fit a hierarchical model with lme4 are wrapped in `\donttest{}`
-because a single fit takes longer than the five seconds CRAN allows per
-example. They all run under `R CMD check --run-donttest`, in about 35 seconds
-in total.
+The examples of each help page run in less than five seconds, except two
+blocks that stay in `\donttest{}`:
 
-One example in `?usdt_boot` is wrapped in `\dontrun{}`. It refits the model 500
-times by parametric bootstrap, which takes several minutes on any platform.
+* The second part of `?usdt_hypotheses` fits a trial-level model with
+  `lme4::glmer()`, which takes about 25 seconds.
+* `?usdt_boot` refits the model 500 times by parametric bootstrap, which takes
+  about three minutes. 500 is the fewest replicates `usdt_boot()` accepts.
+
+Both blocks run under `R CMD check --run-donttest`.
 
 ## Downstream dependencies
 

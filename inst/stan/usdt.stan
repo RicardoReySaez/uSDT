@@ -37,7 +37,8 @@ data {
   // Prior hyperparameters, passed as data so new priors never recompile
   vector[2] mu_loc;                        // Normal priors on (mu_D, mu_I or intercept)
   vector<lower=0>[2] mu_scale;
-  vector<lower=0>[2] sd_d_scale;           // Half-normal priors on the d' SDs
+  vector<lower=0>[2] sd_d_df;              // Half-Student-t priors on the d' SDs
+  vector<lower=0>[2] sd_d_scale;
   real<lower=0> rho_d_a;                   // Scaled-beta prior on the d' correlation
   real<lower=0> rho_d_b;
   vector[sum(free_c)] mu_c_loc;            // Priors for the estimated criteria only
@@ -106,7 +107,7 @@ transformed parameters {
 model {
   // Priors
   mu ~ normal(mu_loc, mu_scale);
-  sigma_d ~ normal(0, sd_d_scale);
+  sigma_d ~ student_t(sd_d_df, 0, sd_d_scale);
   rho_d ~ scaled_beta(rho_d_a, rho_d_b);
   mu_c ~ normal(mu_c_loc, mu_c_scale);
   sigma_c ~ normal(0, sd_c_scale);

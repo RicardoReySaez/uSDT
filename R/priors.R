@@ -40,7 +40,7 @@
 #' The correlations take a single prior.
 #'
 #' The defaults are centred at zero and weakly informative on the probit
-#' scale: `normal(0, 1)` for every mean, `student_t(4, 0, 1)` for every
+#' scale: `normal(0, 1)` for every mean, `student_t(4, 0, 0.5)` for every
 #' between-subject standard deviation and a uniform `scaled_beta(1, 1)` for
 #' every correlation. With equal locations for both means, the prior of the
 #' difference between them (H1) is centred at zero. A symmetric scaled beta,
@@ -72,10 +72,10 @@
 #'
 #' @export
 usdt_priors <- function(dprime        = "normal(0, 1)",
-                        sd_dprime     = "student_t(4, 0, 1)",
+                        sd_dprime     = "student_t(4, 0, 0.5)",
                         cor_dprime    = "scaled_beta(1, 1)",
                         criterion     = "normal(0, 1)",
-                        sd_criterion  = "student_t(4, 0, 1)",
+                        sd_criterion  = "student_t(4, 0, 0.5)",
                         cor_criterion = "scaled_beta(1, 1)",
                         sd_signal     = "lognormal(0, 0.5)") {
 
@@ -137,7 +137,7 @@ print.usdt_priors <- function(x, ...) {
 # This function reads one prior string and checks its arguments.
 .parse_prior <- function(x, arg, family) {
   example <- switch(family, normal = "normal(0, 1)",
-                    student_t = "student_t(4, 0, 1)",
+                    student_t = "student_t(4, 0, 0.5)",
                     scaled_beta = "scaled_beta(1, 1)",
                     lognormal = "lognormal(0, 0.5)")
   if (!is.character(x) || length(x) != 1L || is.na(x)) {

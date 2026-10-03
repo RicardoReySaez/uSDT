@@ -9,7 +9,7 @@ usdt_priors(
   dprime = "normal(0, 1)",
   sd_dprime = "student_t(4, 0, 0.5)",
   cor_dprime = "scaled_beta(1, 1)",
-  criterion = "normal(0, 1)",
+  criterion = "normal(0, 0.5)",
   sd_criterion = "student_t(4, 0, 0.5)",
   cor_criterion = "scaled_beta(1, 1)",
   sd_signal = "lognormal(0, 0.5)"
@@ -68,10 +68,13 @@ prior for both tasks or one per task as \code{list(direct = ..., indirect = ...)
 The correlations take a single prior.
 
 The defaults are centred at zero and weakly informative on the probit
-scale: \code{normal(0, 1)} for every mean, \code{student_t(4, 0, 0.5)} for every
-between-subject standard deviation and a uniform \code{scaled_beta(1, 1)} for
-every correlation. With equal locations for both means, the prior of the
-difference between them (H1) is centred at zero. A symmetric scaled beta,
+scale: \code{normal(0, 1)} for the mean \eqn{d'}, \code{normal(0, 0.5)} for the mean
+criterion, \code{student_t(4, 0, 0.5)} for every between-subject standard
+deviation and a uniform \code{scaled_beta(1, 1)} for every correlation. With them,
+the hit and false-alarm rates of a new subject spread over \eqn{(0, 1)}
+without piling up at either end; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. With equal
+locations for both means, the prior of the difference between them (H1) is
+centred at zero. A symmetric scaled beta,
 \code{scaled_beta(a, a)}, equals the marginal of an LKJ(a) prior on a 2 x 2
 correlation matrix and is centred at zero (H2).
 

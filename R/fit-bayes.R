@@ -14,8 +14,7 @@
 .hsdt_bayes <- function(data, fix_criteria, level, priors, unequal_variances,
                         backend, dots, call) {
   settings <- c(.bayes_settings(dots), backend = backend)
-  rlang::check_installed(c(backend, "posterior"),
-                         reason = "to fit the Bayesian model.")
+  .check_backend(backend)
 
   free_c <- .bayes_free_criteria(data, fix_criteria)
   stan <- .stan_data(data, free_c, unequal_variances, priors)
@@ -39,6 +38,22 @@
                  data = data, diagnostics = diagnostics, settings = settings,
                  call = call, level = level, estimation = "bayesian"),
             class = "hsdt")
+}
+
+# This function checks that the chosen backend can compile the model. rstan
+# compiles at run time against the headers of BH and RcppEigen, which a binary
+# install of rstan does not bring, and cmdstanr needs CmdStan itself.
+.check_backend <- function(backend) {
+  needs <- switch(backend, rstan = c("rstan", "BH", "RcppEigen"),
+                  cmdstanr = "cmdstanr")
+  rlang::check_installed(c(needs, "posterior"),
+                         reason = "to fit the Bayesian model.")
+  if (backend == "cmdstanr" &&
+      is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
+    .usdt_stop("cmdstanr cannot find CmdStan. Install it once with ",
+               "cmdstanr::install_cmdstan(), or use backend = \"rstan\".")
+  }
+  invisible(TRUE)
 }
 
 # This function completes the sampling options given through `...`.

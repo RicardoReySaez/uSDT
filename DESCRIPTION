@@ -50,6 +50,8 @@ Suggests:
     posterior,
     logspline,
     rstan,
+    BH,
+    RcppEigen,
     cmdstanr
 Additional_repositories: https://stan-dev.r-universe.dev
 VignetteBuilder: knitr

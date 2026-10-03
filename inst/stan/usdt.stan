@@ -30,10 +30,12 @@ data {
   real<lower=0> rho_d_b;
   vector[sum(free_c)] mu_c_loc;            // Priors for the estimated criteria only
   vector<lower=0>[sum(free_c)] mu_c_scale;
+  vector<lower=0>[sum(free_c)] sd_c_df;    // Half-Student-t priors on the criterion SDs
   vector<lower=0>[sum(free_c)] sd_c_scale;
   real<lower=0> rho_c_a;                   // Used only when both criteria are free
   real<lower=0> rho_c_b;
-  vector<lower=0>[UV ? 2 : 0] sd_s_scale;  // Lognormal scales of the signal SDs
+  vector[UV ? 2 : 0] sd_s_loc;             // Lognormal priors on the signal SDs
+  vector<lower=0>[UV ? 2 : 0] sd_s_scale;
 }
 
 parameters {
@@ -91,11 +93,11 @@ model {
   sigma_d ~ student_t(sd_d_df, 0, sd_d_scale);
   rho_d   ~ scaled_beta(rho_d_a, rho_d_b);
   mu_c    ~ normal(mu_c_loc, mu_c_scale);
-  sigma_c ~ normal(0, sd_c_scale);
+  sigma_c ~ student_t(sd_c_df, 0, sd_c_scale);
   for (k in 1:size(rho_c)) {
     rho_c[k] ~ scaled_beta(rho_c_a, rho_c_b);
   }
-  sigma_s_free   ~ lognormal(0, sd_s_scale);
+  sigma_s_free   ~ lognormal(sd_s_loc, sd_s_scale);
   to_vector(z_d) ~ std_normal();
   to_vector(z_c) ~ std_normal();
 

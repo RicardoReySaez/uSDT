@@ -83,6 +83,11 @@ reference:
   contents:
   - hsdt
 
+- title: Specify the Bayesian priors
+  desc: Choose the prior distributions of the Bayesian model.
+  contents:
+  - usdt_priors
+
 - title: Test hypotheses and bootstrap uncertainty
   desc: >
     sensitivity_diff() compares mean sensitivities; latent_cor() estimates

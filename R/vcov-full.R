@@ -1,7 +1,7 @@
 # vcov-full.R
 # This script estimates uncertainty for fixed and random model parameters.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 03-10-2026
 
 # Numerical derivatives
 
@@ -127,9 +127,6 @@
 
 # Random-effect variances and covariances
 
-# This function keeps a correlation inside its range.
-.cor_clamp <- function(rho) max(-1, min(1, rho))
-
 # This function finds the random term that contains both sensitivities.
 .locate_block <- function(fit, direct, indirect) {
 
@@ -247,10 +244,32 @@
     variance <- drop(J %*% V %*% t(J))
     if (is.finite(variance) && variance >= 0) se <- sqrt(variance)
   }
-  list(estimate = .cor_clamp(estimate), se = se)
+  list(estimate = max(-1, min(1, estimate)), se = se)
 }
 
 # Conditional effects
+
+# This function gives each task parameter at the population level and, for the
+# requested subjects, the fixed effect plus the subject's conditional mode. A
+# parameter absent from the model, such as a criterion fixed at zero, is zero.
+.task_effects <- function(fit, subjects = character(0),
+                          parameters = c("c_D", "c_I", "d_D", "d_I")) {
+  beta <- lme4::fixef(fit)
+  population <- stats::setNames(rep.int(0, length(parameters)), parameters)
+  in_model <- intersect(parameters, names(beta))
+  population[in_model] <- beta[in_model]
+
+  individual <- matrix(0, nrow = length(subjects), ncol = length(parameters),
+                       dimnames = list(subjects, parameters))
+  if (length(subjects)) {
+    random <- lme4::ranef(fit, condVar = FALSE)[["subj"]]
+    random_parameters <- intersect(parameters, colnames(random))
+    individual[, random_parameters] <- as.matrix(
+      random[match(subjects, rownames(random)), random_parameters, drop = FALSE])
+  }
+  list(population = population,
+       subjects = sweep(individual, 2L, population, "+"))
+}
 
 # This function estimates uncertainty for each group's total effect.
 #
@@ -370,7 +389,7 @@
   }
 
   # The sensitivity block must be inside its valid parameter range.
-  rho <- .cor_clamp(est[["s_DI"]] / sqrt(est[["s2_D"]] * est[["s2_I"]]))
+  rho <- .usdt_quantities(est)[, "rho"]
   S <- matrix(c(est[["s2_D"]], est[["s_DI"]],
                 est[["s_DI"]], est[["s2_I"]]), 2L)
   s_values <- tryCatch(eigen(S, symmetric = TRUE, only.values = TRUE)$values,

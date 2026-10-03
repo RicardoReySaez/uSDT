@@ -1,7 +1,7 @@
 # reliability.R
 # Estimate task-level and subject-level reliability for uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 03-10-2026
 
 #' Reliability of direct and indirect task measures
 #'
@@ -81,10 +81,9 @@ usdt_reliability <- function(object) {
                "contributes.")
   }
 
-  agg    <- object$data$agg
-  labels <- object$data$meta$labels
-  fixed  <- lme4::fixef(object$fit)
-  random <- lme4::ranef(object$fit, condVar = FALSE)[["subj"]]
+  agg     <- object$data$agg
+  labels  <- object$data$meta$labels
+  effects <- .task_effects(object$fit, unique(as.character(agg$subj)))$subjects
 
   results <- lapply(c("D", "I"), function(task) {
     slope   <- paste0("d_", task)
@@ -96,8 +95,7 @@ usdt_reliability <- function(object) {
     # Each subject supplies the cells that inform their own sensitivity.
     values <- vapply(who, function(s) {
       cells <- rows[as.character(rows$subj) == s, , drop = FALSE]
-      coef  <- fixed[columns] + unlist(random[s, columns, drop = FALSE],
-                                       use.names = FALSE)
+      coef  <- effects[s, ][columns]
       eta   <- drop(as.matrix(cells[, columns, drop = FALSE]) %*% coef)
       c(dprime   = unname(coef[[slope]]),
         variance = .sensitivity_variance(cells, columns, slope, eta))

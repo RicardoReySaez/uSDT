@@ -1,7 +1,7 @@
 # bootstrap.R
 # Parametric bootstrap for fitted uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 03-10-2026
 
 # Public functions
 
@@ -246,62 +246,50 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
                     population_names, subject_names)
   stat <- function(f, block_index, block_size, direct_random,
                    indirect_random, direct_fixed, indirect_fixed,
-                   subjects, parameters, output_names) {
+                   subjects, parameters, output_names,
+                   quantities, task_effects, convergence) {
     theta <- lme4::getME(f, "theta")
     beta <- lme4::fixef(f)
     L <- matrix(0, block_size, block_size)
     L[lower.tri(L, diag = TRUE)] <- theta[block_index]
     S <- tcrossprod(L)
 
-    gamma_D <- unname(beta[direct_fixed])
-    gamma_I <- unname(beta[indirect_fixed])
-    s2_D <- S[direct_random, direct_random]
-    s2_I <- S[indirect_random, indirect_random]
-    s_DI <- S[direct_random, indirect_random]
-    slope <- s_DI / s2_D
-    # The worker repeats the correlation limit in its own environment.
-    rho <- max(-1, min(1, s_DI / sqrt(s2_D * s2_I)))
+    primitives <- c(gamma_D = unname(beta[direct_fixed]),
+                    gamma_I = unname(beta[indirect_fixed]),
+                    s2_D = S[direct_random, direct_random],
+                    s2_I = S[indirect_random, indirect_random],
+                    s_DI = S[direct_random, indirect_random])
+    q <- quantities(primitives)
+    effects <- task_effects(f, subjects, parameters)
 
-    opt <- f@optinfo$conv$opt
-    opt_ok <- !length(opt) || (is.numeric(opt) && all(opt == 0))
-    messages <- f@optinfo$conv$lme4$messages
-    if (length(messages)) {
-      messages <- messages[!grepl("boundary.*singular", messages,
-                                  ignore.case = TRUE)]
-    }
-
-    population <- stats::setNames(rep.int(0, length(parameters)), parameters)
-    in_model <- intersect(parameters, names(beta))
-    population[in_model] <- beta[in_model]
-
-    random <- lme4::ranef(f, condVar = FALSE)[["subj"]]
-    subject_row <- match(subjects, rownames(random))
-    individual <- matrix(0, nrow = length(subjects), ncol = length(parameters),
-                         dimnames = list(subjects, parameters))
-    random_parameters <- intersect(parameters, colnames(random))
-    individual[, random_parameters] <-
-      as.matrix(random[subject_row, random_parameters, drop = FALSE])
-    individual <- sweep(individual, 2L, population, "+")
-
-    finite <- all(is.finite(c(gamma_D, gamma_I, S, slope, rho,
-                              population, individual)))
+    finite <- all(is.finite(c(primitives, S, q, effects$population,
+                              effects$subjects)))
     boundary <- TRUE
     if (finite) {
       values <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
-      boundary <- min(s2_D, s2_I) < 1e-8 || min(values) < 1e-8 ||
-        abs(rho) > 1 - 1e-6
+      boundary <- min(primitives[c("s2_D", "s2_I")]) < 1e-8 ||
+        min(values) < 1e-8 || abs(q[, "rho"]) > 1 - 1e-6
     }
 
     stats::setNames(
-      c(gamma_I - gamma_D, rho, gamma_I - slope * gamma_D, slope,
-        as.numeric(opt_ok && !length(messages)),
+      c(q, as.numeric(convergence(f)$ok),
         as.numeric(lme4::isSingular(f, tol = 1e-4)),
-        as.numeric(boundary), s2_D, s2_I,
-        population, as.vector(individual)),
+        as.numeric(boundary), primitives[c("s2_D", "s2_I")],
+        effects$population, as.vector(effects$subjects)),
       output_names
     )
   }
+
+  # The workers receive the package helpers without the package namespace, so
+  # a parallel run only needs lme4 on each worker.
+  in_base <- function(fun) {
+    environment(fun) <- baseenv()
+    fun
+  }
   args <- formals(stat)
+  args$quantities <- in_base(.usdt_quantities)
+  args$task_effects <- in_base(.task_effects)
+  args$convergence <- in_base(.fit_convergence)
   args$block_index <- blk$idx
   args$block_size <- blk$q
   args$direct_random <- blk$iD

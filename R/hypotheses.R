@@ -1,7 +1,7 @@
 # hypotheses.R
 # Hypothesis tests for hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 03-10-2026
 
 # Public functions
 
@@ -165,8 +165,7 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 
 # This function tests the group-level sensitivity difference.
 .diff_rows <- function(p, level) {
-  e <- p$est
-  est  <- e[["gamma_I"]] - e[["gamma_D"]]
+  est <- .usdt_quantities(p$est)[, "diff"]
   V <- p$fixed_vcov
   if (is.null(V) || !all(p$fixed_names %in% rownames(V))) {
     return(.row_na("d'(indirect) - d'(direct)", est,
@@ -213,9 +212,9 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 .reg_rows <- function(p, level) {
   e <- p$est
   s2D <- e[["s2_D"]]; sDI <- e[["s_DI"]]
-  gD  <- e[["gamma_D"]]; gI <- e[["gamma_I"]]
-  slope <- sDI / s2D
-  inter <- gI - slope * gD
+  q <- .usdt_quantities(e)
+  slope <- q[, "slope"]
+  inter <- q[, "intercept"]
   if (!p$joint_ok) {
     return(rbind(.row_na("intercept", inter, p$inference_reason),
                  .row_na("slope", slope, p$inference_reason)))

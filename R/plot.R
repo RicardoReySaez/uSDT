@@ -1,7 +1,7 @@
 # plot.R
 # Visualize results from fitted hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 03-10-2026
 
 #' Diagnostic and analytical plots for hierarchical SDT models
 #'
@@ -158,7 +158,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 .latent_line <- function(object, x, band = TRUE) {
 
   e <- object$pars$est
-  slope <- e[["s_DI"]] / e[["s2_D"]]
+  q <- .usdt_quantities(e)
+  slope <- q[, "slope"]
   fit <- e[["gamma_I"]] + slope * (x - e[["gamma_D"]])
   limits <- matrix(NA_real_, length(x), 2L)
 
@@ -185,7 +186,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   list(line = data.frame(x = x, fit = fit, conf.low = limits[, 1L],
                          conf.high = limits[, 2L], stringsAsFactors = FALSE),
-       slope = slope, intercept = e[["gamma_I"]] - slope * e[["gamma_D"]],
+       slope = slope, intercept = q[, "intercept"],
        method = method, reason = reason)
 }
 
@@ -524,14 +525,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   values <- .observed_pairs(object)
 
   # Each model value combines the task average with the subject difference.
-  random <- lme4::ranef(object$fit, condVar = FALSE)[["subj"]]
-  fixed <- lme4::fixef(object$fit)
-  random_row <- match(values$subject, rownames(random))
-  if (anyNA(random_row) || !all(c("d_D", "d_I") %in% names(random))) {
-    .usdt_stop("the fitted model does not contain the expected subject sensitivities.")
-  }
-  values$model_direct <- fixed[["d_D"]] + random$d_D[random_row]
-  values$model_indirect <- fixed[["d_I"]] + random$d_I[random_row]
+  model <- .task_effects(object$fit, values$subject)$subjects
+  values$model_direct <- unname(model[, "d_D"])
+  values$model_indirect <- unname(model[, "d_I"])
   values
 }
 
@@ -838,18 +834,15 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   # Four common names keep estimated and fixed criteria interchangeable.
   parameters <- c("c_D", "c_I", "d_D", "d_I")
-  fixed <- stats::setNames(rep.int(0, length(parameters)), parameters)
-  beta <- lme4::fixef(object$fit)
-  in_model <- intersect(parameters, names(beta))
-  fixed[in_model] <- beta[in_model]
+  se <- stats::setNames(rep.int(NA_real_, length(parameters)), parameters)
 
   # The population curve uses fixed effects and their analytic sensitivity SEs.
   if (is.null(subject_id)) {
     fixed_se <- sqrt(diag(as.matrix(stats::vcov(object$fit))))
-    se <- stats::setNames(rep.int(NA_real_, length(parameters)), parameters)
     estimated <- intersect(parameters, names(fixed_se))
     se[estimated] <- fixed_se[estimated]
-    return(list(subject = NULL, estimate = fixed, se = se))
+    population <- .task_effects(object$fit, parameters = parameters)$population
+    return(list(subject = NULL, estimate = population, se = se))
   }
 
   # One checked identifier selects the subject's conditional modes.
@@ -857,18 +850,12 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     .usdt_stop("`subject_id` must identify exactly one subject.")
   }
   subject <- as.character(subject_id)
-  random <- lme4::ranef(object$fit, condVar = FALSE)[["subj"]]
-  subject_row <- match(subject, rownames(random))
-  if (is.na(subject_row)) {
+  estimate <- .task_effects(object$fit, subject, parameters)$subjects[1L, ]
+  if (anyNA(estimate)) {
     .usdt_stop("subject `", subject, "` was not found in the fitted model.")
   }
-  random_parameters <- intersect(parameters, colnames(random))
-  estimate <- fixed
-  estimate[random_parameters] <- estimate[random_parameters] +
-    unlist(random[subject_row, random_parameters, drop = FALSE], use.names = FALSE)
 
   # Conditional standard deviations describe uncertainty around this mode.
-  se <- stats::setNames(rep.int(NA_real_, length(parameters)), parameters)
   if (conditional) {
     values <- as.data.frame(lme4::ranef(object$fit, condVar = TRUE))
     values <- values[values$grpvar == "subj" &

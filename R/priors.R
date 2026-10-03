@@ -432,10 +432,15 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
     ) +
     ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), ncol = 2,
                         scales = "free") +
-    ggplot2::scale_colour_manual(values = task_colours, name = NULL) +
+    # The task legend always comes first, so the legend reads the same way
+    # whatever the labels.
+    ggplot2::scale_colour_manual(
+      values = task_colours, name = NULL,
+      guide = ggplot2::guide_legend(order = 1L)
+    ) +
     ggplot2::scale_linetype_manual(
       values = c("Hit rate" = "solid", "False-alarm rate" = "dashed"),
-      name = NULL
+      name = NULL, guide = ggplot2::guide_legend(order = 2L)
     ) +
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.03)) +
     ggplot2::scale_y_continuous(

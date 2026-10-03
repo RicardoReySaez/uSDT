@@ -282,7 +282,8 @@ print.usdt_priors <- function(x, ...) {
 #' @param x A `usdt_priors` object from [usdt_priors()].
 #' @param data Optional `usdt_data` object. When given, a criterion fixed by
 #'   the median split stays fixed, as in [hsdt()], and the tasks take the data
-#'   labels. Without it, both criteria are estimated.
+#'   labels. Without it, both criteria are estimated. The caption says which
+#'   criteria are fixed.
 #' @param unequal_variances Logical. Simulate the signal standard deviation
 #'   from its prior instead of fixing it to 1.
 #' @param ... Ignored.
@@ -385,6 +386,8 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
   curves$rate <- factor(curves$rate,
                         levels = c("Hit rate", "False-alarm rate"))
   list(curves = curves, labels = labels,
+       fixed = unname(labels[c("direct", "indirect")][free_c == 0L]),
+       unequal_variances = unequal_variances,
        nulls = data.frame(panel = factor(panels[-1L], levels = panels), x = 0))
 }
 
@@ -411,6 +414,20 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
                                   unname(values$labels[c("direct", "indirect")]))
   model_colour <- "#116B60"
   model_fill <- "#3FA88E"
+
+  # The rates depend on which criteria the median split fixes, so the caption
+  # names them. Under equal variances a fixed criterion is exactly zero.
+  fixed <- values$fixed
+  where <- if (values$unequal_variances) "by the median split (HR + FAR = 1)" else
+    "at 0 by the median split"
+  criteria <- if (!length(fixed)) {
+    "Both criteria are estimated."
+  } else if (length(fixed) == 2L) {
+    paste0("Both criteria are fixed ", where, ".")
+  } else {
+    paste0("The ", fixed, " criterion is fixed ", where,
+           "; the other is estimated.")
+  }
 
   ggplot2::ggplot(curves) +
     ggplot2::geom_vline(
@@ -452,10 +469,11 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
     ggplot2::labs(
       x = NULL, y = NULL,
       caption = .wrap_caption(
-        "Prior densities from 100,000 draws of the priors; no data are used. ",
-        "Rates belong to one new subject per draw. H1 and H2 are exact ",
-        "densities; the H3 intercept is induced by the other priors and is ",
-        "shown over its central 95%. Dotted lines mark each null value."
+        "Prior densities from 100,000 draws of the priors; no responses are ",
+        "used. Rates belong to one new subject per draw. ", criteria, "\n",
+        "H1 and H2 are exact densities; the H3 intercept is induced by the ",
+        "other priors and is shown over its central 95%. Dotted lines mark ",
+        "each null value."
       )
     ) +
     .panel_theme() +

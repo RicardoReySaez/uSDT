@@ -11,7 +11,8 @@
 
 \item{data}{Optional \code{usdt_data} object. When given, a criterion fixed by
 the median split stays fixed, as in \code{\link[=hsdt]{hsdt()}}, and the tasks take the data
-labels. Without it, both criteria are estimated.}
+labels. Without it, both criteria are estimated. The caption says which
+criteria are fixed.}
 
 \item{unequal_variances}{Logical. Simulate the signal standard deviation
 from its prior instead of fixing it to 1.}

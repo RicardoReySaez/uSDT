@@ -12,9 +12,9 @@
 
 # This function fits the Bayesian model and builds its hsdt object.
 .hsdt_bayes <- function(data, fix_criteria, level, priors, unequal_variances,
-                        dots, call) {
-  settings <- .bayes_settings(dots)
-  rlang::check_installed(c(settings$backend, "posterior"),
+                        backend, dots, call) {
+  settings <- c(.bayes_settings(dots), backend = backend)
+  rlang::check_installed(c(backend, "posterior"),
                          reason = "to fit the Bayesian model.")
 
   free_c <- .bayes_free_criteria(data, fix_criteria)
@@ -46,7 +46,7 @@
   defaults <- list(chains = 4L, iter = 3500L, warmup = 1000L,
                    cores = getOption("mc.cores", 1L), seed = NULL,
                    control = list(adapt_delta = 0.95, max_treedepth = 10L),
-                   backend = "rstan", refresh = 0L)
+                   refresh = 0L)
   unknown <- setdiff(names(dots), names(defaults))
   if (length(unknown)) {
     .usdt_stop("`", unknown[1L], "` is not a sampling option. A Bayesian fit ",
@@ -72,9 +72,6 @@
                        upper = 1, open_lower = TRUE, open_upper = TRUE)
   .check_scalar_number(s$control$max_treedepth, "max_treedepth", lower = 1,
                        whole = TRUE)
-  s$backend <- tryCatch(match.arg(s$backend, c("rstan", "cmdstanr")),
-                        error = function(e)
-                          .usdt_stop("`backend` must be \"rstan\" or \"cmdstanr\"."))
   s
 }
 

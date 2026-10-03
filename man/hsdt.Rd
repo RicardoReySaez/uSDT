@@ -14,6 +14,7 @@ hsdt(
   optimizer = "bobyqa",
   priors = usdt_priors(),
   unequal_variances = FALSE,
+  backend = c("rstan", "cmdstanr"),
   ...
 )
 
@@ -47,13 +48,17 @@ estimation only.}
 signal distribution of each task instead of fixing it to that of the noise
 distribution. Bayesian estimation only.}
 
+\item{backend}{Stan interface used for Bayesian estimation: \code{"rstan"}
+(default, available from CRAN) or \code{"cmdstanr"} (installed from the Stan
+R-universe together with CmdStan). Bayesian estimation only.}
+
 \item{...}{For frequentist estimation, additional arguments passed to
 \code{\link[lme4:glmer]{lme4::glmer()}}; the model formula, family and data remain managed by the
 package. For Bayesian estimation, sampling options: \code{chains} (default 4),
 \code{iter} (iterations per chain including warmup, default 3500), \code{warmup}
 (default 1000), \code{cores} (default \code{getOption("mc.cores", 1)}), \code{seed},
-\code{control = list(adapt_delta, max_treedepth)} (default 0.95 and 10),
-\code{backend} (\code{"rstan"}, the default, or \code{"cmdstanr"}) and \code{refresh}.}
+\code{control = list(adapt_delta, max_treedepth)} (default 0.95 and 10) and
+\code{refresh}.}
 
 \item{object}{An \code{hsdt} object.}
 

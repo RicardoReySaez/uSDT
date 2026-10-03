@@ -31,13 +31,16 @@
 #' @param unequal_variances Logical. Estimate the standard deviation of the
 #'   signal distribution of each task instead of fixing it to that of the noise
 #'   distribution. Bayesian estimation only.
+#' @param backend Stan interface used for Bayesian estimation: `"rstan"`
+#'   (default, available from CRAN) or `"cmdstanr"` (installed from the Stan
+#'   R-universe together with CmdStan). Bayesian estimation only.
 #' @param ... For frequentist estimation, additional arguments passed to
 #'   [lme4::glmer()]; the model formula, family and data remain managed by the
 #'   package. For Bayesian estimation, sampling options: `chains` (default 4),
 #'   `iter` (iterations per chain including warmup, default 3500), `warmup`
 #'   (default 1000), `cores` (default `getOption("mc.cores", 1)`), `seed`,
-#'   `control = list(adapt_delta, max_treedepth)` (default 0.95 and 10),
-#'   `backend` (`"rstan"`, the default, or `"cmdstanr"`) and `refresh`.
+#'   `control = list(adapt_delta, max_treedepth)` (default 0.95 and 10) and
+#'   `refresh`.
 #'
 #' @return An object of class `hsdt` containing:
 #' * `$fit`: The underlying fit: a `glmerMod` object from lme4, or the Stan fit
@@ -125,6 +128,7 @@ hsdt <- function(data,
                  optimizer    = "bobyqa",
                  priors       = usdt_priors(),
                  unequal_variances = FALSE,
+                 backend      = c("rstan", "cmdstanr"),
                  ...) {
 
   # The function checks the data and the requested options.
@@ -154,11 +158,13 @@ hsdt <- function(data,
         is.na(unequal_variances)) {
       .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
     }
+    backend <- tryCatch(match.arg(backend), error = function(e)
+      .usdt_stop("`backend` must be `\"rstan\"` or `\"cmdstanr\"`."))
     return(.hsdt_bayes(data, fix_criteria, level, priors, unequal_variances,
-                       dots, match.call()))
+                       backend, dots, match.call()))
   }
-  if (!missing(priors) || !missing(unequal_variances)) {
-    .usdt_stop("`priors` and `unequal_variances` apply only to ",
+  if (!missing(priors) || !missing(unequal_variances) || !missing(backend)) {
+    .usdt_stop("`priors`, `unequal_variances` and `backend` apply only to ",
                "`estimation = \"bayesian\"`.")
   }
   if (!is.character(optimizer) || length(optimizer) != 1L ||

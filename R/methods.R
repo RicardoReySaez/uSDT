@@ -416,8 +416,15 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   used$task <- ifelse(used$task == "both", "both", lab[used$task])
   .print_prior_rows(used)
 
+  # The columns read like frequentist ones, so the notes say what they hold.
+  cat("\n", .rule("Notes"), "\n\n", sep = "")
+  cat(sprintf(paste0(
+    "  Mean, SD and CrI are the posterior mean, posterior SD and central\n",
+    "  credible interval. The p-value is the two-sided posterior p-value,\n",
+    "  2 min{P(x > 0), P(x < 0)}: it is below %s exactly when the %.0f%% CrI\n",
+    "  excludes 0.\n"),
+    sub("^0", "", format(1 - object$level)), 100 * object$level))
   if (length(dg$issues)) {
-    cat("\n", .rule("Notes"), "\n\n", sep = "")
     cat("  The posterior may be unreliable: ",
         paste(dg$issues, collapse = "; "), ".\n", sep = "")
   }

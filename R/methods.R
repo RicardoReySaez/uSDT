@@ -327,8 +327,8 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
               switch(object$boot$type, perc = "percentile", norm = "normal",
                      basic = "basic")),
       "Boot p-value"),
-    bayes = sprintf("  %-14s %10s %8s  %-18s %7s\n",
-                    "Parameter", "Post. Mean", "Post. SD",
+    bayes = sprintf("  %-14s %9s %8s  %-18s %7s\n",
+                    "Parameter", "Mean", "SD",
                     sprintf("%.0f%% CrI", 100 * object$level), "p-value"))
 }
 
@@ -352,8 +352,8 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
                         .fmt_n(row$se, 4L, 8L),
                         .fmt_ci(row$conf.low, row$conf.high),
                         .fmt_p(row$p.value)),
-    bayes = sprintf("  %-14s %10s %8s  %-18s %7s\n",
-                    parameter, .fmt_n(row$estimate, 4L, 10L),
+    bayes = sprintf("  %-14s %9s %8s  %-18s %7s\n",
+                    parameter, .fmt_n(row$estimate, 4L, 9L),
                     .fmt_n(row$est.error, 4L, 8L),
                     .fmt_ci(row$conf.low, row$conf.high),
                     .fmt_p(row$p.value)))
@@ -394,13 +394,13 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
     selected <- rows[rows$block == block, , drop = FALSE]
     if (!nrow(selected)) next
     cat("\n", .rule(block), "\n\n", sep = "")
-    cat(sprintf("  %-14s %-9s %10s %8s  %-18s %6s %7s\n", "Parameter", "Task",
-                "Post. Mean", "Post. SD",
-                sprintf("%.0f%% CrI", 100 * object$level), "R-hat", "ESS"))
+    cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", "Parameter", "Task",
+                "Mean", "SD", sprintf("%.0f%% CrI", 100 * object$level),
+                "R-hat", "ESS"))
     for (i in seq_len(nrow(selected))) {
       r <- selected[i, ]
-      cat(sprintf("  %-14s %-9s %10s %8s  %-18s %6s %7s\n", r$parameter, r$task,
-                  .fmt_n(r$mean, 4L, 10L), .fmt_n(r$sd, 4L, 8L),
+      cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", r$parameter, r$task,
+                  .fmt_n(r$mean, 4L, 9L), .fmt_n(r$sd, 4L, 8L),
                   .fmt_ci(r$conf.low, r$conf.high),
                   formatC(r$rhat, format = "f", digits = 3),
                   .fmt_int(round(r$ess_bulk))))
@@ -418,8 +418,9 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 
   # The columns read like frequentist ones, so the notes say what they hold.
   cat("\n", .rule("Notes"), "\n\n", sep = "")
-  cat("  CrI is the central credible interval and the p-value is the two-sided\n",
-      "  posterior p-value.\n", sep = "")
+  cat("  Mean, SD and CrI are the posterior mean, posterior SD and central\n",
+      "  credible interval. The p-value is the two-sided posterior p-value.\n",
+      sep = "")
   if (length(dg$issues)) {
     cat("  The posterior may be unreliable: ",
         paste(dg$issues, collapse = "; "), ".\n", sep = "")

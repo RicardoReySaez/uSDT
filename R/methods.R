@@ -328,8 +328,8 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
                      basic = "basic")),
       "Boot p-value"),
     bayes = sprintf("  %-14s %9s %8s  %-18s %7s\n",
-                    "Parameter", "Median", "MAD",
-                    sprintf("%.0f%% CrI", 100 * object$level), "P(>0)"))
+                    "Parameter", "Mean", "SD",
+                    sprintf("%.0f%% CrI", 100 * object$level), "p-value"))
 }
 
 # This function checks whether bootstrap summaries are available.
@@ -356,7 +356,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
                     parameter, .fmt_n(row$estimate, 4L, 9L),
                     .fmt_n(row$est.error, 4L, 8L),
                     .fmt_ci(row$conf.low, row$conf.high),
-                    formatC(row$prob_gt0, format = "f", digits = 3, width = 7)))
+                    .fmt_p(row$p.value)))
 }
 
 # Bayesian summaries
@@ -395,12 +395,12 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
     if (!nrow(selected)) next
     cat("\n", .rule(block), "\n\n", sep = "")
     cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", "Parameter", "Task",
-                "Median", "MAD", sprintf("%.0f%% CrI", 100 * object$level),
+                "Mean", "SD", sprintf("%.0f%% CrI", 100 * object$level),
                 "R-hat", "ESS"))
     for (i in seq_len(nrow(selected))) {
       r <- selected[i, ]
       cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", r$parameter, r$task,
-                  .fmt_n(r$median, 4L, 9L), .fmt_n(r$mad, 4L, 8L),
+                  .fmt_n(r$mean, 4L, 9L), .fmt_n(r$sd, 4L, 8L),
                   .fmt_ci(r$conf.low, r$conf.high),
                   formatC(r$rhat, format = "f", digits = 3),
                   .fmt_int(round(r$ess_bulk))))
@@ -456,10 +456,10 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   a <- (1 - object$level) / 2
   draws <- posterior::subset_draws(object$draws, variable = spec$variable)
   summary <- posterior::summarise_draws(
-    draws, "median", "mad", ~stats::quantile(.x, c(a, 1 - a), names = FALSE),
+    draws, "mean", "sd", ~stats::quantile(.x, c(a, 1 - a), names = FALSE),
     "rhat", "ess_bulk")
   summary <- summary[match(spec$variable, summary$variable), ]
-  data.frame(spec, median = summary$median, mad = summary$mad,
+  data.frame(spec, mean = summary$mean, sd = summary$sd,
              conf.low = summary[[4L]], conf.high = summary[[5L]],
              rhat = summary$rhat, ess_bulk = summary$ess_bulk,
              stringsAsFactors = FALSE)

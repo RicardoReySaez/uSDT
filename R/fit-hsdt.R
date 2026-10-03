@@ -78,8 +78,11 @@
 #' correlation of the two sensitivities and on the criteria; see
 #' [usdt_priors()]. The slope and intercept of the latent regression are
 #' derived from them draw by draw. The hypothesis table reports the posterior
-#' median, the median absolute deviation, a central credible interval and the
-#' posterior probability that each quantity is positive (`prob_gt0`).
+#' mean and standard deviation, a central credible interval and a two-sided
+#' posterior p-value, \eqn{2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}}.
+#' The p-value falls below `1 - level` exactly when zero lies outside the
+#' credible interval, so with the default `level = 0.95` a p-value below .05
+#' means that the 95% credible interval excludes zero.
 #'
 #' The Stan model is compiled the first time it is used, which needs a C++
 #' toolchain, and stays in a per-user cache directory for later sessions. The

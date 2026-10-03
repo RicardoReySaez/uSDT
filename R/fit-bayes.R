@@ -121,9 +121,10 @@
   .usdt_quantities(.bivariate_primitives(B))
 }
 
-# This function summarises the posterior of the three hypotheses. Estimates are
-# medians with their median absolute deviation, intervals are central, and
-# `prob_gt0` is the posterior probability that the quantity is positive.
+# This function summarises the posterior of the three hypotheses: the posterior
+# mean and SD, the central credible interval, and the two-sided posterior
+# p-value 2 min{P(q > 0), P(q < 0)}. That p-value falls below 1 - level exactly
+# when zero lies outside the interval.
 .bayes_tests <- function(draws, level) {
   Q <- .bayes_quantities(draws)
   shape <- c(posterior::niterations(draws), posterior::nchains(draws))
@@ -136,9 +137,10 @@
     chains <- matrix(x, shape[1L], shape[2L])
     limits <- stats::quantile(x, c(a, 1 - a), names = FALSE)
     data.frame(hypothesis = hypotheses[[q]], term = terms[[q]],
-               estimate = stats::median(x), est.error = stats::mad(x),
+               estimate = mean(x), est.error = stats::sd(x),
                conf.low = limits[1L], conf.high = limits[2L],
-               ci_method = "quantile", prob_gt0 = mean(x > 0),
+               ci_method = "quantile",
+               p.value = 2 * min(mean(x > 0), mean(x < 0)),
                rhat = posterior::rhat(chains),
                ess_bulk = posterior::ess_bulk(chains),
                stringsAsFactors = FALSE)

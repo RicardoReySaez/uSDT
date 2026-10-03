@@ -31,9 +31,10 @@
 #'   includes an extra `hypothesis` column (`H1`, `H2`, `H3`).
 #'
 #'   For a Bayesian `hsdt` fit the columns are `term`, `estimate` (posterior
-#'   median), `est.error` (median absolute deviation), `conf.low` and
-#'   `conf.high` (central credible interval), `ci_method`, `prob_gt0` (posterior
-#'   probability that the quantity is positive), `rhat` and `ess_bulk`.
+#'   mean), `est.error` (posterior standard deviation), `conf.low` and
+#'   `conf.high` (central credible interval), `ci_method`, `p.value` (two-sided
+#'   posterior p-value, below `1 - level` exactly when the interval excludes
+#'   zero), `rhat` and `ess_bulk`.
 #'
 #' @details
 #' # The three hypotheses

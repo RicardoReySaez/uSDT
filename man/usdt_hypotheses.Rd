@@ -34,9 +34,10 @@ A data frame with columns \code{term}, \code{estimate}, \code{se}, \code{statist
 includes an extra \code{hypothesis} column (\code{H1}, \code{H2}, \code{H3}).
 
 For a Bayesian \code{hsdt} fit the columns are \code{term}, \code{estimate} (posterior
-median), \code{est.error} (median absolute deviation), \code{conf.low} and
-\code{conf.high} (central credible interval), \code{ci_method}, \code{prob_gt0} (posterior
-probability that the quantity is positive), \code{rhat} and \code{ess_bulk}.
+mean), \code{est.error} (posterior standard deviation), \code{conf.low} and
+\code{conf.high} (central credible interval), \code{ci_method}, \code{p.value} (two-sided
+posterior p-value, below \code{1 - level} exactly when the interval excludes
+zero), \code{rhat} and \code{ess_bulk}.
 }
 \description{
 Evaluates the difference between average task sensitivities (H1), their

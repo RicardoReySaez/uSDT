@@ -11,9 +11,9 @@
 * `usdt_priors()` specifies the priors as Stan-style strings, and
   `plot.usdt_priors()` shows what they imply before any data are fitted.
 * `usdt_tests()`, `sensitivity_diff()`, `latent_cor()` and
-  `latent_regression()` summarise a Bayesian fit with posterior medians,
-  credible intervals and the posterior probability that each quantity is
-  positive.
+  `latent_regression()` summarise a Bayesian fit with posterior means and
+  standard deviations, central credible intervals and a two-sided posterior
+  p-value that falls below .05 exactly when the 95% interval excludes zero.
 
 # uSDT 0.1.0
 

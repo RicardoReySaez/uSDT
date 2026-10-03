@@ -17,8 +17,8 @@ latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted model: an \code{hsdt} object or a \code{glmerMod} from
-\code{lme4::glmer()}.}
+\item{fit}{A fitted model: an \code{hsdt} object, frequentist or Bayesian, or a
+\code{glmerMod} from \code{lme4::glmer()}.}
 
 \item{direct, indirect}{Character strings naming the sensitivity terms in the
 model. Defaults match the internal naming of \code{\link[=hsdt]{hsdt()}}. For custom models,
@@ -32,6 +32,11 @@ A data frame with columns \code{term}, \code{estimate}, \code{se}, \code{statist
 \code{p.value}, \code{conf.low}, \code{conf.high}, and \code{ci_method}. Columns \code{status} and
 \code{reason} flag unsupported estimates (e.g., singular fits). \code{usdt_tests()}
 includes an extra \code{hypothesis} column (\code{H1}, \code{H2}, \code{H3}).
+
+For a Bayesian \code{hsdt} fit the columns are \code{term}, \code{estimate} (posterior
+median), \code{est.error} (median absolute deviation), \code{conf.low} and
+\code{conf.high} (central credible interval), \code{ci_method}, \code{prob_gt0} (posterior
+probability that the quantity is positive), \code{rhat} and \code{ess_bulk}.
 }
 \description{
 Evaluates the difference between average task sensitivities (H1), their

@@ -8,10 +8,12 @@
 \usage{
 hsdt(
   data,
-  estimation = c("frequentist"),
+  estimation = c("frequentist", "bayesian"),
   fix_criteria = c("auto", "none"),
   level = 0.95,
   optimizer = "bobyqa",
+  priors = usdt_priors(),
+  unequal_variances = FALSE,
   ...
 )
 
@@ -23,21 +25,35 @@ hsdt(
 \item{data}{A \code{usdt_data} object from \code{\link[=usdt_data_tasks]{usdt_data_tasks()}} or
 \code{\link[=usdt_data_long]{usdt_data_long()}}.}
 
-\item{estimation}{Estimation framework. Currently only \code{"frequentist"}
-(maximum likelihood via Laplace approximation) is supported.}
+\item{estimation}{Estimation framework: \code{"frequentist"} (maximum likelihood
+via Laplace approximation with lme4) or \code{"bayesian"} (Hamiltonian Monte
+Carlo with Stan).}
 
 \item{fix_criteria}{How to handle response criteria. \code{"auto"} fixes to zero
 any criterion that is zero by design (such as a task split at the median
 under deviation coding). \code{"none"} estimates all criteria.}
 
-\item{level}{Confidence level for Wald intervals (default is 0.95).}
+\item{level}{Confidence level for Wald intervals, or credible level for the
+posterior intervals of a Bayesian fit (default is 0.95).}
 
 \item{optimizer}{Primary optimizer passed to \code{\link[lme4:glmerControl]{lme4::glmerControl()}}.
 Alternative optimizers are automatically evaluated if the default fails to
-converge or produces a singular fit.}
+converge or produces a singular fit. Frequentist estimation only.}
 
-\item{...}{Additional arguments passed to \code{\link[lme4:glmer]{lme4::glmer()}}. Model formula,
-family, and data inputs remain managed by the package.}
+\item{priors}{A \code{usdt_priors} object from \code{\link[=usdt_priors]{usdt_priors()}}. Bayesian
+estimation only.}
+
+\item{unequal_variances}{Logical. Estimate the standard deviation of the
+signal distribution of each task instead of fixing it to that of the noise
+distribution. Bayesian estimation only.}
+
+\item{...}{For frequentist estimation, additional arguments passed to
+\code{\link[lme4:glmer]{lme4::glmer()}}; the model formula, family and data remain managed by the
+package. For Bayesian estimation, sampling options: \code{chains} (default 4),
+\code{iter} (iterations per chain including warmup, default 3500), \code{warmup}
+(default 1000), \code{cores} (default \code{getOption("mc.cores", 1)}), \code{seed},
+\code{control = list(adapt_delta, max_treedepth)} (default 0.95 and 10),
+\code{backend} (\code{"rstan"}, the default, or \code{"cmdstanr"}) and \code{refresh}.}
 
 \item{object}{An \code{hsdt} object.}
 
@@ -46,19 +62,23 @@ family, and data inputs remain managed by the package.}
 \value{
 An object of class \code{hsdt} containing:
 \itemize{
-\item \verb{$fit}: The underlying \code{glmerMod} object from \code{lme4}.
+\item \verb{$fit}: The underlying fit: a \code{glmerMod} object from lme4, or the Stan fit
+of the chosen backend.
 \item \verb{$tests}: Summary table for hypotheses H1, H2, and H3.
-\item \verb{$pars}: Model parameter estimates on the SDT scale.
-\item \verb{$design}: Summary of the model specification and formula.
-\item \verb{$diagnostics}: Convergence flags and singular fit indicators.
+\item \verb{$design}: Summary of the model specification.
+\item \verb{$diagnostics}: Convergence diagnostics.
 }
+
+A frequentist fit also contains \verb{$pars}, the parameter estimates and their
+joint covariance. A Bayesian fit also contains \verb{$draws}, the posterior draws
+of the population and subject parameters, and \verb{$priors}.
 }
 \description{
-Fits a bivariate hierarchical SDT model using \code{\link[lme4:glmer]{lme4::glmer()}} and evaluates
-the core unconscious processing hypotheses. The model estimates task-specific
-sensitivities (\eqn{d'}) and response criteria (\eqn{c}) as fixed effects,
-while estimating their variation and correlation across participants via
-random effects.
+Fits a bivariate hierarchical SDT model and evaluates the core unconscious
+processing hypotheses. The model estimates task-specific sensitivities
+(\eqn{d'}) and response criteria (\eqn{c}) for the population, and their
+variation and correlation across participants. The frequentist estimation
+uses \code{\link[lme4:glmer]{lme4::glmer()}}; the Bayesian estimation uses Stan.
 }
 \details{
 The model fits trial counts with a binomial probit link, directly mapping
@@ -78,8 +98,24 @@ reflects expected indirect performance when direct awareness is zero
 
 When sample sizes or trial counts are low, variance components can reach
 singular boundaries. In these cases, the function issues a warning, and
-parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}.
+parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}, or the
+model can be fitted with \code{estimation = "bayesian"}.
 }
+\section{Bayesian estimation}{
+The Bayesian model places its priors on the mean, standard deviation and
+correlation of the two sensitivities and on the criteria; see
+\code{\link[=usdt_priors]{usdt_priors()}}. The slope and intercept of the latent regression are
+derived from them draw by draw. The hypothesis table reports the posterior
+median, the median absolute deviation, a central credible interval and the
+posterior probability that each quantity is positive (\code{prob_gt0}).
+
+The Stan model is compiled the first time it is used, which needs a C++
+toolchain, and stays in a per-user cache directory for later sessions. The
+default sampling settings draw 10,000 posterior samples. A warning names any
+divergent transition, an R-hat above 1.01 or an effective sample size below
+400.
+}
+
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
@@ -102,7 +138,16 @@ summary(m)
 # Inspect the model formula (indirect criterion omitted by default)
 m$design$formula
 
+\donttest{
+# Bayesian estimation. The first call compiles the Stan model.
+if (requireNamespace("rstan", quietly = TRUE)) {
+  mb <- hsdt(d, estimation = "bayesian", seed = 1)
+  summary(mb)
+}
+}
+
 }
 \seealso{
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}, \code{\link[=usdt_priors]{usdt_priors()}}, \code{\link[=usdt_tests]{usdt_tests()}},
+\code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
 }

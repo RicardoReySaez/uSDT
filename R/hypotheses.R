@@ -17,8 +17,8 @@
 #' [lme4::glmer()], allowing you to test these hypotheses while controlling for
 #' additional covariates (e.g., set size, experimental groups).
 #'
-#' @param fit A fitted model: an `hsdt` object or a `glmerMod` from
-#'   `lme4::glmer()`.
+#' @param fit A fitted model: an `hsdt` object, frequentist or Bayesian, or a
+#'   `glmerMod` from `lme4::glmer()`.
 #' @param direct,indirect Character strings naming the sensitivity terms in the
 #'   model. Defaults match the internal naming of [hsdt()]. For custom models,
 #'   both terms must be fixed effects and share a common random-effects grouping
@@ -29,6 +29,11 @@
 #'   `p.value`, `conf.low`, `conf.high`, and `ci_method`. Columns `status` and
 #'   `reason` flag unsupported estimates (e.g., singular fits). `usdt_tests()`
 #'   includes an extra `hypothesis` column (`H1`, `H2`, `H3`).
+#'
+#'   For a Bayesian `hsdt` fit the columns are `term`, `estimate` (posterior
+#'   median), `est.error` (median absolute deviation), `conf.low` and
+#'   `conf.high` (central credible interval), `ci_method`, `prob_gt0` (posterior
+#'   probability that the quantity is positive), `rhat` and `ess_bulk`.
 #'
 #' @details
 #' # The three hypotheses
@@ -123,6 +128,7 @@ usdt_tests <- function(fit, direct = "d_D", indirect = "d_I", level = 0.95) {
 
   # The function collects the values shared by the three tests.
   .check_confidence_level(level)
+  if (.is_bayes(fit)) return(.bayes_tests(fit$draws, level))
   r  <- .resolve_fit(fit)
   p  <- .usdt_pars(r$fit, direct, indirect, devfun = r$devfun)
 
@@ -142,6 +148,7 @@ usdt_tests <- function(fit, direct = "d_D", indirect = "d_I", level = 0.95) {
 sensitivity_diff <- function(fit, direct = "d_D", indirect = "d_I",
                              level = 0.95) {
   .check_confidence_level(level)
+  if (.is_bayes(fit)) return(.bayes_rows(fit, "H1", level))
   .diff_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -150,6 +157,7 @@ sensitivity_diff <- function(fit, direct = "d_D", indirect = "d_I",
 latent_cor <- function(fit, direct = "d_D", indirect = "d_I",
                        level = 0.95) {
   .check_confidence_level(level)
+  if (.is_bayes(fit)) return(.bayes_rows(fit, "H2", level))
   .cor_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -158,6 +166,7 @@ latent_cor <- function(fit, direct = "d_D", indirect = "d_I",
 latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
                               level = 0.95) {
   .check_confidence_level(level)
+  if (.is_bayes(fit)) return(.bayes_rows(fit, "H3", level))
   .reg_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -263,6 +272,19 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 }
 
 # Model input
+
+# This function tells a Bayesian hsdt fit from every frequentist input.
+.is_bayes <- function(x) {
+  inherits(x, "hsdt") && identical(x$estimation, "bayesian")
+}
+
+# This function returns the posterior rows of one hypothesis.
+.bayes_rows <- function(fit, hypothesis, level) {
+  tests <- .bayes_tests(fit$draws, level)
+  out <- tests[tests$hypothesis == hypothesis, -1L, drop = FALSE]
+  rownames(out) <- NULL
+  out
+}
 
 # This function finds the fitted model and its deviance function.
 .resolve_fit <- function(x) {

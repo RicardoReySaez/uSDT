@@ -80,6 +80,9 @@ usdt_reliability <- function(object) {
                "between-subject variance and the information each subject ",
                "contributes.")
   }
+  if (.is_bayes(object)) {
+    .usdt_stop("usdt_reliability() does not support Bayesian fits yet.")
+  }
 
   agg     <- object$data$agg
   labels  <- object$data$meta$labels

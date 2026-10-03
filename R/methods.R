@@ -91,15 +91,17 @@ print.usdt_data <- function(x, ...) {
   invisible(NULL)
 }
 
-# This function lists the estimated and fixed criteria.
-.criteria_line <- function(m, fm, lab) {
+# This function lists the estimated and fixed criteria. `check` holds the
+# criterion left by each Meyen split, and `fixed` says what a fixed criterion
+# is set to.
+.criteria_line <- function(check, criteria, lab, fixed = "fixed to 0") {
   parts <- character(0)
   for (k in c("direct", "indirect")) {
     nm <- if (k == "direct") "c_D" else "c_I"
-    parts <- c(parts, if (nm %in% fm$criteria)
+    parts <- c(parts, if (nm %in% criteria)
       paste0(lab[[k]], " estimated") else
-      sprintf("%s fixed to 0 (Meyen split, mean |c| = %.4f)",
-              lab[[k]], m$criterion[[k]]$mean_abs))
+      sprintf("%s %s (Meyen split, mean |c| = %.4f)",
+              lab[[k]], fixed, check[[k]]$mean_abs))
   }
   paste(parts, collapse = ", ")
 }
@@ -127,6 +129,8 @@ print.usdt_data <- function(x, ...) {
 #' @export
 summary.hsdt <- function(object, ...) {
 
+  if (identical(object$estimation, "bayesian")) return(.summary_bayes(object))
+
   m   <- object$data$meta
   lab <- m$labels
   dg  <- object$diagnostics
@@ -139,7 +143,8 @@ summary.hsdt <- function(object, ...) {
               m$n_rows, .fmt_int(m$n_trials)))
   cat(sprintf("  Family:         binomial (probit)\n"))
   cat(sprintf("  Coding:         %s\n", m$coding))
-  cat(sprintf("  Criteria:       %s\n", .criteria_line(m, object$design, lab)))
+  cat(sprintf("  Criteria:       %s\n",
+              .criteria_line(m$criterion, object$design$criteria, lab)))
   cat(sprintf("  Estimation:     lme4::glmer (%s)%s\n", dg$optimizer,
               if (isTRUE(dg$retried))
                 paste0(", tried ", paste(dg$tried, collapse = " -> ")) else ""))
@@ -288,14 +293,14 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   )
   names <- c(correlation = "rho", intercept = "Intercept", slope = "Slope")
   names[["d'(indirect) - d'(direct)"]] <- paste0(delta, "d' (I - D)")
+  style <- .hypothesis_style(object)
 
   for (hypothesis in c("H1", "H2", "H3")) {
     rows <- t[t$hypothesis == hypothesis, , drop = FALSE]
     cat(sprintf("%s: %s\n", hypothesis, titles[[hypothesis]]))
-    cat(.hypothesis_header(object), sep = "")
+    cat(.hypothesis_header(object, style), sep = "")
     for (i in seq_len(nrow(rows))) {
-      cat(.hypothesis_row(names[[rows$term[i]]], rows[i, ],
-                          bootstrap = .has_boot_summary(object)))
+      cat(.hypothesis_row(names[[rows$term[i]]], rows[i, ], style))
     }
     if (hypothesis != "H3") cat("\n")
   }
@@ -303,19 +308,28 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   invisible(NULL)
 }
 
+# This function names the inference behind the hypothesis tables.
+.hypothesis_style <- function(object) {
+  if (identical(object$estimation, "bayesian")) return("bayes")
+  if (.has_boot_summary(object)) "bootstrap" else "wald"
+}
+
 # This function prints the columns used by a hypothesis table.
-.hypothesis_header <- function(object) {
-  if (!.has_boot_summary(object)) {
-    return(sprintf("  %-14s %9s %8s  %-18s %7s %9s\n",
+.hypothesis_header <- function(object, style) {
+  switch(style,
+    wald = sprintf("  %-14s %9s %8s  %-18s %7s %9s\n",
                    "Parameter", "Estimate", "SE",
-                   sprintf("%.0f%% CI", 100 * object$level), "z", "p-value"))
-  }
-  type <- switch(object$boot$type,
-                 perc = "percentile", norm = "normal", basic = "basic")
-  sprintf("  %-14s %11s %8s  %-25s %12s\n",
-          "Parameter", "Estimate", "Boot SE",
-          sprintf("Boot %.0f%% CI (%s)", 100 * object$level, type),
-          "Boot p-value")
+                   sprintf("%.0f%% CI", 100 * object$level), "z", "p-value"),
+    bootstrap = sprintf(
+      "  %-14s %11s %8s  %-25s %12s\n",
+      "Parameter", "Estimate", "Boot SE",
+      sprintf("Boot %.0f%% CI (%s)", 100 * object$level,
+              switch(object$boot$type, perc = "percentile", norm = "normal",
+                     basic = "basic")),
+      "Boot p-value"),
+    bayes = sprintf("  %-14s %9s %8s  %-18s %7s\n",
+                    "Parameter", "Median", "MAD",
+                    sprintf("%.0f%% CrI", 100 * object$level), "P(>0)"))
 }
 
 # This function checks whether bootstrap summaries are available.
@@ -324,19 +338,126 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 }
 
 # This function prints one result from a hypothesis table.
-.hypothesis_row <- function(parameter, row, bootstrap) {
-  if (bootstrap) {
-    return(sprintf("  %-14s %11s %8s  %-25s %12s\n",
-                   parameter, .fmt_n(row$estimate, 4L, 11L),
+.hypothesis_row <- function(parameter, row, style) {
+  switch(style,
+    wald = sprintf("  %-14s %9s %8s  %-18s %7s %9s\n",
+                   parameter, .fmt_n(row$estimate, 4L, 9L),
                    .fmt_n(row$se, 4L, 8L),
                    .fmt_ci(row$conf.low, row$conf.high),
-                   .fmt_p(row$p.value)))
+                   if (is.na(row$statistic)) "NA" else
+                     formatC(row$statistic, format = "f", digits = 2, width = 7),
+                   .fmt_p(row$p.value)),
+    bootstrap = sprintf("  %-14s %11s %8s  %-25s %12s\n",
+                        parameter, .fmt_n(row$estimate, 4L, 11L),
+                        .fmt_n(row$se, 4L, 8L),
+                        .fmt_ci(row$conf.low, row$conf.high),
+                        .fmt_p(row$p.value)),
+    bayes = sprintf("  %-14s %9s %8s  %-18s %7s\n",
+                    parameter, .fmt_n(row$estimate, 4L, 9L),
+                    .fmt_n(row$est.error, 4L, 8L),
+                    .fmt_ci(row$conf.low, row$conf.high),
+                    formatC(row$prob_gt0, format = "f", digits = 3, width = 7)))
+}
+
+# Bayesian summaries
+
+# This function prints the summary of a Bayesian fit with the layout of the
+# frequentist one.
+.summary_bayes <- function(object) {
+
+  m   <- object$data$meta
+  lab <- m$labels
+  dg  <- object$diagnostics
+  s   <- object$settings
+  design <- object$design
+  uv  <- design$unequal_variances
+
+  cat(.rule("Model summary"), "\n\n")
+  cat(sprintf("  Subjects:       %d\n", m$n_subj))
+  cat(sprintf("  Observations:   %d aggregated rows (%s trials)\n",
+              m$n_rows, .fmt_int(m$n_trials)))
+  cat(sprintf("  Family:         binomial (probit), %s variances\n",
+              if (uv) "unequal" else "equal"))
+  cat(sprintf("  Criteria:       %s\n", .criteria_line(
+    .criterion_check(object$data$agg, "deviation"), design$criteria, lab,
+    if (uv) "fixed by HR + FAR = 1" else "fixed to 0")))
+  cat(sprintf("  Estimation:     Stan via %s, %d chains x %s draws (warmup %s)\n",
+              s$backend, s$chains, .fmt_int(s$iter - s$warmup),
+              .fmt_int(s$warmup)))
+  cat(sprintf("  Diagnostics:    max R-hat %.3f, min ESS %s, %s divergent\n",
+              dg$max_rhat, .fmt_int(round(min(dg$min_ess_bulk, dg$min_ess_tail))),
+              .fmt_int(dg$divergent)))
+
+  # The population tables follow the fixed and random effects of lme4.
+  rows <- .bayes_parameters(object)
+  for (block in c("Fixed effects", "Random effects", "Signal distribution")) {
+    selected <- rows[rows$block == block, , drop = FALSE]
+    if (!nrow(selected)) next
+    cat("\n", .rule(block), "\n\n", sep = "")
+    cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", "Parameter", "Task",
+                "Median", "MAD", sprintf("%.0f%% CrI", 100 * object$level),
+                "R-hat", "ESS"))
+    for (i in seq_len(nrow(selected))) {
+      r <- selected[i, ]
+      cat(sprintf("  %-14s %-9s %9s %8s  %-18s %6s %7s\n", r$parameter, r$task,
+                  .fmt_n(r$median, 4L, 9L), .fmt_n(r$mad, 4L, 8L),
+                  .fmt_ci(r$conf.low, r$conf.high),
+                  formatC(r$rhat, format = "f", digits = 3),
+                  .fmt_int(round(r$ess_bulk))))
+    }
   }
-  sprintf("  %-14s %9s %8s  %-18s %7s %9s\n",
-          parameter, .fmt_n(row$estimate, 4L, 9L),
-          .fmt_n(row$se, 4L, 8L),
-          .fmt_ci(row$conf.low, row$conf.high),
-          if (is.na(row$statistic)) "NA" else
-            formatC(row$statistic, format = "f", digits = 2, width = 7),
-          .fmt_p(row$p.value))
+
+  cat("\n", .rule("Hypotheses"), "\n\n", sep = "")
+  .print_hypotheses(object, lab)
+
+  cat("\n", .rule("Priors"), "\n\n", sep = "")
+  .print_prior_rows(.used_priors(object$priors, design$free_c, uv))
+
+  if (length(dg$issues)) {
+    cat("\n", .rule("Notes"), "\n\n", sep = "")
+    cat("  The posterior may be unreliable: ",
+        paste(dg$issues, collapse = "; "), ".\n", sep = "")
+  }
+  invisible(object)
+}
+
+# This function summarises the population parameters of a Bayesian fit in the
+# order of the frequentist tables.
+.bayes_parameters <- function(object) {
+  lab <- object$data$meta$labels
+  tasks <- unname(lab[c("direct", "indirect")])
+  free <- tasks[object$design$free_c == 1L]
+  spec <- rbind(
+    data.frame(variable = paste0("mu_c[", seq_along(free), "]"),
+               block = "Fixed effects", parameter = "criterion", task = free),
+    data.frame(variable = c("mu_d[1]", "mu_d[2]"), block = "Fixed effects",
+               parameter = "d'", task = tasks),
+    data.frame(variable = paste0("sigma_c[", seq_along(free), "]"),
+               block = "Random effects", parameter = "sd(criterion)",
+               task = free),
+    if (length(free) == 2L) {
+      data.frame(variable = "rho_c[1]", block = "Random effects",
+                 parameter = "cor(c)", task = "both")
+    },
+    data.frame(variable = c("sigma_d[1]", "sigma_d[2]"),
+               block = "Random effects", parameter = "sd(d')", task = tasks),
+    data.frame(variable = "rho_d", block = "Random effects",
+               parameter = "cor(d')", task = "both"),
+    if (object$design$unequal_variances) {
+      data.frame(variable = c("sigma_s[1]", "sigma_s[2]"),
+                 block = "Signal distribution", parameter = "sd(signal)",
+                 task = tasks)
+    }
+  )
+
+  a <- (1 - object$level) / 2
+  draws <- posterior::subset_draws(object$draws, variable = spec$variable)
+  summary <- posterior::summarise_draws(
+    draws, "median", "mad", ~stats::quantile(.x, c(a, 1 - a), names = FALSE),
+    "rhat", "ess_bulk")
+  summary <- summary[match(spec$variable, summary$variable), ]
+  data.frame(spec, median = summary$median, mad = summary$mad,
+             conf.low = summary[[4L]], conf.high = summary[[5L]],
+             rhat = summary$rhat, ess_bulk = summary$ess_bulk,
+             stringsAsFactors = FALSE)
 }

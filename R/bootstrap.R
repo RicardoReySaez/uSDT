@@ -97,6 +97,10 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     .usdt_stop("`object` must come from hsdt(), not a plain ",
                class(object)[1L], ".")
   }
+  if (.is_bayes(object)) {
+    .usdt_stop("usdt_boot() resamples maximum-likelihood fits. A Bayesian fit ",
+               "already carries its uncertainty in the posterior draws.")
+  }
   .check_scalar_number(nsim, "nsim", lower = .boot_min, whole = TRUE)
   .check_scalar_number(ncores, "ncores", lower = 1, whole = TRUE)
   .check_scalar_number(max_attempts, "max_attempts", lower = nsim, whole = TRUE)

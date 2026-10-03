@@ -1,5 +1,20 @@
 # uSDT (development version)
 
+## Bayesian estimation (in progress)
+
+* `hsdt(estimation = "bayesian")` fits the hierarchical model with Stan on the
+  aggregated hit and false-alarm counts. The priors go on the means, standard
+  deviations and correlation of the two sensitivities and on the criteria. The
+  Stan model compiles once per installation into a per-user cache, through
+  rstan or cmdstanr. Equal variances are the default; unequal variances are
+  optional.
+* `usdt_priors()` specifies the priors as Stan-style strings, and
+  `plot.usdt_priors()` shows what they imply before any data are fitted.
+* `usdt_tests()`, `sensitivity_diff()`, `latent_cor()` and
+  `latent_regression()` summarise a Bayesian fit with posterior medians,
+  credible intervals and the posterior probability that each quantity is
+  positive.
+
 # uSDT 0.1.0
 
 First release.

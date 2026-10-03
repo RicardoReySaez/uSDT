@@ -112,15 +112,8 @@ usdt_priors <- function(dprime        = "normal(0, 1)",
 #' @rdname usdt_priors
 #' @export
 print.usdt_priors <- function(x, ...) {
-  labels <- c(dprime = "mean d'", sd_dprime = "sd(d')", cor_dprime = "cor(d')",
-              criterion = "mean c", sd_criterion = "sd(c)",
-              cor_criterion = "cor(c)", sd_signal = "sd(signal)")
   cat(.rule("Priors"), "\n\n")
-  cat(sprintf("  %-12s %-10s %s\n", "Parameter", "Task", "Prior"))
-  for (i in seq_len(nrow(x))) {
-    cat(sprintf("  %-12s %-10s %s\n", labels[[x$parameter[i]]], x$task[i],
-                x$prior[i]))
-  }
+  .print_prior_rows(x)
   cat("\n  Standard deviation priors are truncated at zero. cor(c) applies when\n",
       "  both criteria are estimated, and sd(signal) under unequal variances.\n",
       sep = "")
@@ -128,6 +121,32 @@ print.usdt_priors <- function(x, ...) {
 }
 
 # Internal functions
+
+# This function prints one line per prior.
+.print_prior_rows <- function(x) {
+  labels <- c(dprime = "mean d'", sd_dprime = "sd(d')", cor_dprime = "cor(d')",
+              criterion = "mean c", sd_criterion = "sd(c)",
+              cor_criterion = "cor(c)", sd_signal = "sd(signal)")
+  cat(sprintf("  %-12s %-10s %s\n", "Parameter", "Task", "Prior"))
+  for (i in seq_len(nrow(x))) {
+    cat(sprintf("  %-12s %-10s %s\n", labels[[x$parameter[i]]], x$task[i],
+                x$prior[i]))
+  }
+  invisible(NULL)
+}
+
+# This function keeps the priors a fit uses: those of the estimated criteria,
+# the criterion correlation when both are estimated, and the signal SDs under
+# unequal variances.
+.used_priors <- function(priors, free_c, UV) {
+  free <- c("direct", "indirect")[free_c == 1L]
+  keep <- priors$parameter %in% c("dprime", "sd_dprime", "cor_dprime") |
+    (priors$parameter %in% c("criterion", "sd_criterion") &
+       priors$task %in% free) |
+    (priors$parameter == "cor_criterion" & length(free) == 2L) |
+    (priors$parameter == "sd_signal" & UV)
+  priors[keep, , drop = FALSE]
+}
 
 # The arguments of each admissible family, in Stan order.
 .prior_families <- list(

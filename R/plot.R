@@ -105,6 +105,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                       population_reference = TRUE, observed_se = NULL, ...) {
 
   # The function checks the requested plot.
+  if (.is_bayes(x)) {
+    .usdt_stop("plot() does not support Bayesian fits yet.")
+  }
   type <- match.arg(type)
   if (!is.logical(band) || length(band) != 1L || is.na(band)) {
     .usdt_stop("`band` must be `TRUE` or `FALSE`.")

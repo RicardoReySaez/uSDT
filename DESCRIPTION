@@ -48,7 +48,10 @@ Suggests:
     rmarkdown,
     brms,
     posterior,
-    logspline
+    logspline,
+    rstan,
+    cmdstanr
+Additional_repositories: https://stan-dev.r-universe.dev
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3

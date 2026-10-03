@@ -5,14 +5,9 @@
 // Last modified: 03-10-2026
 //
 // Column 1 of every subject x task matrix is the direct task and column 2 the
-// indirect task. Subject sensitivities follow a bivariate normal distribution.
-// Two parameterizations share the same likelihood:
-//   intercept_prior = 0: the priors go on mu_D, mu_I, both SDs and rho, which
-//     gives Bayes factors for H1 (delta) and H2 (rho).
-//   intercept_prior = 1: the prior on mu_I moves to the intercept of the latent
-//     regression, and mu_I = intercept + slope * mu_D. This gives Bayes factors
-//     for H3 (intercept). It samples worse when sigma_D is near 0, so it needs
-//     adapt_delta of at least 0.95.
+// indirect task. Subject sensitivities follow a bivariate normal distribution
+// whose five parameters carry the priors. The latent regression of indirect on
+// direct sensitivity is derived from them in generated quantities.
 
 functions {
   // Log density of a correlation rho whose (rho + 1) / 2 follows Beta(a, b).
@@ -32,11 +27,10 @@ data {
   int<lower=0, upper=1> UV;                // Unequal variances indicator
   array[2] int<lower=0, upper=1> free_c;   // 0: criterion fixed by the Meyen split
   int<lower=0, upper=1> prior_only;        // 1: sample from the priors alone
-  int<lower=0, upper=1> intercept_prior;   // 1: the second mean prior is on the intercept
 
   // Prior hyperparameters, passed as data so new priors never recompile
-  vector[2] mu_loc;                        // Normal priors on (mu_D, mu_I or intercept)
-  vector<lower=0>[2] mu_scale;
+  vector[2] mu_d_loc;                      // Normal priors on the mean d'
+  vector<lower=0>[2] mu_d_scale;
   vector<lower=0>[2] sd_d_df;              // Half-Student-t priors on the d' SDs
   vector<lower=0>[2] sd_d_scale;
   real<lower=0> rho_d_a;                   // Scaled-beta prior on the d' correlation
@@ -51,7 +45,7 @@ data {
 
 parameters {
   // Population-level distribution of d'
-  vector[2] mu;                            // (mu_D, mu_I) or (mu_D, intercept)
+  vector[2] mu_d;
   vector<lower=0>[2] sigma_d;
   real<lower=-1, upper=1> rho_d;
 
@@ -70,11 +64,6 @@ parameters {
 
 transformed parameters {
   vector[2] sigma_s = UV ? sigma_s_free : rep_vector(1, 2);
-
-  // Means of d', with the indirect one given by the latent regression when the
-  // intercept carries the prior
-  real slope = rho_d * sigma_d[2] / sigma_d[1];
-  vector[2] mu_d = intercept_prior ? [mu[1], mu[2] + slope * mu[1]]' : mu;
 
   // Subject-level d': the 2 x 2 Cholesky factor written out
   matrix[I, 2] d;
@@ -106,7 +95,7 @@ transformed parameters {
 
 model {
   // Priors
-  mu ~ normal(mu_loc, mu_scale);
+  mu_d ~ normal(mu_d_loc, mu_d_scale);
   sigma_d ~ student_t(sd_d_df, 0, sd_d_scale);
   rho_d ~ scaled_beta(rho_d_a, rho_d_b);
   mu_c ~ normal(mu_c_loc, mu_c_scale);
@@ -128,8 +117,8 @@ model {
 }
 
 generated quantities {
-  // H1 and the intercept of the latent regression (H3), which equals mu[2]
-  // when the intercept carries the prior
+  // H1 and the latent regression of indirect on direct d' (H3)
   real delta = mu_d[2] - mu_d[1];
+  real slope = rho_d * sigma_d[2] / sigma_d[1];
   real intercept = mu_d[2] - slope * mu_d[1];
 }

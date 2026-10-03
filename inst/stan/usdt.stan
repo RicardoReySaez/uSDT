@@ -19,7 +19,6 @@ data {
   array[I, 2] int<lower=0> N_fa;           // Noise trials (0 if the subject lacks the task)
   int<lower=0, upper=1> UV;                // Unequal variances indicator
   array[2] int<lower=0, upper=1> free_c;   // 0: criterion fixed by the Meyen split
-  int<lower=0, upper=1> prior_only;        // 1: sample from the priors alone
 
   // Prior hyperparameters
   vector[2] mu_d_loc;                      // Normal priors on the mean d'
@@ -104,11 +103,9 @@ model {
   to_vector(z_c) ~ std_normal();
 
   // Model Log-Likelihood on aggregated counts
-  if (!prior_only) {
-    for (j in 1:2) {
-      hit[, j] ~ binomial(N_hit[, j], Phi((0.5 * d[, j] - c[, j]) / sigma_s[j]));
-      fa[, j]  ~ binomial(N_fa[, j],  Phi(-0.5 * d[, j] - c[, j]));
-    }
+  for (j in 1:2) {
+    hit[, j] ~ binomial(N_hit[, j], Phi((0.5 * d[, j] - c[, j]) / sigma_s[j]));
+    fa[, j]  ~ binomial(N_fa[, j],  Phi(-0.5 * d[, j] - c[, j]));
   }
 }
 

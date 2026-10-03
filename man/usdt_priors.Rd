@@ -53,8 +53,9 @@ prior is fixed by the model; you choose its parameters. Each prior is
 written as a string in Stan notation:
 \itemize{
 \item means of \eqn{d'} and of the criterion: \code{"normal(location, scale)"};
-\item between-subject standard deviations: \code{"student_t(df, 0, scale)"}, a
-Student-\eqn{t} distribution truncated at zero (half-Student-\eqn{t});
+\item between-subject standard deviations: \code{"student_t(df, location, scale)"},
+a Student-\eqn{t} distribution truncated at zero. With location 0 it is a
+half-Student-\eqn{t};
 \item correlations: \code{"scaled_beta(alpha, beta)"}, a beta distribution stretched
 from \eqn{(0, 1)} to \eqn{(-1, 1)};
 \item signal standard deviation under unequal variances:
@@ -90,5 +91,8 @@ usdt_priors(dprime = list(direct = "normal(0, 1)",
 
 # A correlation prior that concentrates near zero
 usdt_priors(cor_dprime = "scaled_beta(2, 2)")
+
+# Standard deviations of d' expected around 0.3 rather than near zero
+usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
 
 }

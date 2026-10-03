@@ -84,9 +84,10 @@ reference:
   - hsdt
 
 - title: Specify the Bayesian priors
-  desc: Choose the prior distributions of the Bayesian model.
+  desc: Choose the prior distributions of the Bayesian model and check what they imply.
   contents:
   - usdt_priors
+  - plot.usdt_priors
 
 - title: Test hypotheses and bootstrap uncertainty
   desc: >

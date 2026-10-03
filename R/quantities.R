@@ -18,3 +18,12 @@
         intercept = P[, "gamma_I"] - slope * P[, "gamma_D"],
         slope     = slope)
 }
+
+# This function writes a bivariate normal given by its means, SDs and
+# correlation (columns mu_D, mu_I, sigma_D, sigma_I and rho) as the five values
+# read by .usdt_quantities().
+.bivariate_primitives <- function(B) {
+  cbind(gamma_D = B[, "mu_D"], gamma_I = B[, "mu_I"],
+        s2_D = B[, "sigma_D"]^2, s2_I = B[, "sigma_I"]^2,
+        s_DI = B[, "rho"] * B[, "sigma_D"] * B[, "sigma_I"])
+}

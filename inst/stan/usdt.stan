@@ -24,13 +24,15 @@ data {
   // Prior hyperparameters
   vector[2] mu_d_loc;                      // Normal priors on the mean d'
   vector<lower=0>[2] mu_d_scale;
-  vector<lower=0>[2] sd_d_df;              // Half-Student-t priors on the d' SDs
+  vector<lower=0>[2] sd_d_df;              // Student-t priors on the d' SDs, truncated at 0
+  vector[2] sd_d_loc;
   vector<lower=0>[2] sd_d_scale;
   real<lower=0> rho_d_a;                   // Scaled-beta prior on the d' correlation
   real<lower=0> rho_d_b;
   vector[sum(free_c)] mu_c_loc;            // Priors for the estimated criteria only
   vector<lower=0>[sum(free_c)] mu_c_scale;
-  vector<lower=0>[sum(free_c)] sd_c_df;    // Half-Student-t priors on the criterion SDs
+  vector<lower=0>[sum(free_c)] sd_c_df;    // Student-t priors on the criterion SDs, truncated at 0
+  vector[sum(free_c)] sd_c_loc;
   vector<lower=0>[sum(free_c)] sd_c_scale;
   real<lower=0> rho_c_a;                   // Used only when both criteria are free
   real<lower=0> rho_c_b;
@@ -90,10 +92,10 @@ transformed parameters {
 model {
   // Model priors
   mu_d    ~ normal(mu_d_loc, mu_d_scale);
-  sigma_d ~ student_t(sd_d_df, 0, sd_d_scale);
+  sigma_d ~ student_t(sd_d_df, sd_d_loc, sd_d_scale);
   rho_d   ~ scaled_beta(rho_d_a, rho_d_b);
   mu_c    ~ normal(mu_c_loc, mu_c_scale);
-  sigma_c ~ student_t(sd_c_df, 0, sd_c_scale);
+  sigma_c ~ student_t(sd_c_df, sd_c_loc, sd_c_scale);
   for (k in 1:size(rho_c)) {
     rho_c[k] ~ scaled_beta(rho_c_a, rho_c_b);
   }

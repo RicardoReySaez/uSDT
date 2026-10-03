@@ -796,7 +796,14 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
         "Percentages descriptively summarise the displayed intervals."
       )
     ) +
-    ggplot2::theme_classic(base_size = 13) +
+    .panel_theme()
+}
+
+# This function gives the theme of the faceted plots, whose y axis carries no
+# scale of its own: subject ranks in the caterpillar plot and densities in the
+# prior predictive check.
+.panel_theme <- function() {
+  ggplot2::theme_classic(base_size = 13) +
     ggplot2::theme(
       panel.background = ggplot2::element_rect(fill = "white", colour = NA),
       plot.background = ggplot2::element_rect(fill = "white", colour = NA),

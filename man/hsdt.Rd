@@ -119,11 +119,24 @@ The p-value falls below \code{1 - level} exactly when zero lies outside the
 credible interval, so with the default \code{level = 0.95} a p-value below .05
 means that the 95\% credible interval excludes zero.
 
+With \code{unequal_variances = TRUE}, the noise distribution of each task is
+\eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so
+\eqn{d} is the distance between their means in units of the noise standard
+deviation, and H1-H3 compare these \eqn{d}. When \eqn{\sigma_s} differs
+between the tasks, \eqn{d} no longer measures the same discriminability in
+both: the measure comparable with an equal-variance \eqn{d'} is
+\eqn{d_a = d \sqrt{2 / (1 + \sigma_s^2)}}, and the mean \eqn{d_a} of a task
+is its mean \eqn{d} times that factor, which can be computed from the draws
+of \code{mu_d} and \code{sigma_s} in \verb{$draws}. The correlation (H2) is the same on
+either scale.
+
 The Stan model is compiled the first time it is used, which needs a C++
 toolchain, and stays in a per-user cache directory for later sessions. The
-default sampling settings draw 10,000 posterior samples. A warning names any
-divergent transition, an R-hat above 1.01 or an effective sample size below
-400.
+default sampling settings keep 20,000 posterior draws, from four chains
+that run in parallel behind a progress bar. A summary after the bar, and a
+warning when something fails, report divergent transitions, transitions at
+the maximum tree depth, an R-hat above 1.01 or an effective sample size
+below 400.
 }
 
 \examples{

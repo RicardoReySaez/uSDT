@@ -14,6 +14,14 @@
   `latent_regression()` summarise a Bayesian fit with posterior means and
   standard deviations, central credible intervals and a two-sided posterior
   p-value that falls below .05 exactly when the 95% interval excludes zero.
+  They also accept custom models fitted with brms (`brmsfit`), named by the
+  same terms as an lme4 model.
+
+## Data preparation
+
+* `usdt_aggregate()` counts binary trials into binomial `y`/`n` rows by any
+  grouping columns, so custom lme4 and brms models with covariates fit on
+  counts instead of trials, with the same estimates and much faster.
 
 # uSDT 0.1.0
 

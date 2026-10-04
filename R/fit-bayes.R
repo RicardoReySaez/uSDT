@@ -20,7 +20,7 @@
   stan <- .stan_data(data, free_c, unequal_variances, priors)
   sampled <- .stan_sample(.stan_model(settings$backend), stan$data, settings,
                           .bayes_variables)
-  tests <- .bayes_tests(sampled$draws, level)
+  tests <- .bayes_tests(.stan_bivariate(sampled$draws), level)
   diagnostics <- .bayes_diagnostics(sampled, tests, settings)
 
   if (length(diagnostics$issues)) {
@@ -124,25 +124,33 @@
                 .stan_priors(priors, free_c, unequal_variances)))
 }
 
-# This function draws the bivariate normal of the sensitivities from a fit and
-# derives the tested quantities draw by draw.
-.bayes_quantities <- function(draws) {
-  m <- posterior::as_draws_matrix(
-    posterior::subset_draws(draws, variable = c("mu_d", "sigma_d", "rho_d")))
-  column <- function(v) as.numeric(m[, v])
-  B <- cbind(mu_D = column("mu_d[1]"), mu_I = column("mu_d[2]"),
-             sigma_D = column("sigma_d[1]"), sigma_I = column("sigma_d[2]"),
-             rho = column("rho_d"))
-  .usdt_quantities(.bivariate_primitives(B))
+# The names given to the bivariate normal of the sensitivities, whatever model
+# the draws come from.
+.bivariate_names <- c("mu_D", "mu_I", "sigma_D", "sigma_I", "rho")
+
+# This function selects the bivariate normal of the sensitivities from draws,
+# given the names of its five variables in that order, and gives them the
+# common names.
+.select_bivariate <- function(draws, variables) {
+  B <- posterior::subset_draws(draws, variable = variables)
+  posterior::variables(B) <- .bivariate_names
+  B
 }
 
-# This function summarises the posterior of the three hypotheses: the posterior
-# mean and SD, the central credible interval, and the two-sided posterior
-# p-value 2 min{P(q > 0), P(q < 0)}. That p-value falls below 1 - level exactly
-# when zero lies outside the interval.
-.bayes_tests <- function(draws, level) {
-  Q <- .bayes_quantities(draws)
-  shape <- c(posterior::niterations(draws), posterior::nchains(draws))
+# This function selects the bivariate normal from the draws of the uSDT model.
+.stan_bivariate <- function(draws) {
+  .select_bivariate(draws, c("mu_d[1]", "mu_d[2]", "sigma_d[1]",
+                             "sigma_d[2]", "rho_d"))
+}
+
+# This function summarises the posterior of the three hypotheses from the draws
+# of the bivariate normal: the posterior mean and SD, the central credible
+# interval, and the two-sided posterior p-value 2 min{P(q > 0), P(q < 0)}. That
+# p-value falls below 1 - level exactly when zero lies outside the interval.
+.bayes_tests <- function(bivariate, level) {
+  B <- unclass(posterior::as_draws_matrix(bivariate))
+  Q <- .usdt_quantities(.bivariate_primitives(B))
+  shape <- c(posterior::niterations(bivariate), posterior::nchains(bivariate))
   a <- (1 - level) / 2
   terms <- c(diff = "d'(indirect) - d'(direct)", rho = "correlation",
              intercept = "intercept", slope = "slope")

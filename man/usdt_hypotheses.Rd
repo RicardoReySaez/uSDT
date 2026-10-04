@@ -17,8 +17,8 @@ latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted model: an \code{hsdt} object, frequentist or Bayesian, or a
-\code{glmerMod} from \code{lme4::glmer()}.}
+\item{fit}{A fitted model: an \code{hsdt} object, frequentist or Bayesian, a
+\code{glmerMod} from \code{lme4::glmer()} or a \code{brmsfit} from \code{brms::brm()}.}
 
 \item{direct, indirect}{Character strings naming the sensitivity terms in the
 model. Defaults match the internal naming of \code{\link[=hsdt]{hsdt()}}. For custom models,
@@ -48,8 +48,9 @@ while individual functions compute them separately.
 \details{
 These tests run automatically inside \code{\link[=hsdt]{hsdt()}} and appear in its summary.
 Calling them directly is especially useful when fitting custom models with
-\code{\link[lme4:glmer]{lme4::glmer()}}, allowing you to test these hypotheses while controlling for
-additional covariates (e.g., set size, experimental groups).
+\code{\link[lme4:glmer]{lme4::glmer()}} or \code{\link[brms:brm]{brms::brm()}}, allowing you to test these hypotheses
+while controlling for additional covariates (e.g., set size, experimental
+groups).
 }
 \section{The three hypotheses}{
 \itemize{
@@ -70,9 +71,13 @@ association and share identical test statistics.
 
 \section{Custom models with covariates}{
 To adjust tests for additional factors, specify the model directly using
-\code{\link[lme4:glmer]{lme4::glmer()}}. As long as the two sensitivity terms are included as fixed
-effects and correlated across subjects via random slopes, \code{usdt_tests()} will
-compute the latent tests conditional on those covariates.
+\code{\link[lme4:glmer]{lme4::glmer()}} or \code{\link[brms:brm]{brms::brm()}}. As long as the two sensitivity terms are
+included as fixed effects and correlated across subjects via random slopes,
+\code{usdt_tests()} will compute the latent tests conditional on those
+covariates. A brms model is summarised from its posterior, like a Bayesian
+\code{\link[=hsdt]{hsdt()}} fit, and keeps the term names that lme4 would give it. Aggregating
+the trials with \code{\link[=usdt_aggregate]{usdt_aggregate()}} gives either model the same estimates
+and makes it much faster to fit.
 }
 
 \examples{
@@ -117,13 +122,18 @@ trials <- within(trials, {
   direct <- as.integer(task == "D")
 })
 
+# Counting responses per subject, task and condition keeps the likelihood
+# and makes the fit much faster than one row per trial
+counts <- usdt_aggregate(trials, response = "resp",
+                         by = c("subj", "task", "cond", "size", "direct"))
+
 # Standard glmer formula: indirect criterion is omitted (fixed at 0
 # by the median split). Random effects estimate the direct criterion
 # and correlated task sensitivities across subjects.
 fit <- lme4::glmer(
-  resp ~ 0 + direct + task:size + task:cond +
+  cbind(y, n - y) ~ 0 + direct + task:size + task:cond +
     (0 + direct | subj) + (0 + task:cond | subj),
-  data = trials, family = binomial("probit"),
+  data = counts, family = binomial("probit"),
   control = lme4::glmerControl(optimizer = "bobyqa")
 )
 
@@ -134,7 +144,20 @@ names(lme4::fixef(fit))
 usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
 }
 
+\dontrun{
+# 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
+fit_b <- brms::brm(
+  y | trials(n) ~ 0 + direct + task:size + task:cond +
+    (0 + direct | subj) + (0 + task:cond | subj),
+  data = counts, family = binomial("probit"),
+  prior = brms::prior(normal(0, 1), class = b), seed = 1
+)
+
+# The same term names; the tests now summarise the posterior
+usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+}
+
 }
 \seealso{
-\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=usdt_aggregate]{usdt_aggregate()}}
 }

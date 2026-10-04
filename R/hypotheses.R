@@ -14,11 +14,12 @@
 #'
 #' These tests run automatically inside [hsdt()] and appear in its summary.
 #' Calling them directly is especially useful when fitting custom models with
-#' [lme4::glmer()], allowing you to test these hypotheses while controlling for
-#' additional covariates (e.g., set size, experimental groups).
+#' [lme4::glmer()] or [brms::brm()], allowing you to test these hypotheses
+#' while controlling for additional covariates (e.g., set size, experimental
+#' groups).
 #'
-#' @param fit A fitted model: an `hsdt` object, frequentist or Bayesian, or a
-#'   `glmerMod` from `lme4::glmer()`.
+#' @param fit A fitted model: an `hsdt` object, frequentist or Bayesian, a
+#'   `glmerMod` from `lme4::glmer()` or a `brmsfit` from `brms::brm()`.
 #' @param direct,indirect Character strings naming the sensitivity terms in the
 #'   model. Defaults match the internal naming of [hsdt()]. For custom models,
 #'   both terms must be fixed effects and share a common random-effects grouping
@@ -55,11 +56,15 @@
 #' # Custom models with covariates
 #'
 #' To adjust tests for additional factors, specify the model directly using
-#' [lme4::glmer()]. As long as the two sensitivity terms are included as fixed
-#' effects and correlated across subjects via random slopes, `usdt_tests()` will
-#' compute the latent tests conditional on those covariates.
+#' [lme4::glmer()] or [brms::brm()]. As long as the two sensitivity terms are
+#' included as fixed effects and correlated across subjects via random slopes,
+#' `usdt_tests()` will compute the latent tests conditional on those
+#' covariates. A brms model is summarised from its posterior, like a Bayesian
+#' [hsdt()] fit, and keeps the term names that lme4 would give it. Aggregating
+#' the trials with [usdt_aggregate()] gives either model the same estimates
+#' and makes it much faster to fit.
 #'
-#' @seealso [hsdt()], [usdt_boot()]
+#' @seealso [hsdt()], [usdt_boot()], [usdt_aggregate()]
 #'
 #' @examples
 #' # 1. Standard model via hsdt()
@@ -103,13 +108,18 @@
 #'   direct <- as.integer(task == "D")
 #' })
 #'
+#' # Counting responses per subject, task and condition keeps the likelihood
+#' # and makes the fit much faster than one row per trial
+#' counts <- usdt_aggregate(trials, response = "resp",
+#'                          by = c("subj", "task", "cond", "size", "direct"))
+#'
 #' # Standard glmer formula: indirect criterion is omitted (fixed at 0
 #' # by the median split). Random effects estimate the direct criterion
 #' # and correlated task sensitivities across subjects.
 #' fit <- lme4::glmer(
-#'   resp ~ 0 + direct + task:size + task:cond +
+#'   cbind(y, n - y) ~ 0 + direct + task:size + task:cond +
 #'     (0 + direct | subj) + (0 + task:cond | subj),
-#'   data = trials, family = binomial("probit"),
+#'   data = counts, family = binomial("probit"),
 #'   control = lme4::glmerControl(optimizer = "bobyqa")
 #' )
 #'
@@ -118,6 +128,19 @@
 #'
 #' # Evaluate hypotheses conditional on set size
 #' usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
+#' }
+#'
+#' \dontrun{
+#' # 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
+#' fit_b <- brms::brm(
+#'   y | trials(n) ~ 0 + direct + task:size + task:cond +
+#'     (0 + direct | subj) + (0 + task:cond | subj),
+#'   data = counts, family = binomial("probit"),
+#'   prior = brms::prior(normal(0, 1), class = b), seed = 1
+#' )
+#'
+#' # The same term names; the tests now summarise the posterior
+#' usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
 #' }
 #'
 #' @name usdt_hypotheses
@@ -129,7 +152,9 @@ usdt_tests <- function(fit, direct = "d_D", indirect = "d_I", level = 0.95) {
 
   # The function collects the values shared by the three tests.
   .check_confidence_level(level)
-  if (.is_bayes(fit)) return(.bayes_tests(fit$draws, level))
+  if (.is_posterior(fit)) {
+    return(.bayes_tests(.bivariate_draws(fit, direct, indirect), level))
+  }
   r  <- .resolve_fit(fit)
   p  <- .usdt_pars(r$fit, direct, indirect, devfun = r$devfun)
 
@@ -149,7 +174,9 @@ usdt_tests <- function(fit, direct = "d_D", indirect = "d_I", level = 0.95) {
 sensitivity_diff <- function(fit, direct = "d_D", indirect = "d_I",
                              level = 0.95) {
   .check_confidence_level(level)
-  if (.is_bayes(fit)) return(.bayes_rows(fit, "H1", level))
+  if (.is_posterior(fit)) {
+    return(.bayes_rows(fit, direct, indirect, "H1", level))
+  }
   .diff_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -158,7 +185,9 @@ sensitivity_diff <- function(fit, direct = "d_D", indirect = "d_I",
 latent_cor <- function(fit, direct = "d_D", indirect = "d_I",
                        level = 0.95) {
   .check_confidence_level(level)
-  if (.is_bayes(fit)) return(.bayes_rows(fit, "H2", level))
+  if (.is_posterior(fit)) {
+    return(.bayes_rows(fit, direct, indirect, "H2", level))
+  }
   .cor_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -167,7 +196,9 @@ latent_cor <- function(fit, direct = "d_D", indirect = "d_I",
 latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
                               level = 0.95) {
   .check_confidence_level(level)
-  if (.is_bayes(fit)) return(.bayes_rows(fit, "H3", level))
+  if (.is_posterior(fit)) {
+    return(.bayes_rows(fit, direct, indirect, "H3", level))
+  }
   .reg_rows(.pars_of(fit, direct, indirect), level)
 }
 
@@ -279,12 +310,68 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
   inherits(x, "hsdt") && identical(x$estimation, "bayesian")
 }
 
+# This function tells a posterior, from a Bayesian hsdt fit or brms, from a
+# maximum-likelihood fit.
+.is_posterior <- function(x) {
+  .is_bayes(x) || inherits(x, "brmsfit")
+}
+
 # This function returns the posterior rows of one hypothesis.
-.bayes_rows <- function(fit, hypothesis, level) {
-  tests <- .bayes_tests(fit$draws, level)
+.bayes_rows <- function(fit, direct, indirect, hypothesis, level) {
+  tests <- .bayes_tests(.bivariate_draws(fit, direct, indirect), level)
   out <- tests[tests$hypothesis == hypothesis, -1L, drop = FALSE]
   rownames(out) <- NULL
   out
+}
+
+# This function draws the bivariate normal of the two sensitivities from a
+# posterior. A Bayesian hsdt fit names it itself; a brms model names it after
+# the sensitivity terms.
+.bivariate_draws <- function(fit, direct, indirect) {
+  if (.is_bayes(fit)) return(.stan_bivariate(fit$draws))
+  rlang::check_installed(c("brms", "posterior"), reason = "to test a brms model.")
+  variables <- .brms_variables(posterior::variables(fit), direct, indirect)
+  B <- posterior::as_draws_array(fit, variable = variables)
+  .select_bivariate(B, variables)
+}
+
+# This function finds, among the variable names of a brms model, the means,
+# SDs and correlation of the two sensitivity terms: `b_<term>`,
+# `sd_<group>__<term>` and `cor_<group>__<term>__<term>` in either order. The
+# names are matched as plain text, because terms such as `taskD:cond` hold
+# characters that regular expressions reserve.
+.brms_variables <- function(variables, direct, indirect) {
+  fixed <- paste0("b_", c(direct, indirect))
+  missing <- c(direct, indirect)[!fixed %in% variables]
+  if (length(missing)) {
+    available <- substring(variables[startsWith(variables, "b_")], 3L)
+    .usdt_stop("population-level effect", if (length(missing) > 1L) "s" else "",
+               " ", paste0("`", missing, "`", collapse = " and "),
+               " not found in the model.\n  Available: ",
+               paste(available, collapse = ", "))
+  }
+
+  # The groups whose SDs include a term.
+  sds <- variables[startsWith(variables, "sd_")]
+  groups_of <- function(term) {
+    suffix <- paste0("__", term)
+    hit <- sds[endsWith(sds, suffix)]
+    substring(hit, 4L, nchar(hit) - nchar(suffix))
+  }
+  for (group in intersect(groups_of(direct), groups_of(indirect))) {
+    pairs <- paste0("cor_", group, "__",
+                    c(paste0(direct, "__", indirect),
+                      paste0(indirect, "__", direct)))
+    correlation <- pairs[pairs %in% variables]
+    if (length(correlation)) {
+      return(c(fixed, paste0("sd_", group, "__", c(direct, indirect)),
+               correlation[1L]))
+    }
+  }
+  .usdt_stop("no group-level term correlates `", direct, "` and `", indirect,
+             "`.\n  The latent correlation requires the two sensitivities to ",
+             "vary together in the same term, e.g. (0 + ", direct, " + ",
+             indirect, " | subject).")
 }
 
 # This function finds the fitted model and its deviance function.

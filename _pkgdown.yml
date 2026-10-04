@@ -68,10 +68,13 @@ articles:
 
 reference:
 - title: Prepare the data
-  desc: Build paired task data and dichotomize continuous responses.
+  desc: >
+    Build paired task data, dichotomize continuous responses and count
+    trials for custom binomial models.
   contents:
   - usdt_data
   - meyen_split
+  - usdt_aggregate
 
 - title: Estimate descriptive SDT measures
   desc: Calculate subject-level SDT quantities without fitting a model.

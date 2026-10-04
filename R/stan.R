@@ -123,13 +123,17 @@
   running <- list()
   on.exit(for (p in running) p$kill(), add = TRUE)
 
-  # The bar starts with the first progress report after the first iteration,
-  # so the seconds the sessions take to start do not distort its estimate of
-  # the time left. It shows at once, in light blue where the console has
-  # colours, and names the phase the chains are in.
+  # The bar redraws itself in place, so it shows only in a console that can
+  # do that; in knitr documents and logs a single line reports the time taken.
+  # It starts with the first progress report after the first iteration, so
+  # the seconds the sessions take to start do not distort its estimate of the
+  # time left. It shows at once, in light blue where the console has colours,
+  # and names the phase the chains are in.
   bar <- NULL
   label <- if (chains == 1L) "1 chain" else paste(chains, "chains")
-  if (settings$refresh > 0) {
+  dynamic <- settings$refresh > 0 && cli::is_dynamic_tty()
+  started <- Sys.time()
+  if (dynamic) {
     old <- options(cli.progress_show_after = 0,
                    cli.progress_bar_style = .bar_style())
     on.exit(options(old), add = TRUE)
@@ -157,7 +161,7 @@
       }
     }
     phase <- if (all(done > settings$warmup)) "Sampling" else "Warmup  "
-    if (settings$refresh > 0 && is.null(bar) && max(done) > 1L) {
+    if (dynamic && is.null(bar) && max(done) > 1L) {
       bar <- cli::cli_progress_bar(
         total = chains * settings$iter, clear = FALSE, auto_terminate = FALSE,
         status = phase,
@@ -171,7 +175,14 @@
     }
     if (length(running)) Sys.sleep(0.1)
   }
-  if (!is.null(bar)) cli::cli_progress_done(id = bar)
+  if (!is.null(bar)) {
+    cli::cli_progress_done(id = bar)
+  } else if (settings$refresh > 0) {
+    secs <- as.numeric(difftime(Sys.time(), started, units = "secs"))
+    elapsed <- if (secs < 60) sprintf("%.1fs", secs) else
+      sprintf("%dm %ds", as.integer(secs %/% 60), as.integer(round(secs %% 60)))
+    cli::cli_alert_success("Sampled {label} in {elapsed}.")
+  }
   results
 }
 

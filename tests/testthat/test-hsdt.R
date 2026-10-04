@@ -456,3 +456,10 @@ test_that("failure with every optimizer stops the analysis", {
 test_that("hsdt rejects anything that is not a usdt_data object", {
   expect_error(hsdt(data.frame(x = 1)), "usdt_data_long")
 })
+
+test_that("the hypotheses come from the five parameters by the shared algebra", {
+  m <- fit_reference()
+  q <- .usdt_quantities(m$pars$est)
+  expect_equal(unname(q[1L, c("diff", "rho", "intercept", "slope")]),
+               m$tests$estimate)
+})

@@ -77,3 +77,21 @@ test_that("every kind of hypothesis gives a panel title that parses", {
     expect_no_error(parse(text = .bf_math(.bf_parse(text), "test")))
   }
 })
+
+test_that("the priors of the tested quantities match simulated prior draws", {
+  set.seed(4)
+  priors <- usdt_priors(dprime = list(direct = "normal(0.5, 1)",
+                                      indirect = "normal(0, 0.5)"),
+                        cor_dprime = "scaled_beta(2, 3)")
+  exact <- .bf_priors(priors, c("intercept", "slope"))
+  B <- .prior_draws(priors, 1e5)
+  slope <- B[, "rho"] * B[, "sigma_I"] / B[, "sigma_D"]
+  simulated <- list(diff = B[, "mu_I"] - B[, "mu_D"], rho = B[, "rho"],
+                    intercept = B[, "mu_I"] - slope * B[, "mu_D"],
+                    slope = slope)
+  for (q in names(simulated)) {
+    at <- stats::quantile(simulated[[q]], c(0.1, 0.3, 0.5, 0.7, 0.9))
+    expect_equal(exact[[q]]$cdf(at), c(0.1, 0.3, 0.5, 0.7, 0.9),
+                 tolerance = 0.01, ignore_attr = TRUE, label = q)
+  }
+})

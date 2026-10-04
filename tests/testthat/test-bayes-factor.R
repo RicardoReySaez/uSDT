@@ -37,3 +37,28 @@ test_that("the induced priors keep the symmetry of the correlation prior", {
   expect_equal(priors$intercept$cdf(0), 0.5, tolerance = 0.01)
   expect_identical(priors$slope$cdf(0), priors$rho$cdf(0))
 })
+
+test_that("each hypothesis prints as a report, and a row subset plots its own", {
+  skip_if_not_installed("logspline")
+  set.seed(3)
+  draws <- stats::rnorm(2e4, 0.3, 0.1)
+  prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
+                cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL)
+  results <- lapply(c("diff = 0", "diff > 0"), function(text) {
+    .bf_one(.bf_parse(text), draws, draws, prior, 0.95)
+  })
+  b <- structure(do.call(rbind, lapply(results, `[[`, "row")),
+                 curves = lapply(results, `[[`, "curve"), level = 0.95,
+                 class = c("usdt_bf", "data.frame"))
+  rownames(b) <- NULL
+
+  out <- utils::capture.output(print(b))
+  expect_length(grep("Savage-Dickey density ratio test", out, fixed = TRUE), 1L)
+  expect_length(grep("Posterior probability (H1)", out, fixed = TRUE), 1L)
+  expect_length(grep("95% CrI", out, fixed = TRUE), 2L)
+  expect_output(print(b[, c("hypothesis", "log_BF10")]), "mu_I - mu_D > 0")
+
+  expect_identical(levels(plot(b[2, ])$data$panel),
+                   "mu_I - mu_D > 0 (directional)")
+  expect_error(plot(b[, 1:3]), "lost")
+})

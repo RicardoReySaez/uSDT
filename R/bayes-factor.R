@@ -22,12 +22,13 @@
 #'   level of `fit`.
 #'
 #' @return An object of class `usdt_bf`: a data frame with one row per
-#'   hypothesis and the columns `hypothesis`, `test`, `H1`, `H0`, `estimate`
-#'   and `est.error` (posterior mean and SD), `conf.low` and `conf.high`
-#'   (central credible interval), `post.prob` (posterior probability of H1 for
-#'   a directional or interval test), `log_BF10`, `BF10`, `BF01`, `evidence`
-#'   and `favours`. The prior and posterior curves are stored for
-#'   [plot.usdt_bf()].
+#'   hypothesis and the columns `hypothesis`, `test` (`"Savage-Dickey density
+#'   ratio test"`, `"Directional test"` or `"Interval test"`), `H1`, `H0`,
+#'   `estimate` and `est.error` (posterior mean and SD), `conf.low` and
+#'   `conf.high` (central credible interval), `post.prob` (posterior
+#'   probability of H1 for a directional or interval test), `log_BF10`,
+#'   `BF10`, `BF01`, `evidence` and `favours`. The prior and posterior curves
+#'   are stored for [plot.usdt_bf()]. It prints one report per hypothesis.
 #'
 #' @details
 #' # Point hypotheses: the Savage-Dickey density ratio
@@ -159,27 +160,45 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
 }
 
 #' @param x A `usdt_bf` object.
+#' @param digits Number of decimals printed.
+#' @param width Width of the printed report, in characters.
 #' @param ... Ignored.
 #' @rdname usdt_bf
 #' @export
-print.usdt_bf <- function(x, ...) {
-  cat(.rule("Bayes factors"), "\n")
+print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
+  # A subset that lost columns is printed as the data frame it now is.
+  needed <- c("test", "H1", "H0", "estimate", "est.error", "conf.low",
+              "conf.high", "post.prob", "log_BF10", "evidence", "favours")
+  if (!all(needed %in% names(x))) return(NextMethod())
+
+  width <- max(60L, as.integer(width))
+  chars <- .usdt_chars()
+  level <- attr(x, "level")
+  interval <- if (is.null(level)) "CrI" else sprintf("%g%% CrI", 100 * level)
+  number <- function(v) {
+    if (is.na(v)) return("NA")
+    if (is.infinite(v)) return(if (v > 0) "Inf" else "-Inf")
+    formatC(v, format = "f", digits = digits)
+  }
+  row <- function(label, value) cat(sprintf("  %-27s : %s\n", label, value))
+
+  # Every hypothesis gets a complete card, so mixed test types stay explicit.
   for (i in seq_len(nrow(x))) {
-    r <- x[i, ]
-    cat(sprintf("\n  %s (%s)\n", r$hypothesis, r$test))
-    cat(sprintf("    H1: %s   vs   H0: %s\n", r$H1, r$H0))
-    cat(sprintf("    Mean %s, SD %s, %.0f%% CrI %s\n",
-                .fmt_n(r$estimate, 4L, 0L), .fmt_n(r$est.error, 4L, 0L),
-                100 * attr(x, "level"), .fmt_ci(r$conf.low, r$conf.high)))
-    if (!is.na(r$post.prob)) {
-      cat(sprintf("    P(H1 | data) = %s\n",
-                  formatC(r$post.prob, format = "f", digits = 3)))
+    if (i > 1L) cat("\n")
+    cat(" uSDT hypothesis ", chars$h, " ", x$test[[i]], "\n", sep = "")
+    cat(strrep(chars$hh, width), "\n", sep = "")
+    row("Hypothesis (H1)", x$H1[[i]])
+    row("Hypothesis (H0)", x$H0[[i]])
+    row("Posterior mean", number(x$estimate[[i]]))
+    row("Posterior SD", number(x$est.error[[i]]))
+    row(interval, sprintf("[%s, %s]", number(x$conf.low[[i]]),
+                          number(x$conf.high[[i]])))
+    if (!is.na(x$post.prob[[i]])) {
+      row("Posterior probability (H1)", number(x$post.prob[[i]]))
     }
-    cat(sprintf("    log BF10 = %s (BF10 = %s, BF01 = %s): %s evidence for %s\n",
-                formatC(r$log_BF10, format = "f", digits = 2),
-                formatC(r$BF10, format = "g", digits = 3),
-                formatC(r$BF01, format = "g", digits = 3),
-                r$evidence, r$favours))
+    row("log BF10", number(x$log_BF10[[i]]))
+    row("Evidence", paste(x$evidence[[i]], "for", x$favours[[i]]))
+    cat(strrep(chars$h, width), "\n", sep = "")
   }
   invisible(x)
 }
@@ -305,17 +324,40 @@ print.usdt_bf <- function(x, ...) {
        cdf = function(q) logspline::poldlogspline(q, fit))
 }
 
+# The names shown for each quantity. The difference is written out so that its
+# direction, indirect minus direct, is never in doubt.
+.bf_names <- c(diff = "mu_I - mu_D", rho = "rho", slope = "slope",
+               intercept = "intercept")
+
+# This function writes a hypothesis with the shown name of its quantity.
+.bf_label <- function(name, h) {
+  if (h$op %in% c("in", "out")) {
+    sprintf("%s %s [%s, %s]", name, h$op, format(h$value[1L]),
+            format(h$value[2L]))
+  } else {
+    sprintf("%s %s %s", name, h$op, format(h$value))
+  }
+}
+
 # This function evaluates one hypothesis on the draws of the tested quantity,
 # and summarises the draws of the quantity it names.
 .bf_one <- function(h, draws, summary, prior, level) {
   post <- .bf_posterior(draws, prior$bounds)
   a <- (1 - level) / 2
   limits <- stats::quantile(summary, c(a, 1 - a), names = FALSE)
-  name <- h$summary
-  as_rho <- if (h$as_rho) sprintf(", as rho %s 0", h$op) else ""
+  name <- .bf_names[[h$summary]]
+
+  # The printed card names the test in full, the panel strip in short.
+  test <- switch(h$op, "=" = "Savage-Dickey density ratio test",
+                 "<" = , ">" = "Directional test", "Interval test")
+  short <- switch(h$op, "=" = "Savage-Dickey", "<" = , ">" = "directional",
+                  "interval")
+  if (h$as_rho) {
+    test <- sprintf("%s, on rho %s 0", test, h$op)
+    short <- paste0(short, ", on rho")
+  }
 
   if (h$op == "=") {
-    test <- paste0("Savage-Dickey", as_rho)
     h1 <- sprintf("%s != %s", name, format(h$value))
     h0 <- sprintf("%s = %s", name, format(h$value))
     log_bf10 <- prior$log_density(h$value) - post$log_density(h$value)
@@ -327,8 +369,6 @@ print.usdt_bf <- function(x, ...) {
       "in" = cdf(h$value[2L]) - cdf(h$value[1L]),
       out = 1 - (cdf(h$value[2L]) - cdf(h$value[1L])))
     interval <- sprintf("[%s, %s]", format(h$value[1L]), format(h$value[2L]))
-    test <- paste0(if (h$op %in% c("<", ">")) "directional" else "interval",
-                   as_rho)
     h1 <- switch(h$op, ">" = sprintf("%s > %s", name, format(h$value)),
                  "<" = sprintf("%s < %s", name, format(h$value)),
                  sprintf("%s %s %s", name, h$op, interval))
@@ -345,7 +385,7 @@ print.usdt_bf <- function(x, ...) {
                                  "very strong", "extreme"),
                                right = FALSE, include.lowest = TRUE))
   row <- data.frame(
-    hypothesis = h$text, test = test, H1 = h1, H0 = h0,
+    hypothesis = .bf_label(name, h), test = test, H1 = h1, H0 = h0,
     estimate = mean(summary), est.error = stats::sd(summary),
     conf.low = limits[1L], conf.high = limits[2L], post.prob = prob,
     log_BF10 = log_bf10, BF10 = exp(log_bf10), BF01 = exp(-log_bf10),
@@ -361,8 +401,8 @@ print.usdt_bf <- function(x, ...) {
   if (!is.null(prior$bounds)) {
     grid <- grid[grid > prior$bounds[1L] & grid < prior$bounds[2L]]
   }
-  curve <- list(hypothesis = paste0(h$text, if (h$as_rho) " (as rho)" else ""),
-                op = h$op, value = h$value, grid = grid,
+  curve <- list(hypothesis = sprintf("%s (%s)", .bf_label(name, h), short),
+                op = h$op, as_rho = h$as_rho, value = h$value, grid = grid,
                 prior = exp(prior$log_density(grid)),
                 posterior = exp(post$log_density(grid)),
                 at = if (h$op == "=") {
@@ -396,9 +436,21 @@ plot.usdt_bf <- function(x, ...) {
   if (length(list(...))) {
     .usdt_stop("`...` is not used by the Bayes factor plot.")
   }
+  # A row subset keeps every curve, so its row names pick the curves it shows.
   curves <- attr(x, "curves")
+  rows <- suppressWarnings(as.integer(rownames(x)))
+  if (is.null(curves) || !nrow(x) || anyNA(rows) ||
+      any(rows < 1L | rows > length(curves))) {
+    .usdt_stop("`x` has lost its prior and posterior curves; plot the ",
+               "object returned by usdt_bf(), or a subset of its rows.")
+  }
+  curves <- curves[rows]
   panels <- vapply(curves, `[[`, "", "hypothesis")
-  panel <- function(i, n) factor(rep(panels[i], n), levels = panels)
+  panel <- function(i, n) factor(rep(panels[i], n), levels = unique(panels))
+
+  # Up to three hypotheses share one row; more fill a near-square grid.
+  columns <- if (length(curves) <= 3L) length(curves) else
+    ceiling(sqrt(length(curves)))
 
   densities <- do.call(rbind, lapply(seq_along(curves), function(i) {
     cv <- curves[[i]]
@@ -475,7 +527,8 @@ plot.usdt_bf <- function(x, ...) {
                    fill = .data[["distribution"]]),
       inherit.aes = FALSE, shape = 21, size = 2.8, stroke = 0.8,
       colour = "white", show.legend = FALSE
-    )
+    ) +
+      ggplot2::scale_fill_manual(values = colours, name = NULL)
   }
   plot +
     ggplot2::geom_text(
@@ -486,15 +539,16 @@ plot.usdt_bf <- function(x, ...) {
       size = 3.35, colour = "#3E4347"
     ) +
     ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), scales = "free",
-                        ncol = min(length(curves), 2L)) +
+                        ncol = columns) +
     ggplot2::scale_colour_manual(values = colours, name = NULL) +
-    ggplot2::scale_fill_manual(values = colours, name = NULL) +
     ggplot2::scale_linetype_manual(
       values = c(Posterior = "solid", Prior = "dashed"), name = NULL
     ) +
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.03)) +
+    # A third line of text, the posterior probability, needs more headroom.
     ggplot2::scale_y_continuous(
-      expand = ggplot2::expansion(mult = c(0, 0.25))
+      expand = ggplot2::expansion(mult = c(0, if (any(!is.na(
+        vapply(curves, `[[`, 0, "prob")))) 0.4 else 0.3))
     ) +
     ggplot2::labs(
       x = NULL, y = NULL,
@@ -504,9 +558,17 @@ plot.usdt_bf <- function(x, ...) {
         "the two marked heights at the dotted line (Savage-Dickey); for a ",
         "directional or interval hypothesis the shaded area is the posterior ",
         "probability of H1. The intercept and slope priors are induced by the ",
-        "other priors."
+        "other priors.",
+        if (any(vapply(curves, `[[`, TRUE, "as_rho"))) {
+          paste0(" A slope compared with zero is tested on rho, which has ",
+                 "its sign, so that panel shows rho.")
+        },
+        width = max(88L, 50L * columns)
       )
     ) +
     .panel_theme() +
-    ggplot2::theme(legend.key.width = grid::unit(30, "pt"))
+    # The caption spans every column, and wider keys keep the dashed prior
+    # recognisable in the legend.
+    ggplot2::theme(legend.key.width = grid::unit(30, "pt"),
+                   plot.caption.position = "plot")
 }

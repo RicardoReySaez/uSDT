@@ -284,9 +284,9 @@
 # This function chooses characters that the console can display.
 .usdt_chars <- function() {
   if (isTRUE(l10n_info()[["UTF-8"]])) {
-    list(h = "\u2500", dot = "\u00b7", delta = "\u0394")
+    list(h = "\u2500", hh = "\u2550", dot = "\u00b7", delta = "\u0394")
   } else {
-    list(h = "-", dot = "*", delta = "Delta ")
+    list(h = "-", hh = "=", dot = "*", delta = "Delta ")
   }
 }
 

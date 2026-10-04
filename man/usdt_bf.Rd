@@ -11,7 +11,7 @@ usdt_bf(
   level = fit$level
 )
 
-\method{print}{usdt_bf}(x, ...)
+\method{print}{usdt_bf}(x, digits = 3L, width = 80L, ...)
 }
 \arguments{
 \item{fit}{A Bayesian \code{hsdt} object, fitted with \code{estimation = "bayesian"}.}
@@ -27,16 +27,20 @@ level of \code{fit}.}
 
 \item{x}{A \code{usdt_bf} object.}
 
+\item{digits}{Number of decimals printed.}
+
+\item{width}{Width of the printed report, in characters.}
+
 \item{...}{Ignored.}
 }
 \value{
 An object of class \code{usdt_bf}: a data frame with one row per
-hypothesis and the columns \code{hypothesis}, \code{test}, \code{H1}, \code{H0}, \code{estimate}
-and \code{est.error} (posterior mean and SD), \code{conf.low} and \code{conf.high}
-(central credible interval), \code{post.prob} (posterior probability of H1 for
-a directional or interval test), \code{log_BF10}, \code{BF10}, \code{BF01}, \code{evidence}
-and \code{favours}. The prior and posterior curves are stored for
-\code{\link[=plot.usdt_bf]{plot.usdt_bf()}}.
+hypothesis and the columns \code{hypothesis}, \code{test} (\code{"Savage-Dickey density ratio test"}, \code{"Directional test"} or \code{"Interval test"}), \code{H1}, \code{H0},
+\code{estimate} and \code{est.error} (posterior mean and SD), \code{conf.low} and
+\code{conf.high} (central credible interval), \code{post.prob} (posterior
+probability of H1 for a directional or interval test), \code{log_BF10},
+\code{BF10}, \code{BF01}, \code{evidence} and \code{favours}. The prior and posterior curves
+are stored for \code{\link[=plot.usdt_bf]{plot.usdt_bf()}}. It prints one report per hypothesis.
 }
 \description{
 Tests point, directional and interval hypotheses about the quantities of

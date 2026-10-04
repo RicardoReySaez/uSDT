@@ -57,7 +57,8 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   # The default Bayes factors test the three point nulls and draw.
   skip_if_not_installed("logspline")
   b <- usdt_bf(m)
-  expect_identical(b$hypothesis, c("diff = 0", "rho = 0", "intercept = 0"))
+  expect_identical(b$hypothesis,
+                   c("mu_I - mu_D = 0", "rho = 0", "intercept = 0"))
   expect_equal(b$BF10, 1 / b$BF01)
   expect_s3_class(plot(b), "ggplot")
 })

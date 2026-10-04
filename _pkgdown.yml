@@ -65,6 +65,7 @@ articles:
   navbar: ~
   contents:
   - uSDT-tutorial
+  - uSDT-bayesian
 
 reference:
 - title: Prepare the data

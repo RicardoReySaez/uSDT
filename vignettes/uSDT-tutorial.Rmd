@@ -344,6 +344,10 @@ A few practical considerations when bootstrapping:
 - **Dichotomized designs:** The simulation generates binary trial responses at the original cell sizes without repeating upstream steps like response-time median splits.
 - **Information limits:** While bootstrapping resolves boundary issues in Wald approximations, it remains conditional on the model and cannot compensate for an inherently underpowered design.
 
+### Bayesian estimation
+
+`hsdt(data_usdt, estimation = "bayesian")` fits the same model with Stan, with priors on its parameters and Bayes factors for the three hypotheses. The article [Bayesian estimation with uSDT](uSDT-bayesian.html) walks through it with these same data.
+
 ### Long-format datasets
 
 If your direct and indirect data already reside in a single data frame with a task column, you can prepare them directly using [`usdt_data_long()`](../reference/usdt_data.html) by specifying `task_col` and `task_levels`.

@@ -8,7 +8,8 @@
 usdt_bf(
   fit,
   hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
-  level = fit$level
+  level = fit$level,
+  plot = TRUE
 )
 
 \method{print}{usdt_bf}(x, digits = 3L, width = 80L, ...)
@@ -25,6 +26,11 @@ for a region and its complement. The default tests the three point nulls.}
 \item{level}{Credible level of the reported intervals. Defaults to the
 level of \code{fit}.}
 
+\item{plot}{Logical. Draw, for each hypothesis, a panel with the prior and
+posterior of the tested quantity (default \code{TRUE}). Set \code{plot = FALSE}
+inside loops, reports and other functions, and draw the figure later with
+\code{\link[=plot.usdt_bf]{plot.usdt_bf()}}.}
+
 \item{x}{A \code{usdt_bf} object.}
 
 \item{digits}{Number of decimals printed.}
@@ -39,14 +45,16 @@ hypothesis and the columns \code{hypothesis}, \code{test} (\code{"Savage-Dickey 
 \code{estimate} and \code{est.error} (posterior mean and SD), \code{conf.low} and
 \code{conf.high} (central credible interval), \code{post.prob} (posterior
 probability of H1 for a directional or interval test), \code{log_BF10},
-\code{BF10}, \code{BF01}, \code{evidence} and \code{favours}. The prior and posterior curves
-are stored for \code{\link[=plot.usdt_bf]{plot.usdt_bf()}}. It prints one report per hypothesis.
+\code{BF10}, \code{BF01}, \code{evidence} and \code{favours}. It prints one report per
+hypothesis. The prior and posterior curves are stored, so
+\code{\link[=plot.usdt_bf]{plot.usdt_bf()}} can draw the figure again.
 }
 \description{
 Tests point, directional and interval hypotheses about the quantities of
 the three uSDT hypotheses in a Bayesian \code{\link[=hsdt]{hsdt()}} fit: the difference between
-mean sensitivities (\code{diff}, H1), their correlation (\code{rho}, H2) and the slope
-and intercept of the latent regression (\code{slope}, \code{intercept}, H3).
+mean sensitivities (\code{diff}, H1, reported as \eqn{\Delta d'}, indirect minus
+direct), their correlation (\code{rho}, H2) and the slope and intercept of the
+latent regression (\code{slope}, \code{intercept}, H3).
 }
 \section{Point hypotheses: the Savage-Dickey density ratio}{
 A point hypothesis \eqn{\theta = c} compares a model in which
@@ -119,15 +127,15 @@ if (requireNamespace("rstan", quietly = TRUE) &&
     requireNamespace("logspline", quietly = TRUE)) {
   m <- hsdt(d, estimation = "bayesian", seed = 1)
 
-  # The three point nulls
+  # The three point nulls, with their figure
   set.seed(1)
   usdt_bf(m)
 
   # Unconscious processing as a directional hypothesis, and a region of
-  # practical equivalence for the difference
-  b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"))
+  # practical equivalence for the difference, without the figure
+  b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
   b
-  plot(b)
+  plot(b[1, ])
 }
 }
 

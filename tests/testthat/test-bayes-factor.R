@@ -56,9 +56,20 @@ test_that("each hypothesis prints as a report, and a row subset plots its own", 
   expect_length(grep("Savage-Dickey density ratio test", out, fixed = TRUE), 1L)
   expect_length(grep("Posterior probability (H1)", out, fixed = TRUE), 1L)
   expect_length(grep("95% CrI", out, fixed = TRUE), 2L)
-  expect_output(print(b[, c("hypothesis", "log_BF10")]), "mu_I - mu_D > 0")
+  expect_output(print(b[, c("hypothesis", "log_BF10")]), "d' > 0",
+                fixed = TRUE)
 
-  expect_identical(levels(plot(b[2, ])$data$panel),
-                   "mu_I - mu_D > 0 (directional)")
+  # Panel titles are plotmath, so each one must parse.
+  panel <- levels(plot(b[2, ])$data$panel)
+  expect_identical(panel,
+                   "bold(Delta*d*\"'\" > \"0\" ~~ \"(directional)\")")
+  expect_no_error(parse(text = panel))
   expect_error(plot(b[, 1:3]), "lost")
+})
+
+test_that("every kind of hypothesis gives a panel title that parses", {
+  for (text in c("diff = 0", "rho < -0.2", "slope > 0", "intercept in [-1, 1]",
+                 "diff out [-0.1, 0.1]")) {
+    expect_no_error(parse(text = .bf_math(.bf_parse(text), "test")))
+  }
 })

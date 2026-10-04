@@ -21,8 +21,8 @@
   intercept of a Bayesian fit. The priors of the difference and correlation
   are exact; those of the intercept and slope, induced by the other priors,
   are Rao-Blackwell averages over 100,000 prior draws. Each hypothesis prints
-  as a report, and `plot.usdt_bf()` draws each prior against its posterior,
-  in one row for up to three hypotheses.
+  as a report, and `usdt_bf()` draws each prior against its posterior, in one
+  row for up to three hypotheses, unless `plot = FALSE`.
 * `plot()` draws the four plots of a Bayesian fit with posterior means and
   credible intervals, and `usdt_reliability()` gives the posterior of each
   task's reliability.

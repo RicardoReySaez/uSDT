@@ -21,6 +21,10 @@ hypothesis, a dotted line marks the tested value and two points mark the
 heights whose ratio is the Savage-Dickey Bayes factor. For a directional
 or interval hypothesis, the shaded area is the posterior probability of H1.
 }
+\details{
+\code{\link[=usdt_bf]{usdt_bf()}} draws this figure by default. Call \code{plot()} to draw it again,
+or to draw some of its rows, e.g. \code{plot(b[3, ])}.
+}
 \seealso{
 \code{\link[=usdt_bf]{usdt_bf()}}
 }

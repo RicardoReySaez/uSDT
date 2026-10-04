@@ -9,8 +9,9 @@
 #'
 #' Tests point, directional and interval hypotheses about the quantities of
 #' the three uSDT hypotheses in a Bayesian [hsdt()] fit: the difference between
-#' mean sensitivities (`diff`, H1), their correlation (`rho`, H2) and the slope
-#' and intercept of the latent regression (`slope`, `intercept`, H3).
+#' mean sensitivities (`diff`, H1, reported as \eqn{\Delta d'}, indirect minus
+#' direct), their correlation (`rho`, H2) and the slope and intercept of the
+#' latent regression (`slope`, `intercept`, H3).
 #'
 #' @param fit A Bayesian `hsdt` object, fitted with `estimation = "bayesian"`.
 #' @param hypothesis Character vector of hypotheses. Each one is
@@ -20,6 +21,10 @@
 #'   for a region and its complement. The default tests the three point nulls.
 #' @param level Credible level of the reported intervals. Defaults to the
 #'   level of `fit`.
+#' @param plot Logical. Draw, for each hypothesis, a panel with the prior and
+#'   posterior of the tested quantity (default `TRUE`). Set `plot = FALSE`
+#'   inside loops, reports and other functions, and draw the figure later with
+#'   [plot.usdt_bf()].
 #'
 #' @return An object of class `usdt_bf`: a data frame with one row per
 #'   hypothesis and the columns `hypothesis`, `test` (`"Savage-Dickey density
@@ -27,8 +32,9 @@
 #'   `estimate` and `est.error` (posterior mean and SD), `conf.low` and
 #'   `conf.high` (central credible interval), `post.prob` (posterior
 #'   probability of H1 for a directional or interval test), `log_BF10`,
-#'   `BF10`, `BF01`, `evidence` and `favours`. The prior and posterior curves
-#'   are stored for [plot.usdt_bf()]. It prints one report per hypothesis.
+#'   `BF10`, `BF01`, `evidence` and `favours`. It prints one report per
+#'   hypothesis. The prior and posterior curves are stored, so
+#'   [plot.usdt_bf()] can draw the figure again.
 #'
 #' @details
 #' # Point hypotheses: the Savage-Dickey density ratio
@@ -119,24 +125,27 @@
 #'     requireNamespace("logspline", quietly = TRUE)) {
 #'   m <- hsdt(d, estimation = "bayesian", seed = 1)
 #'
-#'   # The three point nulls
+#'   # The three point nulls, with their figure
 #'   set.seed(1)
 #'   usdt_bf(m)
 #'
 #'   # Unconscious processing as a directional hypothesis, and a region of
-#'   # practical equivalence for the difference
-#'   b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"))
+#'   # practical equivalence for the difference, without the figure
+#'   b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
 #'   b
-#'   plot(b)
+#'   plot(b[1, ])
 #' }
 #' }
 #'
 #' @export
 usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
-                    level = fit$level) {
+                    level = fit$level, plot = TRUE) {
   if (!.is_bayes(fit)) {
     .usdt_stop("`fit` must come from hsdt(estimation = \"bayesian\"), whose ",
                "priors uSDT knows.")
+  }
+  if (!is.logical(plot) || length(plot) != 1L || is.na(plot)) {
+    .usdt_stop("`plot` must be TRUE or FALSE.")
   }
   if (!is.character(hypothesis) || !length(hypothesis) || anyNA(hypothesis)) {
     .usdt_stop("`hypothesis` must be one or more strings such as \"rho = 0\".")
@@ -155,8 +164,13 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
 
   out <- do.call(rbind, lapply(results, `[[`, "row"))
   rownames(out) <- NULL
-  structure(out, curves = lapply(results, `[[`, "curve"), level = level,
-            class = c("usdt_bf", "data.frame"))
+  out <- structure(out, curves = lapply(results, `[[`, "curve"),
+                   level = level, class = c("usdt_bf", "data.frame"))
+
+  # A hypothesis is read from its picture as much as from its row, so the
+  # figure is drawn unless it is turned off.
+  if (plot) print(plot.usdt_bf(out))
+  out
 }
 
 #' @param x A `usdt_bf` object.
@@ -324,12 +338,13 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
        cdf = function(q) logspline::poldlogspline(q, fit))
 }
 
-# The names shown for each quantity. The difference is written out so that its
-# direction, indirect minus direct, is never in doubt.
-.bf_names <- c(diff = "mu_I - mu_D", rho = "rho", slope = "slope",
-               intercept = "intercept")
+# This function returns the printed name of a quantity. The difference is
+# named as in summary(), Delta d' (indirect minus direct).
+.bf_name <- function(quantity) {
+  if (quantity == "diff") paste0(.usdt_chars()$delta, "d'") else quantity
+}
 
-# This function writes a hypothesis with the shown name of its quantity.
+# This function writes a hypothesis with the printed name of its quantity.
 .bf_label <- function(name, h) {
   if (h$op %in% c("in", "out")) {
     sprintf("%s %s [%s, %s]", name, h$op, format(h$value[1L]),
@@ -339,13 +354,26 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   }
 }
 
+# This function writes the panel title as a plotmath expression, so the Greek
+# letters and the set symbols are drawn on every graphics device.
+.bf_math <- function(h, short) {
+  symbol <- switch(h$summary, diff = "Delta*d*\"'\"", h$summary)
+  statement <- switch(h$op,
+    "=" = sprintf("%s == \"%s\"", symbol, format(h$value)),
+    "<" = , ">" = sprintf("%s %s \"%s\"", symbol, h$op, format(h$value)),
+    sprintf("%s %s \"[%s, %s]\"", symbol,
+            if (h$op == "in") "%in%" else "%notin%",
+            format(h$value[1L]), format(h$value[2L])))
+  sprintf("bold(%s ~~ \"(%s)\")", statement, short)
+}
+
 # This function evaluates one hypothesis on the draws of the tested quantity,
 # and summarises the draws of the quantity it names.
 .bf_one <- function(h, draws, summary, prior, level) {
   post <- .bf_posterior(draws, prior$bounds)
   a <- (1 - level) / 2
   limits <- stats::quantile(summary, c(a, 1 - a), names = FALSE)
-  name <- .bf_names[[h$summary]]
+  name <- .bf_name(h$summary)
 
   # The printed card names the test in full, the panel strip in short.
   test <- switch(h$op, "=" = "Savage-Dickey density ratio test",
@@ -401,7 +429,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   if (!is.null(prior$bounds)) {
     grid <- grid[grid > prior$bounds[1L] & grid < prior$bounds[2L]]
   }
-  curve <- list(hypothesis = sprintf("%s (%s)", .bf_label(name, h), short),
+  curve <- list(hypothesis = .bf_math(h, short), quantity = h$summary,
                 op = h$op, as_rho = h$as_rho, value = h$value, grid = grid,
                 prior = exp(prior$log_density(grid)),
                 posterior = exp(post$log_density(grid)),
@@ -423,6 +451,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 #' hypothesis, a dotted line marks the tested value and two points mark the
 #' heights whose ratio is the Savage-Dickey Bayes factor. For a directional
 #' or interval hypothesis, the shaded area is the posterior probability of H1.
+#'
+#' [usdt_bf()] draws this figure by default. Call `plot()` to draw it again,
+#' or to draw some of its rows, e.g. `plot(b[3, ])`.
 #'
 #' @param x A `usdt_bf` object from [usdt_bf()].
 #' @param ... Ignored.
@@ -539,7 +570,7 @@ plot.usdt_bf <- function(x, ...) {
       size = 3.35, colour = "#3E4347"
     ) +
     ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), scales = "free",
-                        ncol = columns) +
+                        ncol = columns, labeller = ggplot2::label_parsed) +
     ggplot2::scale_colour_manual(values = colours, name = NULL) +
     ggplot2::scale_linetype_manual(
       values = c(Posterior = "solid", Prior = "dashed"), name = NULL
@@ -559,6 +590,10 @@ plot.usdt_bf <- function(x, ...) {
         "directional or interval hypothesis the shaded area is the posterior ",
         "probability of H1. The intercept and slope priors are induced by the ",
         "other priors.",
+        if (any(vapply(curves, `[[`, "", "quantity") == "diff")) {
+          paste0(" The difference is the indirect minus the direct mean ",
+                 "sensitivity.")
+        },
         if (any(vapply(curves, `[[`, TRUE, "as_rho"))) {
           paste0(" A slope compared with zero is tested on rho, which has ",
                  "its sign, so that panel shows rho.")

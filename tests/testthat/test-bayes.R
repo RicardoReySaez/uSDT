@@ -39,6 +39,13 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
   expect_true(all(m$tests$rhat < 1.05))
   expect_identical(usdt_tests(m), m$tests)
+
+  # The latent line meets the H3 table at zero, and every plot draws.
+  origin <- .regression_data(m)$origin
+  expect_equal(origin$fit, m$tests$estimate[3L])
+  for (type in c("regression", "shrinkage", "caterpillar", "roc")) {
+    expect_s3_class(plot(m, type = type), "ggplot")
+  }
 })
 
 test_that("brms variables are found whatever the order of the correlation", {

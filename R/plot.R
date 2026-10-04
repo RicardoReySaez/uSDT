@@ -9,7 +9,7 @@
 #' including observed versus latent regression (H3), shrinkage patterns,
 #' participant-level caterpillar intervals, and model-implied ROC curves.
 #'
-#' @param x An `hsdt` object fitted by [hsdt()].
+#' @param x An `hsdt` object fitted by [hsdt()], frequentist or Bayesian.
 #' @param type Character string indicating the plot type:
 #'   * `"regression"`: Compares the observed OLS regression with the latent
 #'     regression line (H3).
@@ -67,6 +67,16 @@
 #' Displays model-implied ROC curves for an average participant or a specific
 #' individual, with points marking the estimated response criteria.
 #'
+#' # Bayesian fits
+#'
+#' For a fit with `estimation = "bayesian"`, every model-estimated value is a
+#' posterior mean and every model band is a central credible interval,
+#' computed draw by draw: the latent line and its band, each subject's
+#' sensitivity in the shrinkage and caterpillar plots, and the ROC curves and
+#' operating points. The latent p-values are the two-sided posterior p-values
+#' of the hypothesis table. Under unequal variances the ROC curves bend with
+#' the signal standard deviation of each draw.
+#'
 #' @seealso [hsdt()], [sdt_moments()], [usdt_boot()]
 #'
 #' @examples
@@ -105,9 +115,6 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                       population_reference = TRUE, observed_se = NULL, ...) {
 
   # The function checks the requested plot.
-  if (.is_bayes(x)) {
-    .usdt_stop("plot() does not support Bayesian fits yet.")
-  }
   type <- match.arg(type)
   if (!is.logical(band) || length(band) != 1L || is.na(band)) {
     .usdt_stop("`band` must be `TRUE` or `FALSE`.")
@@ -160,37 +167,50 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 # This function evaluates the latent line and its band over a grid of x.
 .latent_line <- function(object, x, band = TRUE) {
 
-  e <- object$pars$est
-  q <- .usdt_quantities(e)
-  slope <- q[, "slope"]
-  fit <- e[["gamma_I"]] + slope * (x - e[["gamma_D"]])
-  limits <- matrix(NA_real_, length(x), 2L)
-
   # The band follows whichever method the hypothesis table used, and names the
   # reason whenever it cannot be drawn.
+  limits <- matrix(NA_real_, length(x), 2L)
   method <- "none"
-  reason <- NA_character_
-  if (!band) {
-    reason <- "it was turned off"
-  } else if (.has_boot_summary(object)) {
-    replicates <- object$boot$t[object$boot$ok, c("intercept", "slope"),
-                                drop = FALSE]
-    limits <- .boot_ci(replicates %*% rbind(1, x), fit, object$level,
-                       object$boot$type)
-    method <- object$boot$type
-  } else if (isTRUE(object$pars$joint_ok)) {
-    critical <- stats::qnorm(1 - (1 - object$level) / 2)
-    se <- .delta_se(.reg_grad(e, x), object$pars$vcov)
-    limits <- cbind(fit - critical * se, fit + critical * se)
-    method <- "delta"
+  reason <- if (band) NA_character_ else "it was turned off"
+
+  if (.is_bayes(object)) {
+    # A posterior gives the line its mean and its band draw by draw.
+    Q <- .draw_quantities(.stan_bivariate(object$draws))
+    lines <- Q[, c("intercept", "slope")] %*% rbind(1, x)
+    fit <- colMeans(lines)
+    slope <- mean(Q[, "slope"])
+    intercept <- mean(Q[, "intercept"])
+    if (band) {
+      limits <- .boot_ci(lines, fit, object$level, "perc")
+      method <- "posterior"
+    }
   } else {
-    reason <- object$pars$inference_reason
+    e <- object$pars$est
+    q <- .usdt_quantities(e)
+    slope <- q[, "slope"]
+    intercept <- q[, "intercept"]
+    fit <- e[["gamma_I"]] + slope * (x - e[["gamma_D"]])
+    if (!band) {
+      # The reason above already says why there is no band.
+    } else if (.has_boot_summary(object)) {
+      replicates <- object$boot$t[object$boot$ok, c("intercept", "slope"),
+                                  drop = FALSE]
+      limits <- .boot_ci(replicates %*% rbind(1, x), fit, object$level,
+                         object$boot$type)
+      method <- object$boot$type
+    } else if (isTRUE(object$pars$joint_ok)) {
+      critical <- stats::qnorm(1 - (1 - object$level) / 2)
+      se <- .delta_se(.reg_grad(e, x), object$pars$vcov)
+      limits <- cbind(fit - critical * se, fit + critical * se)
+      method <- "delta"
+    } else {
+      reason <- object$pars$inference_reason
+    }
   }
 
   list(line = data.frame(x = x, fit = fit, conf.low = limits[, 1L],
                          conf.high = limits[, 2L], stringsAsFactors = FALSE),
-       slope = slope, intercept = q[, "intercept"],
-       method = method, reason = reason)
+       slope = slope, intercept = intercept, method = method, reason = reason)
 }
 
 # This function formats one p-value as a plotmath fragment.
@@ -260,8 +280,13 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   } else naive_line[0L, , drop = FALSE]
 
   # The latent line is only drawn over the central fitted population range,
-  # plus zero because its value there is the hypothesis of interest.
-  e <- object$pars$est
+  # plus zero because its value there is the hypothesis of interest. A
+  # posterior places that range with its mean values.
+  e <- if (.is_bayes(object)) {
+    colMeans(.draw_primitives(.stan_bivariate(object$draws)))
+  } else {
+    object$pars$est
+  }
   latent_span <- if (is.finite(e[["s2_D"]]) && e[["s2_D"]] > 0) {
     e[["gamma_D"]] + stats::qnorm(c(.025, .975)) * sqrt(e[["s2_D"]])
   } else {
@@ -437,17 +462,23 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     none = paste0("The latent band is unavailable: ", values$reason, "."),
     delta = sprintf("Bands are %.0f%% OLS and delta-method confidence intervals.",
                     100 * object$level),
+    posterior = sprintf(paste0("Bands are a %.0f%% OLS confidence interval and ",
+                               "a %.0f%% credible interval."),
+                        100 * object$level, 100 * object$level),
     sprintf("Bands are %.0f%% OLS and bootstrap %s confidence intervals.",
             100 * object$level,
             switch(values$method, perc = "percentile", norm = "normal",
                    basic = "basic")))
+  bayes <- .is_bayes(object)
   caption <- .wrap_caption(
-    "Segments show shrinkage from observed to conditional model estimates. ",
+    "Segments show shrinkage from observed to ",
+    if (bayes) "posterior mean" else "conditional model", " estimates. ",
     "The latent line is implied by the fitted random-effects distribution, ",
     "not fitted to the green points.\n",
     "An open circle marks the intercept of each panel at zero. ", band_note,
-    " P-values test the intercept and slope against zero; p < .05 indicates ",
-    "significance."
+    " P-values test the intercept and slope against zero",
+    if (bayes) " (two-sided posterior p-values in the latent panel)" else "",
+    "; p < .05 indicates significance."
   )
 
   plot +
@@ -527,10 +558,16 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   values <- .observed_pairs(object)
 
-  # Each model value combines the task average with the subject difference.
-  model <- .task_effects(object$fit, values$subject)$subjects
-  values$model_direct <- unname(model[, "d_D"])
-  values$model_indirect <- unname(model[, "d_I"])
+  # Each model value combines the task average with the subject difference;
+  # a posterior gives its mean.
+  model <- if (.is_bayes(object)) {
+    cbind(colMeans(.subject_draws(object, "d", 1L, values$subject)),
+          colMeans(.subject_draws(object, "d", 2L, values$subject)))
+  } else {
+    .task_effects(object$fit, values$subject)$subjects[, c("d_D", "d_I")]
+  }
+  values$model_direct <- unname(model[, 1L])
+  values$model_indirect <- unname(model[, 2L])
   values
 }
 
@@ -635,24 +672,14 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 # This function collects both intervals for each subject and task.
 .caterpillar_data <- function(object, observed_se = "gg") {
 
-  # The whole interval needs reliable joint uncertainty.
-  if (!isTRUE(object$pars$joint_ok)) {
-    .usdt_stop("subject intervals are unavailable because ",
-               object$pars$inference_reason, ".")
-  }
-
   # The selected variance gives the trial error around each observed value.
   se_col <- paste0("se_", observed_se)
   observed <- sdt_moments(object$data, correction = "hautus", variances = TRUE)
   labels <- object$data$meta$labels
-  level <- object$level
-  critical <- stats::qnorm(1 - (1 - level) / 2)
+  critical <- stats::qnorm(1 - (1 - object$level) / 2)
 
-  # The model supplies each subject estimate and its uncertainty.
-  conditional <- .conditional_se(object$fit, object$pars$V_full, object$devfun)
-  conditional <- conditional[
-    conditional$grpvar == "subj" & conditional$term %in% c("d_D", "d_I"), ]
-  fixed <- lme4::fixef(object$fit)
+  # The model supplies each subject estimate and its interval.
+  model <- .subject_intervals(object, critical)
 
   # Each task keeps the order given by its observed values.
   tasks <- list(
@@ -662,10 +689,10 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   result <- lapply(tasks, function(task) {
     raw <- observed[observed$task == task$label, ]
     raw$subj <- as.character(raw$subj)
-    model <- conditional[conditional$term == task$term, ]
-    model_row <- match(raw$subj, as.character(model$grp))
-    if (anyNA(model_row) || any(!is.finite(model$se[model_row]))) {
-      .usdt_stop("the fitted model does not provide conditional intervals for every subject.")
+    rows <- model[[task$term]]
+    model_row <- match(raw$subj, rows$subject)
+    if (anyNA(model_row) || any(!is.finite(rows$se[model_row]))) {
+      .usdt_stop("the fitted model does not provide intervals for every subject.")
     }
 
     order_row <- order(raw$dprime, raw$subj)
@@ -680,13 +707,17 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       rank = rank,
       stringsAsFactors = FALSE
     )
+    observed_rows$conf.low <- observed_rows$estimate - critical * observed_rows$se
+    observed_rows$conf.high <- observed_rows$estimate + critical * observed_rows$se
     model_rows <- data.frame(
       subject = raw$subj,
       task = task$label,
       method = "Model-estimated",
-      estimate = fixed[[task$term]] + model$condval[model_row],
-      se = model$se[model_row],
+      estimate = rows$estimate[model_row],
+      se = rows$se[model_row],
       rank = rank,
+      conf.low = rows$conf.low[model_row],
+      conf.high = rows$conf.high[model_row],
       stringsAsFactors = FALSE
     )
     rbind(observed_rows, model_rows)
@@ -694,8 +725,6 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   # The interval colour shows whether zero remains plausible.
   values <- do.call(rbind, result)
-  values$conf.low <- values$estimate - critical * values$se
-  values$conf.high <- values$estimate + critical * values$se
   includes_zero <- values$conf.low <= 0 & values$conf.high >= 0
   values$status <- factor(
     ifelse(includes_zero, "Includes zero", "Excludes zero"),
@@ -720,6 +749,43 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   )
   rownames(values) <- NULL
   values
+}
+
+# This function gives each subject's model-estimated sensitivity, with its
+# uncertainty and interval, one table per task: the conditional estimate with
+# its joint standard error and Wald interval, or the posterior mean, SD and
+# central credible interval.
+.subject_intervals <- function(object, critical) {
+  if (.is_bayes(object)) {
+    a <- (1 - object$level) / 2
+    out <- lapply(1:2, function(j) {
+      draws <- .subject_draws(object, "d", j)
+      limits <- apply(draws, 2L, stats::quantile, probs = c(a, 1 - a),
+                      names = FALSE)
+      data.frame(subject = object$subjects, estimate = colMeans(draws),
+                 se = apply(draws, 2L, stats::sd), conf.low = limits[1L, ],
+                 conf.high = limits[2L, ], stringsAsFactors = FALSE)
+    })
+    return(stats::setNames(out, c("d_D", "d_I")))
+  }
+
+  # The whole interval needs reliable joint uncertainty.
+  if (!isTRUE(object$pars$joint_ok)) {
+    .usdt_stop("subject intervals are unavailable because ",
+               object$pars$inference_reason, ".")
+  }
+  conditional <- .conditional_se(object$fit, object$pars$V_full, object$devfun)
+  fixed <- lme4::fixef(object$fit)
+  out <- lapply(c("d_D", "d_I"), function(term) {
+    rows <- conditional[conditional$grpvar == "subj" &
+                          conditional$term == term, ]
+    estimate <- fixed[[term]] + rows$condval
+    data.frame(subject = as.character(rows$grp), estimate = estimate,
+               se = rows$se, conf.low = estimate - critical * rows$se,
+               conf.high = estimate + critical * rows$se,
+               stringsAsFactors = FALSE)
+  })
+  stats::setNames(out, c("d_D", "d_I"))
 }
 
 # This function describes how many intervals include zero in each panel.
@@ -796,6 +862,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       y = NULL,
       caption = .wrap_caption(
         "Subjects are ordered by observed d' within each task. ",
+        if (.is_bayes(object))
+          "Model estimates are posterior means with central credible intervals. ",
         "Percentages descriptively summarise the displayed intervals."
       )
     ) +
@@ -926,6 +994,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 # This function creates the curves, intervals and criterion points.
 .roc_data <- function(object, subject_id = NULL, band = TRUE) {
 
+  if (.is_bayes(object)) return(.roc_data_bayes(object, subject_id, band))
   subject_fit <- .roc_parameters(object, subject_id, conditional = band)
   tasks <- .roc_tasks(object, subject_fit$subject)
   level <- object$level
@@ -988,15 +1057,93 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     )
     points[[i]] <- point
   }
+  .roc_bundle(curves, points, tasks, subject_fit$subject)
+}
 
+# This function joins the curves and operating points of every task.
+.roc_bundle <- function(curves, points, tasks, subject) {
   curves <- do.call(rbind, curves)
   points <- do.call(rbind, points)
   curves$curve <- factor(curves$curve, levels = unique(curves$curve))
   points$curve <- factor(points$curve, levels = levels(curves$curve))
   rownames(curves) <- NULL
   rownames(points) <- NULL
-  list(curves = curves, points = points, tasks = tasks,
-       subject = subject_fit$subject)
+  list(curves = curves, points = points, tasks = tasks, subject = subject)
+}
+
+# This function builds the ROC curves of a Bayesian fit draw by draw. Each draw
+# gives one curve and one operating point; the plot shows their posterior means
+# with central credible bands. Under unequal variances each curve bends with
+# the signal SD of its draw.
+.roc_data_bayes <- function(object, subject_id = NULL, band = TRUE) {
+
+  subject <- NULL
+  if (!is.null(subject_id)) {
+    if (length(subject_id) != 1L || is.na(subject_id)) {
+      .usdt_stop("`subject_id` must identify exactly one subject.")
+    }
+    subject <- as.character(subject_id)
+    if (!subject %in% object$subjects) {
+      .usdt_stop("subject `", subject, "` was not found in the fitted model.")
+    }
+  }
+  tasks <- .roc_tasks(object, subject)
+  far <- seq(0, 1, length.out = 201L)
+  a <- (1 - object$level) / 2
+  free <- object$design$free_c
+  draw <- function(name) {
+    as.numeric(posterior::extract_variable(object$draws, name))
+  }
+
+  curves <- vector("list", nrow(tasks))
+  points <- vector("list", nrow(tasks))
+  for (i in seq_len(nrow(tasks))) {
+    task <- tasks[i, ]
+    j <- match(task$code, c("D", "I"))
+
+    # The population curve uses the means and a subject curve its own values.
+    if (is.null(subject)) {
+      d <- draw(sprintf("mu_d[%d]", j))
+      criterion <- if (free[j] == 1L) draw(sprintf("mu_c[%d]", sum(free[seq_len(j)])))
+    } else {
+      k <- match(subject, object$subjects)
+      d <- draw(sprintf("d[%d,%d]", k, j))
+      criterion <- draw(sprintf("c[%d,%d]", k, j))
+    }
+    s <- if (object$design$unequal_variances) draw(sprintf("sigma_s[%d]", j)) else
+      rep(1, length(d))
+
+    # A criterion fixed by the Meyen split makes HR + FAR = 1.
+    if (is.null(criterion)) criterion <- d * (1 - s) / (2 * (1 + s))
+
+    hits <- stats::pnorm(outer(d, stats::qnorm(far), "+") / s)
+    interval <- matrix(NA_real_, nrow = length(far), ncol = 2L)
+    if (band) {
+      interval <- t(apply(hits, 2L, stats::quantile, probs = c(a, 1 - a),
+                          names = FALSE))
+    }
+    dprime <- mean(d)
+    auc <- mean(stats::pnorm(d / sqrt(1 + s^2)))
+    curve_label <- sprintf("%s: d' = %.2f | AUC = %.2f",
+                           task$task, dprime, auc)
+    point <- data.frame(
+      task = task$task, curve = curve_label,
+      false_alarm = mean(stats::pnorm(-d / 2 - criterion)),
+      hit = mean(stats::pnorm((d / 2 - criterion) / s)),
+      criterion = mean(criterion), stringsAsFactors = FALSE
+    )
+    curves[[i]] <- data.frame(
+      task = task$task, curve = curve_label, false_alarm = far,
+      hit = colMeans(hits), conf.low = interval[, 1L],
+      conf.high = interval[, 2L], dprime = dprime, auc = auc,
+      criterion = point$criterion,
+      operating_false_alarm = point$false_alarm, operating_hit = point$hit,
+      interval = if (band) "credible" else "none",
+      subject = subject %||% "Population", stringsAsFactors = FALSE
+    )
+    points[[i]] <- point
+  }
+  .roc_bundle(curves, points, tasks, subject)
 }
 
 # This function draws the model-implied ROC comparison.
@@ -1041,17 +1188,20 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   title <- if (is.null(values$subject)) "Population ROC curves" else
     paste0("ROC curves for subject ", values$subject)
   interval <- unique(curves$interval)
+  variance <- if (isTRUE(object$design$unequal_variances)) "unequal" else "equal"
   caption <- if (!band) {
-    "Curves assume equal-variance SDT; points mark the fitted criteria."
+    sprintf("Curves assume %s-variance SDT; points mark the fitted criteria.",
+            variance)
   } else if (is.null(values$subject)) {
     paste0(sprintf("%.0f%% %s bands; points mark the fitted criteria.",
                    100 * object$level, interval[1L]),
-           "\nCurves assume equal-variance SDT.")
+           sprintf("\nCurves assume %s-variance SDT.", variance))
   } else {
-    paste0(sprintf("%.0f%% conditional bands; points mark the fitted criteria.",
-                   100 * object$level),
+    paste0(sprintf("%.0f%% %s bands; points mark the fitted criteria.",
+                   100 * object$level, interval[1L]),
            if (population_reference) "\nDashed lines show the population curves." else "",
-           " Equal-variance SDT.")
+           sprintf(" %s-variance SDT.",
+                   if (variance == "equal") "Equal" else "Unequal"))
   }
 
   # The square panel makes this the narrowest plot in the package, so its

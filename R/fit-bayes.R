@@ -137,6 +137,28 @@
   B
 }
 
+# These functions give, draw by draw, the five values that describe the two
+# sensitivities and the tested quantities derived from them. The draws are
+# stacked chain after chain.
+.draw_primitives <- function(bivariate) {
+  .bivariate_primitives(unclass(posterior::as_draws_matrix(bivariate)))
+}
+.draw_quantities <- function(bivariate) {
+  .usdt_quantities(.draw_primitives(bivariate))
+}
+
+# This function returns the draws of one subject-level variable of a Bayesian
+# fit, `d` or `c`, in one task (1 direct, 2 indirect): one column per subject,
+# in the order of `subjects`.
+.subject_draws <- function(object, variable, task, subjects = object$subjects) {
+  columns <- paste0(variable, "[", match(subjects, object$subjects), ",", task,
+                    "]")
+  m <- unclass(posterior::as_draws_matrix(
+    posterior::subset_draws(object$draws, variable = columns)))
+  dimnames(m) <- list(NULL, subjects)
+  m
+}
+
 # This function selects the bivariate normal from the draws of the uSDT model.
 .stan_bivariate <- function(draws) {
   .select_bivariate(draws, c("mu_d[1]", "mu_d[2]", "sigma_d[1]",
@@ -148,8 +170,7 @@
 # interval, and the two-sided posterior p-value 2 min{P(q > 0), P(q < 0)}. That
 # p-value falls below 1 - level exactly when zero lies outside the interval.
 .bayes_tests <- function(bivariate, level) {
-  B <- unclass(posterior::as_draws_matrix(bivariate))
-  Q <- .usdt_quantities(.bivariate_primitives(B))
+  Q <- .draw_quantities(bivariate)
   shape <- c(posterior::niterations(bivariate), posterior::nchains(bivariate))
   a <- (1 - level) / 2
   terms <- c(diff = "d'(indirect) - d'(direct)", rho = "correlation",

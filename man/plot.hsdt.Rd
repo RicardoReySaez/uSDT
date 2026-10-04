@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{x}{An \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}.}
+\item{x}{An \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}, frequentist or Bayesian.}
 
 \item{type}{Character string indicating the plot type:
 \itemize{
@@ -84,6 +84,16 @@ population means, variance components, and participant random effects.
 \section{ROC plot (\code{type = "roc"})}{
 Displays model-implied ROC curves for an average participant or a specific
 individual, with points marking the estimated response criteria.
+}
+
+\section{Bayesian fits}{
+For a fit with \code{estimation = "bayesian"}, every model-estimated value is a
+posterior mean and every model band is a central credible interval,
+computed draw by draw: the latent line and its band, each subject's
+sensitivity in the shrinkage and caterpillar plots, and the ROC curves and
+operating points. The latent p-values are the two-sided posterior p-values
+of the hypothesis table. Under unequal variances the ROC curves bend with
+the signal standard deviation of each draw.
 }
 
 \examples{

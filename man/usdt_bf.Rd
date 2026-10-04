@@ -78,7 +78,10 @@ value deep in a tail is read on the log scale and with caution.
 An inequality or a region is evidence about where the quantity lies, so its
 Bayes factor is the ratio of posterior to prior odds of H1:
 \deqn{\mathrm{BF}_{10} = \frac{P(H_1 \mid y) / P(H_0 \mid y)}{P(H_1) / P(H_0)}.}
-\code{post.prob} reports \eqn{P(H_1 \mid y)}, read from the same logspline fit.
+\code{post.prob} reports \eqn{P(H_1 \mid y)}, the share of posterior draws in
+H1, and the prior probabilities come from the priors described below. When
+every draw falls on one side, the draws cannot bound the Bayes factor and
+\code{log_BF10} is infinite.
 }
 
 \section{The prior of each quantity}{

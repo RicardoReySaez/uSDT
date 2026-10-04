@@ -60,7 +60,10 @@
 #' An inequality or a region is evidence about where the quantity lies, so its
 #' Bayes factor is the ratio of posterior to prior odds of H1:
 #' \deqn{\mathrm{BF}_{10} = \frac{P(H_1 \mid y) / P(H_0 \mid y)}{P(H_1) / P(H_0)}.}
-#' `post.prob` reports \eqn{P(H_1 \mid y)}, read from the same logspline fit.
+#' `post.prob` reports \eqn{P(H_1 \mid y)}, the share of posterior draws in
+#' H1, and the prior probabilities come from the priors described below. When
+#' every draw falls on one side, the draws cannot bound the Bayes factor and
+#' `log_BF10` is infinite.
 #'
 #' # The prior of each quantity
 #'
@@ -438,7 +441,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
                  "<" = sprintf("%s >= %s", name, format(h$value)),
                  sprintf("%s %s %s", name, if (h$op == "in") "out" else "in",
                          interval))
-    prob <- region(post$cdf)
+    # The posterior probability is the share of draws in H1: unlike the
+    # logspline tail, which overstated it 3 SDs out, it is unbiased.
+    prob <- region(stats::ecdf(draws))
     log_bf10 <- stats::qlogis(prob) - stats::qlogis(region(prior$cdf))
   }
 

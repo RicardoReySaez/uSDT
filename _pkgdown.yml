@@ -102,6 +102,15 @@ reference:
   - usdt_hypotheses
   - usdt_boot
 
+- title: Bayes factors
+  desc: >
+    Test point, directional and interval hypotheses about the difference,
+    correlation and latent regression of a Bayesian fit, and plot their
+    prior and posterior.
+  contents:
+  - usdt_bf
+  - plot.usdt_bf
+
 - title: Visualize the fit and estimate reliability
   desc: Compare observed and fitted estimates and quantify measurement reliability.
   contents:

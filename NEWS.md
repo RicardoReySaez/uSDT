@@ -16,6 +16,15 @@
   p-value that falls below .05 exactly when the 95% interval excludes zero.
   They also accept custom models fitted with brms (`brmsfit`), named by the
   same terms as an lme4 model.
+* `usdt_bf()` computes Bayes factors for point (Savage-Dickey), directional
+  and interval hypotheses about the difference, correlation, slope and
+  intercept of a Bayesian fit. The priors of the difference and correlation
+  are exact; those of the intercept and slope, induced by the other priors,
+  are Rao-Blackwell averages over 100,000 prior draws. `plot.usdt_bf()` draws
+  each prior against its posterior.
+* `plot()` draws the four plots of a Bayesian fit with posterior means and
+  credible intervals, and `usdt_reliability()` gives the posterior of each
+  task's reliability.
 
 ## Data preparation
 

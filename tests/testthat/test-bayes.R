@@ -53,6 +53,13 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
                     r$tasks$reliability <= r$tasks$conf.high))
   expect_equal(r$tasks$reliability, usdt_reliability(f)$tasks$reliability,
                tolerance = 0.2)
+
+  # The default Bayes factors test the three point nulls and draw.
+  skip_if_not_installed("logspline")
+  b <- usdt_bf(m)
+  expect_identical(b$hypothesis, c("diff = 0", "rho = 0", "intercept = 0"))
+  expect_equal(b$BF10, 1 / b$BF01)
+  expect_s3_class(plot(b), "ggplot")
 })
 
 test_that("brms variables are found whatever the order of the correlation", {

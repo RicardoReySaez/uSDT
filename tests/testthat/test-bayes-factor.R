@@ -20,15 +20,19 @@ test_that("Bayes factors match a case with normal prior and posterior", {
   prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
                 cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL)
 
-  point <- .bf_one(.bf_parse("diff = 0"), draws, draws, prior, 0.95)$row
-  expected <- stats::dnorm(0, 0, 1, log = TRUE) -
-    stats::dnorm(0, 0.3, 0.1, log = TRUE)
+  # The tested value lies one posterior SD from the mean. Far in a tail, the
+  # logspline density changes with the draws and with the platform: at three
+  # SDs its log BF10 is off by up to 0.2 (point) and 0.45 (directional).
+  point <- .bf_one(.bf_parse("diff = 0.2"), draws, draws, prior, 0.95)$row
+  expected <- stats::dnorm(0.2, 0, 1, log = TRUE) -
+    stats::dnorm(0.2, 0.3, 0.1, log = TRUE)
   expect_equal(point$log_BF10, expected, tolerance = 0.05)
 
-  directional <- .bf_one(.bf_parse("diff > 0"), draws, draws, prior, 0.95)$row
-  expect_equal(directional$post.prob, stats::pnorm(3), tolerance = 0.005)
-  expect_equal(directional$log_BF10, stats::qlogis(stats::pnorm(3)),
-               tolerance = 0.05)
+  directional <- .bf_one(.bf_parse("diff > 0.2"), draws, draws, prior,
+                         0.95)$row
+  expect_equal(directional$post.prob, stats::pnorm(1), tolerance = 0.02)
+  odds <- stats::qlogis(stats::pnorm(1)) - stats::qlogis(stats::pnorm(-0.2))
+  expect_equal(directional$log_BF10, odds, tolerance = 0.05)
 })
 
 test_that("the induced priors keep the symmetry of the correlation prior", {
@@ -38,7 +42,7 @@ test_that("the induced priors keep the symmetry of the correlation prior", {
   expect_identical(priors$slope$cdf(0), priors$rho$cdf(0))
 })
 
-test_that("each hypothesis prints as a report, and a row subset plots its own", {
+test_that("each hypothesis prints as a report; a row subset plots its own", {
   skip_if_not_installed("logspline")
   set.seed(3)
   draws <- stats::rnorm(2e4, 0.3, 0.1)

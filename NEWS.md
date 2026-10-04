@@ -24,7 +24,10 @@
   and interval hypotheses about the difference, correlation, slope and
   intercept of a Bayesian fit. Point hypotheses read the posterior density
   from a logspline fit to the draws; directional and interval ones read the
-  posterior probability as the share of draws in H1. The priors of the difference and correlation
+  posterior probability as the share of draws in H1. It also takes custom
+  brms models, whose priors it reads from `prior_summary()`: normal priors on
+  the sensitivities and an LKJ prior on their correlation give the same exact
+  and induced priors as a Bayesian `hsdt()` fit. The priors of the difference and correlation
   are exact; those of the intercept and slope, induced by the other priors,
   are Rao-Blackwell averages over 100,000 prior draws. Each hypothesis prints
   as a report, and `usdt_bf()` draws each prior against its posterior, in one

@@ -156,6 +156,12 @@ if (requireNamespace("brms", quietly = TRUE)) {
 
   # The same term names; the tests now summarise the posterior
   usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+
+  # With a proper prior on the sensitivities, also Bayes factors
+  if (requireNamespace("logspline", quietly = TRUE)) {
+    set.seed(1)
+    usdt_bf(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+  }
 }
 }
 

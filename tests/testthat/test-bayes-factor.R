@@ -109,3 +109,46 @@ test_that("very heavy-tailed draws still give a posterior density", {
   expect_equal(reserve$log_density(0), exact, tolerance = 0.15)
   expect_equal(reserve$cdf(0), stats::pt(-0.8, 1), tolerance = 0.02)
 })
+
+test_that("brms priors become the priors of the tested quantities", {
+  variables <- c("b_direct", "b_cond_D", "b_cond_I", "sd_subj__direct",
+                 "sd_subj__cond_D", "sd_subj__cond_I",
+                 "cor_subj__direct__cond_D", "cor_subj__direct__cond_I",
+                 "cor_subj__cond_D__cond_I")
+  table <- data.frame(
+    prior = c("", "normal(0, 1)", "normal(0.5, 2)", "", "student_t(3, 0, 2.5)",
+              "", "cauchy(0, 1)", "", "lkj(2)", ""),
+    class = c("b", "b", "b", "b", "sd", "sd", "sd", "sd", "cor", "cor"),
+    coef = c("", "", "cond_I", "cond_D", "", "", "cond_I", "cond_D", "", ""),
+    group = c("", "", "", "", "", "subj", "subj", "subj", "", "subj"),
+    stringsAsFactors = FALSE)[-1L, ]
+  p <- .brms_priors(table, variables, "cond_D", "cond_I", "intercept")
+
+  expect_identical(.prior_rows(p, "dprime")$location, c(0, 0.5))
+  expect_identical(.prior_rows(p, "dprime")$scale, c(1, 2))
+  sd <- .prior_rows(p, "sd_dprime")
+  expect_identical(cbind(sd$df, sd$location, sd$scale),
+                   cbind(c(3, 1), c(0, 0), c(2.5, 1)))
+  # A 3 x 3 LKJ(2) block: scaled beta(2 - 1 + 3/2, 2 - 1 + 3/2), whether the
+  # prior sits on the correlations or, as in a fitted model, on their
+  # Cholesky factor.
+  expect_identical(.prior_rows(p, "cor_dprime", "both")$alpha, 2.5)
+  fitted <- table
+  fitted$class[fitted$class == "cor"] <- "L"
+  fitted$prior[fitted$prior == "lkj(2)"] <- "lkj_corr_cholesky(2)"
+  expect_identical(.prior_rows(.brms_priors(fitted, variables, "cond_D",
+                                            "cond_I", "rho"),
+                               "cor_dprime", "both")$alpha, 2.5)
+
+  flat <- table
+  flat$prior[flat$class == "b"] <- ""
+  expect_error(.brms_priors(flat, variables, "cond_D", "cond_I", "rho"),
+               "flat default")
+  exponential <- table
+  exponential$prior[exponential$class == "sd" & exponential$coef == ""] <-
+    c("exponential(1)", "")
+  expect_no_error(.brms_priors(exponential, variables, "cond_D", "cond_I",
+                               c("diff", "rho")))
+  expect_error(.brms_priors(exponential, variables, "cond_D", "cond_I",
+                            "slope"), "student_t, cauchy or normal")
+})

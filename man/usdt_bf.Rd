@@ -8,14 +8,17 @@
 usdt_bf(
   fit,
   hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
-  level = fit$level,
+  direct = "d_D",
+  indirect = "d_I",
+  level = NULL,
   plot = TRUE
 )
 
 \method{print}{usdt_bf}(x, digits = 3L, width = 80L, ...)
 }
 \arguments{
-\item{fit}{A Bayesian \code{hsdt} object, fitted with \code{estimation = "bayesian"}.}
+\item{fit}{A Bayesian \code{hsdt} object, fitted with \code{estimation = "bayesian"},
+or a \code{brmsfit} whose priors meet the conditions in Details.}
 
 \item{hypothesis}{Character vector of hypotheses. Each one is
 \code{"<quantity> <op> <value>"}, where the quantity is \code{diff}, \code{rho}, \code{slope}
@@ -23,8 +26,12 @@ or \code{intercept} and the operator is \code{=}, \code{<} or \code{>} (\code{<=
 as \code{<} and \code{>}), or \code{"<quantity> in [a, b]"} and \code{"<quantity> out [a, b]"}
 for a region and its complement. The default tests the three point nulls.}
 
+\item{direct, indirect}{For a brms model, the population-level terms of the
+direct and indirect sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Ignored for an
+\code{hsdt} fit.}
+
 \item{level}{Credible level of the reported intervals. Defaults to the
-level of \code{fit}.}
+level of an \code{hsdt} fit, and to 0.95 for a brms model.}
 
 \item{plot}{Logical. Draw, for each hypothesis, a panel with the prior and
 posterior of the tested quantity (default \code{TRUE}). Set \code{plot = FALSE}
@@ -51,10 +58,11 @@ hypothesis. The prior and posterior curves are stored, so
 }
 \description{
 Tests point, directional and interval hypotheses about the quantities of
-the three uSDT hypotheses in a Bayesian \code{\link[=hsdt]{hsdt()}} fit: the difference between
-mean sensitivities (\code{diff}, H1, reported as \eqn{\Delta d'}, indirect minus
-direct), their correlation (\code{rho}, H2) and the slope and intercept of the
-latent regression (\code{slope}, \code{intercept}, H3).
+the three uSDT hypotheses in a Bayesian \code{\link[=hsdt]{hsdt()}} fit or a custom model
+fitted with brms: the difference between mean sensitivities (\code{diff}, H1,
+reported as \eqn{\Delta d'}, indirect minus direct), their correlation
+(\code{rho}, H2) and the slope and intercept of the latent regression (\code{slope},
+\code{intercept}, H3).
 }
 \section{Point hypotheses: the Savage-Dickey density ratio}{
 A point hypothesis \eqn{\theta = c} compares a model in which
@@ -105,6 +113,26 @@ summarises the posterior of the slope.
 
 The prior draws use the random number generator; call \code{\link[=set.seed]{set.seed()}} first
 for reproducible results.
+}
+
+\section{Custom brms models}{
+For a \code{brmsfit}, the priors are read from \code{\link[brms:prior_summary]{brms::prior_summary()}}, each
+parameter taking its most specific prior (coefficient, then group, then
+class), and the quantities get the same priors as above. The model must
+have:
+\itemize{
+\item a normal prior on each sensitivity term, e.g.
+\code{prior(normal(0, 1), class = b)}. The flat default of brms is improper,
+and a Bayes factor needs a proper prior;
+\item an LKJ(\eqn{\eta}) prior on the correlations of the group-level term that
+holds both sensitivities. One correlation of a \eqn{K \times K} LKJ matrix
+has the scaled beta marginal
+\eqn{(\eta - 1 + K/2, \eta - 1 + K/2)}, so a block with other terms
+besides the two sensitivities still has an exact prior for \code{rho};
+\item for \code{intercept} and \code{slope}, Student-\eqn{t}, Cauchy or normal priors on
+the two SDs, which brms truncates at zero. The brms default,
+\code{student_t(3, 0, 2.5)}, qualifies.
+}
 
 The Bayes factor of a point hypothesis depends on the prior of the tested
 quantity: a wider prior puts less density at the tested value and favours

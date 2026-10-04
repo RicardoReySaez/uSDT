@@ -109,6 +109,12 @@ test_that("a brms model is tested from its posterior", {
   expect_identical(tests$hypothesis, c("H1", "H2", "H3", "H3"))
   expect_identical(latent_cor(fit, "cond_D", "cond_I")$p.value,
                    tests$p.value[2L])
+
+  # Its priors are read from the model, so it also gets Bayes factors.
+  skip_if_not_installed("logspline")
+  b <- usdt_bf(fit, direct = "cond_D", indirect = "cond_I", plot = FALSE)
+  expect_true(all(is.finite(b$log_BF10)))
+  expect_equal(b$estimate, tests$estimate[c(1L, 2L, 3L)])
 })
 
 test_that("chains run in background sessions and report their results", {

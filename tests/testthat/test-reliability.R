@@ -126,7 +126,8 @@ test_that("the profiled information reproduces the closed form", {
       } else {
         4 / sum(w)
       }
-      expect_equal(.sensitivity_variance(cells, columns, slope, eta), expected)
+      expect_equal(.sensitivity_variance(cells, eta, length(columns) == 2L),
+                   expected)
     }
   }
 })
@@ -160,7 +161,7 @@ test_that("the profiled information is the error variance of a per-subject GLM",
                           control = stats::glm.control(epsilon = 1e-12,
                                                        maxit = 200L))
         eta <- unname(stats::predict(one, type = "link"))
-        ours <- c(ours, .sensitivity_variance(cells, columns, slope, eta))
+        ours <- c(ours, .sensitivity_variance(cells, eta, length(columns) == 2L))
         theirs <- c(theirs, unname(stats::vcov(one)[slope, slope]))
       }
 
@@ -183,8 +184,7 @@ test_that("the profiled information is var_gg at the observed rates", {
     cells <- rows[as.character(rows$subj) == s, , drop = FALSE]
     cells <- cells[order(cells$sig), ]
     row <- moments[as.character(moments$subj) == s, ]
-    .sensitivity_variance(cells, c("c_D", "d_D"), "d_D",
-                          stats::qnorm(c(row$far, row$hr)))
+    .sensitivity_variance(cells, stats::qnorm(c(row$far, row$hr)), TRUE)
   }, 0)
 
   expect_equal(unname(ours), moments$var_gg)

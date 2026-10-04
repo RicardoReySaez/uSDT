@@ -46,6 +46,13 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   for (type in c("regression", "shrinkage", "caterpillar", "roc")) {
     expect_s3_class(plot(m, type = type), "ggplot")
   }
+
+  # Reliability lies inside its credible interval, close to the frequentist one.
+  r <- usdt_reliability(m)
+  expect_true(all(r$tasks$conf.low <= r$tasks$reliability &
+                    r$tasks$reliability <= r$tasks$conf.high))
+  expect_equal(r$tasks$reliability, usdt_reliability(f)$tasks$reliability,
+               tolerance = 0.2)
 })
 
 test_that("brms variables are found whatever the order of the correlation", {

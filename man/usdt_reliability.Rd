@@ -13,8 +13,8 @@ usdt_reliability(object)
 \method{print}{usdt_reliability}(x, ...)
 }
 \arguments{
-\item{object}{An \code{hsdt} object from \code{\link[=hsdt]{hsdt()}}, which may also contain
-bootstrap results from \code{\link[=usdt_boot]{usdt_boot()}}.}
+\item{object}{An \code{hsdt} object from \code{\link[=hsdt]{hsdt()}}, frequentist or Bayesian. A
+frequentist fit may also contain bootstrap results from \code{\link[=usdt_boot]{usdt_boot()}}.}
 
 \item{...}{Ignored.}
 
@@ -28,6 +28,10 @@ An object of class \code{usdt_reliability} containing:
 reliabilities.
 \item Bootstrap intervals for both components when available in \code{object}.
 }
+
+For a Bayesian fit, both tables hold posterior means and add the columns
+\code{sd}, \code{conf.low} and \code{conf.high}, and \verb{$posterior$tasks} keeps the draws of
+each task's reliability.
 }
 \description{
 Estimates the reliability of sensitivity (\eqn{d'}) by separating true
@@ -58,6 +62,15 @@ drawn at random from the sample.
 When \code{object} includes bootstrap replicates from \code{\link[=usdt_boot]{usdt_boot()}}, confidence
 intervals for reliability are computed automatically across all retained
 samples.
+
+For a Bayesian fit, reliability is computed draw by draw: each draw gives
+\eqn{\tau_j^2} and, at that draw's subject sensitivities and criteria, each
+\eqn{v_{ij}}. The tables report posterior means, posterior standard
+deviations and central credible intervals. Under unequal variances the
+information of the signal trials is scaled by the signal standard deviation
+\eqn{\sigma_s}, so that \eqn{v_{ij} = \sigma_s^2 / w_{\mathrm{signal}} +
+1 / w_{\mathrm{noise}}} with an estimated criterion, which reduces to the
+Gourevitch and Galanter formula when \eqn{\sigma_s = 1}.
 }
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)

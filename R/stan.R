@@ -25,7 +25,10 @@
   file <- file.path(dir, paste0(stem, ".stan"))
   if (!file.exists(file)) file.copy(source, file)
 
-  compiling <- "compiling the Stan model; this happens once per installation."
+  compiling <- function() {
+    cli::cli_alert_info(
+      "Compiling the Stan model; this happens once per installation.")
+  }
   model <- switch(backend,
     rstan = {
       rds <- file.path(dir, paste0(stem, ".rds"))
@@ -33,7 +36,7 @@
         tryCatch(readRDS(rds), error = function(e) NULL)
       }
       if (is.null(model)) {
-        .usdt_msg(compiling)
+        compiling()
         model <- rstan::stan_model(file, model_name = "usdt")
         saveRDS(model, rds)
       }
@@ -42,7 +45,7 @@
     cmdstanr = {
       exe <- file.path(dir, paste0(stem, if (.Platform$OS.type == "windows")
         ".exe" else ""))
-      if (!file.exists(exe)) .usdt_msg(compiling)
+      if (!file.exists(exe)) compiling()
       cmdstanr::cmdstan_model(file, dir = dir, quiet = TRUE)
     })
   .stan_models[[key]] <- model
@@ -122,8 +125,15 @@
 
   # The bar starts with the first progress report after the first iteration,
   # so the seconds the sessions take to start do not distort its estimate of
-  # the time left.
+  # the time left. It shows at once, in light blue where the console has
+  # colours, and names the phase the chains are in.
   bar <- NULL
+  label <- if (chains == 1L) "1 chain" else paste(chains, "chains")
+  if (settings$refresh > 0) {
+    old <- options(cli.progress_show_after = 0,
+                   cli.progress_bar_style = .bar_style())
+    on.exit(options(old), add = TRUE)
+  }
   while (length(queue) || length(running)) {
     while (length(queue) && length(running) < settings$cores) {
       running[[as.character(queue[1L])]] <- start(queue[1L])
@@ -146,16 +156,32 @@
         running[[key]] <- NULL
       }
     }
+    phase <- if (all(done > settings$warmup)) "Sampling" else "Warmup  "
     if (settings$refresh > 0 && is.null(bar) && max(done) > 1L) {
       bar <- cli::cli_progress_bar(
         total = chains * settings$iter, clear = FALSE, auto_terminate = FALSE,
-        format = paste("Sampling {chains} chains {cli::pb_bar}",
+        status = phase,
+        format = paste("{cli::pb_spin} {cli::pb_status} {cli::pb_bar}",
                        "{cli::pb_percent} | ETA: {cli::pb_eta}"),
-        format_done = "Sampled {chains} chains in {cli::pb_elapsed}")
+        format_done = paste("{cli::col_green(cli::symbol$tick)} Sampled",
+                            "{label} in {cli::pb_elapsed}."))
     }
-    if (!is.null(bar)) cli::cli_progress_update(id = bar, set = sum(done))
+    if (!is.null(bar)) {
+      cli::cli_progress_update(id = bar, set = sum(done), status = phase)
+    }
     if (length(running)) Sys.sleep(0.1)
   }
   if (!is.null(bar)) cli::cli_progress_done(id = bar)
   results
+}
+
+# This function returns the bar: light blue squares for the iterations run and
+# a grey line for those to come. Their shapes differ, so the bar reads on light
+# and dark consoles and without colours; a console that cannot draw them keeps
+# cli's plain bar (NULL).
+.bar_style <- function() {
+  if (!cli::is_utf8_output()) return(NULL)
+  done <- cli::make_ansi_style("#6CB4EE")("■")
+  list(complete = done, current = done,
+       incomplete = cli::make_ansi_style("#9AA0A6")("─"))
 }

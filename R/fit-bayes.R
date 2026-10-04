@@ -18,16 +18,27 @@
 
   free_c <- .bayes_free_criteria(data, fix_criteria)
   stan <- .stan_data(data, free_c, unequal_variances, priors)
+  if (settings$refresh > 0) .bayes_header(settings)
   sampled <- .stan_sample(.stan_model(settings$backend), stan$data, settings,
                           .bayes_variables)
   tests <- .bayes_tests(.stan_bivariate(sampled$draws), level)
   diagnostics <- .bayes_diagnostics(sampled, tests, settings)
+  if (settings$refresh > 0) .bayes_report(diagnostics, settings)
 
+  # The warning repeats any problem, so code that runs quietly still sees it,
+  # and gives the remedy of each one.
   if (length(diagnostics$issues)) {
+    remedies <- c(
+      if (diagnostics$divergent > 0)
+        "raise `control = list(adapt_delta = ...)` towards 1",
+      if (diagnostics$treedepth > 0)
+        "raise `control = list(max_treedepth = ...)`",
+      if (diagnostics$max_rhat > 1.01 ||
+          min(diagnostics$min_ess_bulk, diagnostics$min_ess_tail) < 400)
+        "increase `iter`")
     .usdt_warn("the posterior may be unreliable: ",
                paste(diagnostics$issues, collapse = "; "), ".\n",
-               "  Increase `iter`, or raise `control = list(adapt_delta = ...)` ",
-               "towards 1 when there are divergent transitions.")
+               "  To fix it, ", paste(remedies, collapse = ", or "), ".")
   }
 
   structure(list(fit = sampled$fit, draws = sampled$draws,
@@ -54,6 +65,50 @@
                "cmdstanr::install_cmdstan(), or use backend = \"rstan\".")
   }
   invisible(TRUE)
+}
+
+# This function announces the fit and how its chains run.
+.bayes_header <- function(settings) {
+  cli::cli_rule(left = "Fitting the Bayesian hierarchical SDT model",
+                right = settings$backend)
+  draws <- settings$iter - settings$warmup
+  at_once <- min(settings$cores, settings$chains)
+  cli::cli_alert_info(paste0(
+    "{settings$chains} chain{?s} of {draws} draws after {settings$warmup} ",
+    "warmup iterations, {at_once} at a time."))
+}
+
+# This function reports, after the progress bar, the sampler and convergence
+# checks that .bayes_diagnostics() also turns into a warning.
+.bayes_report <- function(diagnostics, settings) {
+  depth <- settings$control$max_treedepth
+  n <- diagnostics$divergent
+  if (n == 0) {
+    cli::cli_alert_success("No divergent transitions.")
+  } else {
+    cli::cli_alert_warning("{n} divergent transition{?s}.")
+  }
+  n <- diagnostics$treedepth
+  if (n == 0) {
+    cli::cli_alert_success(
+      "No transition reached the maximum tree depth ({depth}).")
+  } else {
+    cli::cli_alert_warning(
+      "{n} transition{?s} reached the maximum tree depth ({depth}).")
+  }
+  rhat <- sprintf("%.3f", diagnostics$max_rhat)
+  if (diagnostics$max_rhat <= 1.01) {
+    cli::cli_alert_success("Largest R-hat {rhat}, below 1.01.")
+  } else {
+    cli::cli_alert_warning("Largest R-hat {rhat}, above 1.01.")
+  }
+  smallest <- min(diagnostics$min_ess_bulk, diagnostics$min_ess_tail)
+  ess <- round(smallest)
+  if (smallest >= 400) {
+    cli::cli_alert_success("Smallest effective sample size {ess}, above 400.")
+  } else {
+    cli::cli_alert_warning("Smallest effective sample size {ess}, below 400.")
+  }
 }
 
 # This function returns how many chains run at once by default: up to four,

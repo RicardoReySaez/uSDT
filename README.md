@@ -1,6 +1,7 @@
 # uSDT <img src="man/figures/logo.png" align="right" height="139" alt="uSDT logo" />
 
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/uSDT)](https://CRAN.R-project.org/package=uSDT)
 [![R-CMD-check](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
@@ -9,7 +10,9 @@
 research on unconscious processing. It jointly models sensitivity in paired
 direct and indirect measures, allowing researchers to compare both
 sensitivities, estimate their latent association, and test indirect sensitivity
-when direct sensitivity is zero.
+when direct sensitivity is zero. The model can be fitted by maximum likelihood
+with `lme4` or in a Bayesian framework with Stan, where Bayes factors weigh the
+evidence for and against each hypothesis.
 
 ## Documentation
 
@@ -19,6 +22,8 @@ The package website is at
 - [Getting started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
   a tutorial that walks through the whole workflow with real data, from two
   trial-level data frames to the three hypotheses.
+- [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/articles/uSDT-bayesian.html),
+  the same analysis with priors, posterior summaries and Bayes factors.
 - [Reference](https://ricardoreysaez.github.io/uSDT/reference/index.html), the
   help page of every function.
 - [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html), the
@@ -26,12 +31,21 @@ The package website is at
 
 ## Installation
 
-Install the development version from GitHub:
+Install the released version from CRAN:
+
+```r
+install.packages("uSDT")
+```
+
+Or the development version from GitHub:
 
 ```r
 install.packages("remotes")
 remotes::install_github("RicardoReySaez/uSDT")
 ```
+
+Bayesian estimation also needs `rstan` (with `BH` and `RcppEigen`) from CRAN,
+or `cmdstanr` with CmdStan, and a C++ toolchain to compile the model once.
 
 ## Example: Vadillo et al. data
 
@@ -61,6 +75,11 @@ d <- usdt_data_tasks(
 
 fit <- hsdt(d)
 summary(fit)
+
+# The same model with Stan, and Bayes factors for the three hypotheses
+fit_bayes <- hsdt(d, estimation = "bayesian")
+summary(fit_bayes)
+usdt_bf(fit_bayes)
 ```
 
 Every column, level and format argument takes either one value for both tasks

@@ -16,7 +16,8 @@ usdt_boot(
 )
 }
 \arguments{
-\item{object}{An \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}.}
+\item{object}{A frequentist \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}. A Bayesian
+fit already carries the posterior of every quantity.}
 
 \item{nsim}{Target number of successful replicates (at least 500).}
 

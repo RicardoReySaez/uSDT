@@ -1,7 +1,7 @@
 # uSDT-package.R
 # This script documents the package and records its imports.
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-09-2026
+# Last modified: 04-10-2026
 
 #' uSDT: Hierarchical Signal Detection Theory for Unconscious Processing
 #'
@@ -15,9 +15,13 @@
 #'     the result reports how every column was read, which tasks were split at
 #'     the median, and what the model will do with all of it.
 #'   \item [sdt_moments()] gives descriptive estimates for each subject.
-#'   \item [hsdt()] fits the model and tests the three hypotheses.
-#'   \item [plot()] and [usdt_reliability()] help to interpret the fit, and
-#'     [usdt_boot()] adds intervals by simulation when the model needs them.
+#'   \item [hsdt()] fits the model and tests the three hypotheses, by maximum
+#'     likelihood with 'lme4' or, with `estimation = "bayesian"`, with Stan
+#'     under the priors of [usdt_priors()].
+#'   \item [plot()] and [usdt_reliability()] help to interpret the fit,
+#'     [usdt_boot()] adds intervals by simulation when the maximum likelihood
+#'     model needs them, and [usdt_bf()] weighs each hypothesis of a Bayesian
+#'     fit with Bayes factors.
 #' }
 #'
 #' @section The three hypotheses:
@@ -31,11 +35,13 @@
 #'     unconscious processing.}
 #' }
 #'
-#' @section Confidence intervals:
-#' H1 and the regression of H3 use Wald intervals. The correlation of H2 uses a
-#' Fisher-z interval, so its limits stay between -1 and 1. When the model
-#' reaches a boundary and an interval becomes unreliable, the package reports it
-#' as unavailable and explains why.
+#' @section Intervals:
+#' In a maximum likelihood fit, H1 and the regression of H3 use Wald intervals.
+#' The correlation of H2 uses a Fisher-z interval, so its limits stay between
+#' -1 and 1. When the model reaches a boundary and an interval becomes
+#' unreliable, the package reports it as unavailable and explains why. A
+#' Bayesian fit reports central credible intervals from the posterior draws,
+#' which need no such approximation.
 #'
 #' @keywords internal
 "_PACKAGE"

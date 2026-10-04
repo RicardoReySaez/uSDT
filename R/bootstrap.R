@@ -15,7 +15,8 @@
 #' for the three core hypotheses (H1, H2, H3). This is especially useful when
 #' asymptotic Wald intervals are unreliable due to singular or boundary fits.
 #'
-#' @param object An `hsdt` object fitted by [hsdt()].
+#' @param object A frequentist `hsdt` object fitted by [hsdt()]. A Bayesian
+#'   fit already carries the posterior of every quantity.
 #' @param nsim Target number of successful replicates (at least 500).
 #' @param ncores Number of CPU cores for parallel processing. Values above 1
 #'   create a temporary cluster that works across Windows, macOS, and Linux,

@@ -17,9 +17,13 @@ processed without awareness.
 the result reports how every column was read, which tasks were split at
 the median, and what the model will do with all of it.
 \item \code{\link[=sdt_moments]{sdt_moments()}} gives descriptive estimates for each subject.
-\item \code{\link[=hsdt]{hsdt()}} fits the model and tests the three hypotheses.
-\item \code{\link[=plot]{plot()}} and \code{\link[=usdt_reliability]{usdt_reliability()}} help to interpret the fit, and
-\code{\link[=usdt_boot]{usdt_boot()}} adds intervals by simulation when the model needs them.
+\item \code{\link[=hsdt]{hsdt()}} fits the model and tests the three hypotheses, by maximum
+likelihood with 'lme4' or, with \code{estimation = "bayesian"}, with Stan
+under the priors of \code{\link[=usdt_priors]{usdt_priors()}}.
+\item \code{\link[=plot]{plot()}} and \code{\link[=usdt_reliability]{usdt_reliability()}} help to interpret the fit,
+\code{\link[=usdt_boot]{usdt_boot()}} adds intervals by simulation when the maximum likelihood
+model needs them, and \code{\link[=usdt_bf]{usdt_bf()}} weighs each hypothesis of a Bayesian
+fit with Bayes factors.
 }
 }
 
@@ -36,12 +40,14 @@ unconscious processing.}
 }
 }
 
-\section{Confidence intervals}{
+\section{Intervals}{
 
-H1 and the regression of H3 use Wald intervals. The correlation of H2 uses a
-Fisher-z interval, so its limits stay between -1 and 1. When the model
-reaches a boundary and an interval becomes unreliable, the package reports it
-as unavailable and explains why.
+In a maximum likelihood fit, H1 and the regression of H3 use Wald intervals.
+The correlation of H2 uses a Fisher-z interval, so its limits stay between
+-1 and 1. When the model reaches a boundary and an interval becomes
+unreliable, the package reports it as unavailable and explains why. A
+Bayesian fit reports central credible intervals from the posterior draws,
+which need no such approximation.
 }
 
 \seealso{

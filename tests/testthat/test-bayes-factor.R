@@ -95,3 +95,17 @@ test_that("the priors of the tested quantities match simulated prior draws", {
                  tolerance = 0.01, ignore_attr = TRUE, label = q)
   }
 })
+
+test_that("very heavy-tailed draws still give a posterior density", {
+  skip_if_not_installed("logspline")
+  # Cauchy draws like these defeat both logspline algorithms on some
+  # platforms; whichever fit converges, a density must come back, and the
+  # asinh fit, the last resort, must be close to the exact one.
+  set.seed(17)
+  x <- 0.08 + 0.1 * stats::rt(5000, 1)
+  exact <- log(stats::dt(-0.8, 1) / 0.1)
+  expect_true(is.finite(.bf_posterior(x)$log_density(0)))
+  reserve <- .bf_posterior_asinh(x)
+  expect_equal(reserve$log_density(0), exact, tolerance = 0.15)
+  expect_equal(reserve$cdf(0), stats::pt(-0.8, 1), tolerance = 0.02)
+})

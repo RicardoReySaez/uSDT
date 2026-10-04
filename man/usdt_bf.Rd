@@ -65,6 +65,11 @@ prior densities at \eqn{c} (Dickey & Lientz, 1970; Wagenmakers et al.,
 2010):
 \deqn{\mathrm{BF}_{01} = p(\theta = c \mid y) / p(\theta = c).}
 The posterior density comes from a logspline fit to the posterior draws.
+When neither logspline algorithm converges, which happens with the very
+heavy tails of the intercept and slope when the direct sensitivities
+barely vary across subjects, the draws are fitted on the scale
+\eqn{\mathrm{asinh}((x - m)/s)}, with \eqn{m} their median and \eqn{s}
+their median absolute deviation, and the density is mapped back.
 Density estimates are least precise far from the posterior mass, so a test
 value deep in a tail is read on the log scale and with caution.
 }

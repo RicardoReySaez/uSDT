@@ -47,6 +47,11 @@
 #' 2010):
 #' \deqn{\mathrm{BF}_{01} = p(\theta = c \mid y) / p(\theta = c).}
 #' The posterior density comes from a logspline fit to the posterior draws.
+#' When neither logspline algorithm converges, which happens with the very
+#' heavy tails of the intercept and slope when the direct sensitivities
+#' barely vary across subjects, the draws are fitted on the scale
+#' \eqn{\mathrm{asinh}((x - m)/s)}, with \eqn{m} their median and \eqn{s}
+#' their median absolute deviation, and the density is mapped back.
 #' Density estimates are least precise far from the posterior mass, so a test
 #' value deep in a tail is read on the log scale and with caution.
 #'
@@ -315,27 +320,56 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 }
 
 # This function fits a logspline density to posterior draws, within the bounds
-# of the quantity, and falls back to the older algorithm when it fails.
+# of the quantity. When neither logspline algorithm converges on an unbounded
+# quantity, it fits the draws on an asinh scale instead.
 .bf_posterior <- function(x, bounds = NULL) {
-  args <- list(x)
-  if (!is.null(bounds)) args <- c(args, lbound = bounds[1L], ubound = bounds[2L])
-  quiet <- function(f) {
-    out <- NULL
-    utils::capture.output(out <- suppressWarnings(
-      tryCatch(do.call(f, args), error = function(e) NULL)))
-    out
-  }
-  fit <- quiet(logspline::logspline)
+  fit <- .quiet_logspline(logspline::logspline, x, bounds)
   if (!is.null(fit)) {
     return(list(log_density = function(q) logspline::dlogspline(q, fit, log = TRUE),
                 cdf = function(q) logspline::plogspline(q, fit)))
   }
-  fit <- quiet(logspline::oldlogspline)
-  if (is.null(fit)) {
+  fit <- .quiet_logspline(logspline::oldlogspline, x, bounds)
+  if (!is.null(fit)) {
+    return(list(log_density = function(q) log(logspline::doldlogspline(q, fit)),
+                cdf = function(q) logspline::poldlogspline(q, fit)))
+  }
+  out <- if (is.null(bounds)) .bf_posterior_asinh(x)
+  if (is.null(out)) {
     .usdt_stop("the posterior density could not be estimated from the draws.")
   }
-  list(log_density = function(q) log(logspline::doldlogspline(q, fit)),
-       cdf = function(q) logspline::poldlogspline(q, fit))
+  out
+}
+
+# This function runs one logspline algorithm without its messages and
+# returns NULL when it fails.
+.quiet_logspline <- function(f, x, bounds = NULL) {
+  args <- c(list(x), if (!is.null(bounds)) {
+    list(lbound = bounds[1L], ubound = bounds[2L])
+  })
+  out <- NULL
+  utils::capture.output(out <- suppressWarnings(
+    tryCatch(do.call(f, args), error = function(e) NULL)))
+  out
+}
+
+# This function fits logspline to y = asinh((x - median) / MAD) and returns
+# the density of x through the Jacobian 1 / (MAD * sqrt(1 + z^2)). The
+# transform is close to the identity near the centre and logarithmic in the
+# tails, so the very heavy tails that the intercept and slope have when
+# sigma_D is near 0, which defeat both logspline algorithms, reach logspline
+# as light ones. Against bridge sampling it is less precise than logspline
+# when logspline converges, so it is only the last resort.
+.bf_posterior_asinh <- function(x) {
+  centre <- stats::median(x)
+  scale <- stats::mad(x)
+  z <- function(q) (q - centre) / scale
+  fit <- .quiet_logspline(logspline::logspline, asinh(z(x)))
+  if (is.null(fit)) return(NULL)
+  list(log_density = function(q) {
+         logspline::dlogspline(asinh(z(q)), fit, log = TRUE) - log(scale) -
+           0.5 * log1p(z(q)^2)
+       },
+       cdf = function(q) logspline::plogspline(asinh(z(q)), fit))
 }
 
 # This function returns the printed name of a quantity. The difference is

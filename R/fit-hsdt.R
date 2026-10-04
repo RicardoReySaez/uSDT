@@ -37,10 +37,12 @@
 #' @param ... For frequentist estimation, additional arguments passed to
 #'   [lme4::glmer()]; the model formula, family and data remain managed by the
 #'   package. For Bayesian estimation, sampling options: `chains` (default 4),
-#'   `iter` (iterations per chain including warmup, default 3500), `warmup`
-#'   (default 1000), `cores` (default `getOption("mc.cores", 1)`), `seed`,
+#'   `iter` (iterations per chain including warmup, default 6000), `warmup`
+#'   (default 1000, so each chain keeps 5000 draws), `cores` (chains run at
+#'   once; default `min(parallel::detectCores() - 2, 4)`, at least 1), `seed`,
 #'   `control = list(adapt_delta, max_treedepth)` (default 0.95 and 10) and
-#'   `refresh`.
+#'   `refresh` (iterations between progress updates of each chain; default 1%
+#'   of `iter`, and `0` hides the progress bar).
 #'
 #' @return An object of class `hsdt` containing:
 #' * `$fit`: The underlying fit: a `glmerMod` object from lme4, or the Stan fit

@@ -1,7 +1,7 @@
 # stan.R
 # Compile, cache and sample the Stan model of uSDT
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 04-10-2026
 
 # Internal functions
 
@@ -52,16 +52,23 @@
 # This function samples the model and returns the backend fit, the draws of the
 # requested variables with their chains, and the sampler diagnostics.
 .stan_sample <- function(model, data, settings, variables) {
-  if (settings$backend == "rstan") {
-    args <- list(object = model, data = data, chains = settings$chains,
-                 iter = settings$iter, warmup = settings$warmup,
-                 cores = settings$cores, control = settings$control,
-                 refresh = settings$refresh, pars = c("z_d", "z_c"),
-                 include = FALSE, show_messages = FALSE)
-    if (!is.null(settings$seed)) args$seed <- settings$seed
+  # Chains share one seed; the chain number gives each its own stream.
+  seed <- settings$seed %||% sample.int(.Machine$integer.max, 1L)
 
-    # uSDT reports its own diagnostics, so rstan's warnings would repeat them.
-    fit <- suppressWarnings(do.call(rstan::sampling, args))
+  if (settings$backend == "rstan") {
+    args <- list(data = data, chains = 1L, iter = settings$iter,
+                 warmup = settings$warmup, seed = seed,
+                 control = settings$control, refresh = settings$refresh,
+                 pars = c("z_d", "z_c"), include = FALSE,
+                 show_messages = FALSE)
+    chains <- .run_chains(settings, function(chain) {
+      callr::r_bg(function(model, args) {
+        loadNamespace("rstan")
+        args <- c(list(object = model), args)
+        suppressWarnings(do.call(rstan::sampling, args))
+      }, args = list(model = model, args = c(args, chain_id = chain)))
+    })
+    fit <- rstan::sflist2stanfit(chains)
     params <- rstan::get_sampler_params(fit, inc_warmup = FALSE)
     divergent <- sum(vapply(params, function(p) sum(p[, "divergent__"]), 0))
     treedepth <- sum(vapply(params, function(p) {
@@ -69,19 +76,27 @@
     }, 0))
     draws <- posterior::as_draws_array(as.array(fit))
   } else {
-    fit <- model$sample(
-      data = data, chains = settings$chains,
-      parallel_chains = settings$cores, iter_warmup = settings$warmup,
-      iter_sampling = settings$iter - settings$warmup, seed = settings$seed,
-      adapt_delta = settings$control$adapt_delta,
-      max_treedepth = settings$control$max_treedepth,
-      refresh = settings$refresh, show_messages = FALSE,
-      show_exceptions = FALSE)
+    # The chains write their draws to this session's temporary folder, which
+    # outlives the processes that sampled them.
+    args <- list(data = data, chains = 1L, seed = seed,
+                 iter_warmup = settings$warmup,
+                 iter_sampling = settings$iter - settings$warmup,
+                 adapt_delta = settings$control$adapt_delta,
+                 max_treedepth = settings$control$max_treedepth,
+                 refresh = settings$refresh, show_messages = TRUE,
+                 show_exceptions = FALSE, output_dir = tempdir())
+    path <- cmdstanr::cmdstan_path()
+    files <- .run_chains(settings, function(chain) {
+      callr::r_bg(function(model, args, path) {
+        suppressMessages(cmdstanr::set_cmdstan_path(path))
+        do.call(model$sample, args)$output_files()
+      }, args = list(model = model, args = c(args, chain_ids = chain),
+                     path = path))
+    })
+    fit <- cmdstanr::as_cmdstan_fit(unlist(files), check_diagnostics = FALSE)
     summary <- fit$diagnostic_summary(quiet = TRUE)
     divergent <- sum(summary$num_divergent)
     treedepth <- sum(summary$num_max_treedepth)
-
-    # cmdstanr reads its output files lazily, so only uSDT's variables are read.
     written <- unique(sub("\\[.*$", "", fit$metadata()$variables))
     draws <- fit$draws(variables = intersect(variables, written))
   }
@@ -91,4 +106,56 @@
   keep <- present[sub("\\[.*$", "", present) %in% variables]
   list(fit = fit, draws = posterior::subset_draws(draws, variable = keep),
        divergent = divergent, treedepth = treedepth)
+}
+
+# This function runs every chain in its own background R session, at most
+# `cores` at a time, and returns what each session returned. Stan's messages
+# and warnings stay in those sessions; the iterations they report move a single
+# progress bar, which `refresh = 0` hides. Interrupting the fit stops them.
+.run_chains <- function(settings, start) {
+  chains <- settings$chains
+  done <- integer(chains)
+  results <- vector("list", chains)
+  queue <- seq_len(chains)
+  running <- list()
+  on.exit(for (p in running) p$kill(), add = TRUE)
+
+  # The bar starts with the first progress report after the first iteration,
+  # so the seconds the sessions take to start do not distort its estimate of
+  # the time left.
+  bar <- NULL
+  while (length(queue) || length(running)) {
+    while (length(queue) && length(running) < settings$cores) {
+      running[[as.character(queue[1L])]] <- start(queue[1L])
+      queue <- queue[-1L]
+    }
+    for (key in names(running)) {
+      p <- running[[key]]
+      chain <- as.integer(key)
+      alive <- p$is_alive()
+      lines <- p$read_output_lines()
+      p$read_error_lines()
+      at <- regmatches(lines, regexpr("Iteration:\\s*[0-9]+", lines))
+      if (length(at)) done[chain] <- max(as.integer(sub("\\D+", "", at)))
+      if (!alive) {
+        results[[chain]] <- tryCatch(p$get_result(), error = function(e) {
+          .usdt_stop("chain ", chain, " failed: ",
+                     conditionMessage(e$parent %||% e))
+        })
+        done[chain] <- settings$iter
+        running[[key]] <- NULL
+      }
+    }
+    if (settings$refresh > 0 && is.null(bar) && max(done) > 1L) {
+      bar <- cli::cli_progress_bar(
+        total = chains * settings$iter, clear = FALSE, auto_terminate = FALSE,
+        format = paste("Sampling {chains} chains {cli::pb_bar}",
+                       "{cli::pb_percent} | ETA: {cli::pb_eta}"),
+        format_done = "Sampled {chains} chains in {cli::pb_elapsed}")
+    }
+    if (!is.null(bar)) cli::cli_progress_update(id = bar, set = sum(done))
+    if (length(running)) Sys.sleep(0.1)
+  }
+  if (!is.null(bar)) cli::cli_progress_done(id = bar)
+  results
 }

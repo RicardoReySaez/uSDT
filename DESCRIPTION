@@ -37,6 +37,7 @@ LazyDataCompression: xz
 Depends:
     R (>= 4.1)
 Imports:
+    parallel,
     stats,
     utils,
     lme4,
@@ -52,7 +53,9 @@ Suggests:
     rstan,
     BH,
     RcppEigen,
-    cmdstanr
+    cmdstanr,
+    callr,
+    cli
 Additional_repositories: https://stan-dev.r-universe.dev
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

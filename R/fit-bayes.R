@@ -46,7 +46,7 @@
 .check_backend <- function(backend) {
   needs <- switch(backend, rstan = c("rstan", "BH", "RcppEigen"),
                   cmdstanr = "cmdstanr")
-  rlang::check_installed(c(needs, "posterior"),
+  rlang::check_installed(c(needs, "posterior", "callr", "cli"),
                          reason = "to fit the Bayesian model.")
   if (backend == "cmdstanr" &&
       is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
@@ -56,12 +56,27 @@
   invisible(TRUE)
 }
 
-# This function completes the sampling options given through `...`.
+# This function returns how many chains run at once by default: up to four,
+# leaving two cores free, and no more than two while R CMD check limits the
+# cores a package may use.
+.default_cores <- function() {
+  n <- tryCatch(parallel::detectCores(), error = function(e) NA_integer_)
+  cores <- if (is.na(n)) 1L else max(1L, min(n - 2L, 4L))
+  limit <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+  if (nzchar(limit) && !identical(tolower(limit), "false")) {
+    cores <- min(cores, 2L)
+  }
+  as.integer(cores)
+}
+
+# This function completes the sampling options given through `...`. Each of
+# the four chains keeps 5000 draws after 1000 warmup iterations, and reports
+# its progress every 1% of its iterations.
 .bayes_settings <- function(dots) {
-  defaults <- list(chains = 4L, iter = 3500L, warmup = 1000L,
-                   cores = getOption("mc.cores", 1L), seed = NULL,
+  defaults <- list(chains = 4L, iter = 6000L, warmup = 1000L,
+                   cores = .default_cores(), seed = NULL,
                    control = list(adapt_delta = 0.95, max_treedepth = 10L),
-                   refresh = 0L)
+                   refresh = NULL)
   unknown <- setdiff(names(dots), names(defaults))
   if (length(unknown)) {
     .usdt_stop("`", unknown[1L], "` is not a sampling option. A Bayesian fit ",
@@ -82,6 +97,7 @@
     .usdt_stop("`iter` counts the warmup too, so it must exceed `warmup`.")
   }
   if (!is.null(s$seed)) .check_scalar_number(s$seed, "seed", lower = 0, whole = TRUE)
+  if (is.null(s$refresh)) s$refresh <- max(1L, s$iter %/% 100L)
   .check_scalar_number(s$refresh, "refresh", lower = 0, whole = TRUE)
   .check_scalar_number(s$control$adapt_delta, "adapt_delta", lower = 0,
                        upper = 1, open_lower = TRUE, open_upper = TRUE)

@@ -7,7 +7,9 @@
   deviations and correlation of the two sensitivities and on the criteria. The
   Stan model compiles once per installation into a per-user cache, through
   rstan or cmdstanr. Equal variances are the default; unequal variances are
-  optional.
+  optional. By default four chains keep 5000 draws each, and up to four run
+  at once, leaving two cores free. Each chain runs in a background session, so
+  sampling shows a single progress bar and none of Stan's messages.
 * `usdt_priors()` specifies the priors as Stan-style strings, and
   `plot.usdt_priors()` shows what they imply before any data are fitted.
 * `usdt_tests()`, `sensitivity_diff()`, `latent_cor()` and

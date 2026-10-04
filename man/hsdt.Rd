@@ -55,10 +55,12 @@ R-universe together with CmdStan). Bayesian estimation only.}
 \item{...}{For frequentist estimation, additional arguments passed to
 \code{\link[lme4:glmer]{lme4::glmer()}}; the model formula, family and data remain managed by the
 package. For Bayesian estimation, sampling options: \code{chains} (default 4),
-\code{iter} (iterations per chain including warmup, default 3500), \code{warmup}
-(default 1000), \code{cores} (default \code{getOption("mc.cores", 1)}), \code{seed},
+\code{iter} (iterations per chain including warmup, default 6000), \code{warmup}
+(default 1000, so each chain keeps 5000 draws), \code{cores} (chains run at
+once; default \code{min(parallel::detectCores() - 2, 4)}, at least 1), \code{seed},
 \code{control = list(adapt_delta, max_treedepth)} (default 0.95 and 10) and
-\code{refresh}.}
+\code{refresh} (iterations between progress updates of each chain; default 1\%
+of \code{iter}, and \code{0} hides the progress bar).}
 
 \item{object}{An \code{hsdt} object.}
 

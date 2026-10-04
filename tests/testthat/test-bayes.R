@@ -31,7 +31,7 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
 
   set.seed(2)
   d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
-  m <- hsdt(d, estimation = "bayesian", chains = 2, iter = 1500,
+  m <- hsdt(d, estimation = "bayesian", chains = 2, iter = 1500, refresh = 0,
             warmup = 500, seed = 1)
   f <- hsdt(d)
 
@@ -109,4 +109,33 @@ test_that("a brms model is tested from its posterior", {
   expect_identical(tests$hypothesis, c("H1", "H2", "H3", "H3"))
   expect_identical(latent_cor(fit, "cond_D", "cond_I")$p.value,
                    tests$p.value[2L])
+})
+
+test_that("chains run in background sessions and report their results", {
+  skip_on_cran()
+  skip_if_not_installed("callr")
+  settings <- list(chains = 3L, cores = 2L, iter = 10L, refresh = 0L)
+  out <- .run_chains(settings, function(chain) {
+    callr::r_bg(function(k) {
+      cat("Chain", k, "Iteration: 10 / 10\n")
+      k
+    }, args = list(k = chain))
+  })
+  expect_identical(out, list(1L, 2L, 3L))
+
+  expect_error(.run_chains(settings, function(chain) {
+    callr::r_bg(function() stop("no draws"))
+  }), "chain 1 failed: no draws")
+})
+
+test_that("the default cores leave two free, up to four, and two under check", {
+  old <- Sys.getenv("_R_CHECK_LIMIT_CORES_", NA)
+  on.exit(if (is.na(old)) Sys.unsetenv("_R_CHECK_LIMIT_CORES_") else
+    Sys.setenv(`_R_CHECK_LIMIT_CORES_` = old), add = TRUE)
+  Sys.setenv(`_R_CHECK_LIMIT_CORES_` = "TRUE")
+  expect_lte(.default_cores(), 2L)
+  Sys.setenv(`_R_CHECK_LIMIT_CORES_` = "")
+  expect_true(.default_cores() %in% 1:4)
+  s <- .bayes_settings(list())
+  expect_identical(c(s$chains, s$iter - s$warmup, s$refresh), c(4L, 5000L, 60L))
 })

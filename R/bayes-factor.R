@@ -528,16 +528,16 @@ plot.usdt_bf <- function(x, ...) {
       if (!is.na(cv$prob)) sprintf("\nP(H1 | data) = %.3f", cv$prob) else ""))
   }))
 
-  # The posterior takes the colours of the model estimates and the prior the
-  # grey of what does not come from the fit.
-  colours <- c(Posterior = "#116B60", Prior = "#A8AEB3")
+  # The posterior is a light purple and the prior the grey of what does not
+  # come from the fit; the dashed prior line also tells them apart.
+  colours <- c(Posterior = "#9B7FD4", Prior = "#A8AEB3")
   plot <- ggplot2::ggplot(densities)
   if (!is.null(areas)) {
     plot <- plot + ggplot2::geom_ribbon(
       data = areas,
       ggplot2::aes(x = .data[["x"]], ymin = 0, ymax = .data[["density"]],
                    group = .data[["piece"]]),
-      inherit.aes = FALSE, fill = "#3FA88E", alpha = 0.17
+      inherit.aes = FALSE, fill = colours[["Posterior"]], alpha = 0.2
     )
   }
   plot <- plot +

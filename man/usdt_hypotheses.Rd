@@ -144,17 +144,19 @@ names(lme4::fixef(fit))
 usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
 }
 
-\dontrun{
+\donttest{
 # 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
-fit_b <- brms::brm(
-  y | trials(n) ~ 0 + direct + task:size + task:cond +
-    (0 + direct | subj) + (0 + task:cond | subj),
-  data = counts, family = binomial("probit"),
-  prior = brms::prior(normal(0, 1), class = b), seed = 1
-)
+if (requireNamespace("brms", quietly = TRUE)) {
+  fit_b <- brms::brm(
+    y | trials(n) ~ 0 + direct + task:size + task:cond +
+      (0 + direct | subj) + (0 + task:cond | subj),
+    data = counts, family = binomial("probit"),
+    prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
+  )
 
-# The same term names; the tests now summarise the posterior
-usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+  # The same term names; the tests now summarise the posterior
+  usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+}
 }
 
 }

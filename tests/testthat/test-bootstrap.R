@@ -1,7 +1,8 @@
 # test-bootstrap.R
-# This script tests the bootstrap filter and its interval scales.
+# This script tests the bootstrap arguments, filter, interval scales and
+# hypothesis table.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-10-2026
 
 test_that("the bootstrap drops only samples that failed to fit", {
   samples <- rbind(
@@ -46,4 +47,67 @@ test_that("a correlation interval stays inside its range", {
                    drop(.boot_ci(m[, j], c(0.8, 1.3, 0.3)[j], 0.95, type)),
                    numeric(2L))))
   }
+})
+
+test_that("the bootstrap rejects invalid arguments before refitting", {
+  # The checks run before the model is touched, so an empty object of the
+  # right class is enough to reach each of them.
+  m <- structure(list(), class = "hsdt")
+
+  expect_error(usdt_boot(list()), "must come from hsdt()", fixed = TRUE)
+  expect_error(usdt_boot(m, nsim = 100), "`nsim`", fixed = TRUE)
+  expect_error(usdt_boot(m, nsim = 500.5), "`nsim`", fixed = TRUE)
+  expect_error(usdt_boot(m, ncores = 0), "`ncores`", fixed = TRUE)
+  expect_error(usdt_boot(m, nsim = 500, max_attempts = 499),
+               "`max_attempts`", fixed = TRUE)
+  expect_error(usdt_boot(m, level = 1), "`level`", fixed = TRUE)
+  expect_error(usdt_boot(m, seed = -1), "`seed`", fixed = TRUE)
+  expect_error(usdt_boot(m, progress = NA), "`progress`", fixed = TRUE)
+  expect_error(usdt_boot(m, type = "bca"), "should be one of")
+})
+
+test_that("the bootstrap fills the hypothesis table from the replicates", {
+  tests <- rbind(
+    .row("d'(indirect) - d'(direct)", 1, se = 0.3, statistic = 3.3,
+         ci_method = "Wald"),
+    .row("correlation", 0.6, ci_method = "Fisher-z"),
+    .row_na("intercept", 5, "the intercept standard error is invalid"),
+    .row("slope", 0.4, ci_method = "Wald")
+  )
+
+  # Ten replicates per term, placed at known distances from each estimate.
+  shift <- c(-2, -1.5, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1.5, 2)
+  t <- cbind(diff      = 1 + shift,
+             rho       = tanh(atanh(0.6) + shift / 4),
+             intercept = 5 + shift / 10,
+             slope     = 0.4 + shift / 2)
+  result <- .boot_tests(tests, t, level = 0.9, type = "norm")
+
+  # Each term reads its own column of replicates.
+  expect_identical(result$term, tests$term)
+  expect_identical(result$estimate, tests$estimate)
+  expect_equal(result$se, unname(apply(t, 2L, stats::sd)))
+
+  # Four centred replicates of the difference and the slope reach their
+  # estimates, so p = (4 + 1) / (10 + 1). None reach the correlation or the
+  # intercept, and their p-values stop at 1 / 11 rather than zero.
+  expect_equal(result$p.value, c(5, 1, 1, 5) / 11)
+
+  # The normal interval stays on the estimate's scale, except for the
+  # correlation, which is built on the Fisher-z scale and transformed back.
+  z <- stats::qnorm(0.95) * c(-1, 1)
+  v <- t[, "diff"]
+  expect_equal(c(result$conf.low[1L], result$conf.high[1L]),
+               2 * 1 - mean(v) + z * stats::sd(v))
+  v <- atanh(t[, "rho"])
+  expect_equal(c(result$conf.low[2L], result$conf.high[2L]),
+               tanh(2 * atanh(0.6) - mean(v) + z * stats::sd(v)))
+
+  # The bootstrap replaces the Wald statistic and labels its own intervals.
+  expect_true(all(is.na(result$statistic)))
+  expect_identical(result$ci_method, rep("bootstrap (norm)", 4L))
+
+  # A term the Wald test could not estimate is usable once replicates exist.
+  expect_identical(result$status, rep("ok", 4L))
+  expect_true(all(is.na(result$reason)))
 })

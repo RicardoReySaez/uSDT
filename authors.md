@@ -16,7 +16,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/RicardoReySaez/uSDT/blob/v0.1.0/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/RicardoReySaez/uSDT/blob/main/DESCRIPTION)
 
 Rey-Sáez R, Garre-Frutos F, Franco-Martínez A, Vadillo M (2026). *uSDT:
 Hierarchical Signal Detection Theory Models for Unconscious Processing*.

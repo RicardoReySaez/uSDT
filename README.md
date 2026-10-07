@@ -19,17 +19,25 @@ evidence for and against each hypothesis.
 ## Documentation
 
 The package website is at
-**<https://ricardoreysaez.github.io/uSDT/>**. It contains:
+**<https://ricardoreysaez.github.io/uSDT/>** and documents the version on
+CRAN. It contains:
 
 - [Getting started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
   a tutorial that walks through the whole workflow with real data, from two
   trial-level data frames to the three hypotheses.
-- [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/articles/uSDT-bayesian.html),
-  the same analysis with priors, posterior summaries and Bayes factors.
 - [Reference](https://ricardoreysaez.github.io/uSDT/reference/index.html), the
   help page of every function.
 - [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html), the
   changes in each release.
+
+The development version from GitHub has its own website at
+**<https://ricardoreysaez.github.io/uSDT/dev/>**. It also documents the
+Bayesian estimation, which is not on CRAN yet:
+
+<!-- When the Bayesian estimation reaches CRAN, move this article to the list
+above and remove "dev/" from its link. -->
+- [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html),
+  the same analysis with priors, posterior summaries and Bayes factors.
 
 ## Installation
 

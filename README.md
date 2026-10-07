@@ -1,6 +1,8 @@
 # uSDT <img src="man/figures/logo.png" align="right" height="139" alt="uSDT logo" />
 
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/uSDT)](https://CRAN.R-project.org/package=uSDT)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/uSDT)](https://CRAN.R-project.org/package=uSDT)
 [![R-CMD-check](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml)
 <!-- badges: end -->
@@ -26,11 +28,17 @@ The package website is at
 
 ## Installation
 
-Install the development version from GitHub:
+Install the released version from CRAN:
 
 ```r
-install.packages("remotes")
-remotes::install_github("RicardoReySaez/uSDT")
+install.packages("uSDT")
+```
+
+Or install the development version from GitHub:
+
+```r
+# install.packages("pak")
+pak::pak("RicardoReySaez/uSDT")
 ```
 
 ## Example: Vadillo et al. data

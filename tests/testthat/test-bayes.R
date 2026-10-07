@@ -129,9 +129,11 @@ test_that("chains run in background sessions and report their results", {
   })
   expect_identical(out, list(1L, 2L, 3L))
 
+  # Chains 1 and 2 start together, and the error names whichever of them is
+  # found dead first, which depends on how fast each session stops.
   expect_error(.run_chains(settings, function(chain) {
     callr::r_bg(function() stop("no draws"))
-  }), "chain 1 failed: no draws")
+  }), "chain [12] failed: no draws")
 })
 
 test_that("the default cores leave two free, up to four, and two under check", {

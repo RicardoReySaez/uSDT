@@ -1,7 +1,7 @@
 Package: uSDT
 Type: Package
 Title: Hierarchical Signal Detection Theory Models for Unconscious Processing
-Version: 0.1.0
+Version: 0.1.0.9000
 Authors@R: c(
     person("Ricardo", "Rey-Sáez",
            email   = "ricardoreysaez95@gmail.com",

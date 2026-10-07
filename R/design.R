@@ -1,7 +1,7 @@
 # design.R
 # This script builds the model formula and records its structure.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 07-10-2026
 
 # Internal functions
 
@@ -45,19 +45,4 @@
     n_fixed   = length(crit) + 2L,
     n_var     = nv
   )
-}
-
-# This function wraps a long formula for printed output.
-.formula_lines <- function(f, width = 74L) {
-  txt <- paste(deparse(f, width.cutoff = 500L), collapse = " ")
-  txt <- gsub("\\s+", " ", txt)
-  if (nchar(txt) <= width) return(txt)
-
-  # A long formula breaks before its first random term.
-  at <- regexpr(" + (0 +", txt, fixed = TRUE)
-  if (at < 0L) return(strwrap(txt, width))
-  head <- substr(txt, 1L, at + 1L)
-  tail <- substr(txt, at + 3L, nchar(txt))
-  pad  <- strrep(" ", regexpr("~", head, fixed = TRUE) + 1L)
-  c(head, paste0(pad, tail))
 }

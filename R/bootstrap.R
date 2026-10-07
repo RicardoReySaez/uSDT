@@ -1,7 +1,7 @@
 # bootstrap.R
 # Parametric bootstrap for fitted uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 07-10-2026
 
 # Public functions
 
@@ -161,7 +161,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     batch_n <- min(batch_size, nsim - usable, max_attempts - attempted)
     bt <- tryCatch(
       suppressWarnings(do.call(
-        lme4::bootMer,
+        .boot_mer,
         c(list(x = object$fit, FUN = stat, nsim = batch_n,
                type = "parametric", use.u = FALSE, seed = NULL), par_args)
       )),
@@ -232,6 +232,13 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 }
 
 # Internal functions
+
+# This function refits the model to simulated data. It only passes its
+# arguments on to lme4::bootMer(), so the tests can replace it with a fake
+# that returns replicates without refitting.
+.boot_mer <- function(...) {
+  lme4::bootMer(...)
+}
 
 # This function creates the calculation used by each bootstrap sample.
 .boot_statistic <- function(fit, direct, indirect) {

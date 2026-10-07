@@ -16,3 +16,5 @@
 ^\.Rprofile$
 ^cran-comments\.md$
 ^vignettes/.*\.Rmd\.orig$
+^CRAN-SUBMISSION$
+^codecov\.yml$

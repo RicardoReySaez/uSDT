@@ -2,8 +2,10 @@
 
 <!-- badges: start -->
 [![CRAN status](https://www.r-pkg.org/badges/version/uSDT)](https://CRAN.R-project.org/package=uSDT)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/uSDT)](https://CRAN.R-project.org/package=uSDT)
 [![R-CMD-check](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml)
+[![Codecov test coverage](https://codecov.io/gh/RicardoReySaez/uSDT/graph/badge.svg)](https://app.codecov.io/gh/RicardoReySaez/uSDT)
 <!-- badges: end -->
 
 `uSDT` estimates hierarchical signal detection theory (SDT) models for
@@ -37,11 +39,11 @@ Install the released version from CRAN:
 install.packages("uSDT")
 ```
 
-Or the development version from GitHub:
+Or install the development version from GitHub:
 
 ```r
-install.packages("remotes")
-remotes::install_github("RicardoReySaez/uSDT")
+# install.packages("pak")
+pak::pak("RicardoReySaez/uSDT")
 ```
 
 Bayesian estimation also needs `rstan` (with `BH` and `RcppEigen`) from CRAN,

@@ -1,0 +1,23 @@
+# codecov.yml
+# This file configures how Codecov reports the coverage of uSDT.
+# Author: Ricardo Rey-Sáez
+# Last modified: 07-10-2026
+
+# Codecov posts no comment on pull requests.
+comment: false
+
+# Codecov compares each commit with the previous one, both for the whole
+# package (project) and for the lines the commit changes (patch). The checks
+# are informational: a drop in coverage shows on the commit but never fails it.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true

@@ -5,6 +5,7 @@
 [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/uSDT)](https://CRAN.R-project.org/package=uSDT)
 [![R-CMD-check](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml)
+[![Codecov test coverage](https://codecov.io/gh/RicardoReySaez/uSDT/graph/badge.svg)](https://app.codecov.io/gh/RicardoReySaez/uSDT)
 <!-- badges: end -->
 
 `uSDT` estimates hierarchical signal detection theory (SDT) models for

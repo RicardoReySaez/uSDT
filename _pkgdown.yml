@@ -1,9 +1,16 @@
 # _pkgdown.yml
 # This file configures the uSDT website built by pkgdown.
 # Author: Ricardo Rey-Sáez
-# Last modified: 05-09-2026
+# Last modified: 07-10-2026
 
 url: https://ricardoreysaez.github.io/uSDT/
+
+# The version number decides where the site goes. A release version such as
+# 0.1.0 builds the main site, which documents what CRAN users install. A
+# development version such as 0.1.0.9000 builds a separate site under /dev/
+# and leaves the main one untouched.
+development:
+  mode: auto
 
 template:
   math-rendering: katex

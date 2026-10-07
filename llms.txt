@@ -22,12 +22,19 @@ It contains:
 
 ## Installation
 
-Install the development version from GitHub:
+Install the released version from CRAN:
 
 ``` r
 
-install.packages("remotes")
-remotes::install_github("RicardoReySaez/uSDT")
+install.packages("uSDT")
+```
+
+Or install the development version from GitHub:
+
+``` r
+
+# install.packages("pak")
+pak::pak("RicardoReySaez/uSDT")
 ```
 
 ## Example: Vadillo et al. data

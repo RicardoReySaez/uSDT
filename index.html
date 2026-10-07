@@ -96,16 +96,19 @@
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>Install the development version from GitHub:</p>
+<p>Install the released version from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"remotes"</span><span class="op">)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"RicardoReySaez/uSDT"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"uSDT"</span><span class="op">)</span></span></code></pre></div>
+<p>Or install the development version from GitHub:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"RicardoReySaez/uSDT"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="example-vadillo-et-al-data">Example: Vadillo et al. data<a class="anchor" aria-label="anchor" href="#example-vadillo-et-al-data"></a>
 </h2>
 <p>The package includes the two trial-level data frames from Experiment 2 of Vadillo et al. (2025): <code>vadillo_awareness</code> for the direct task and <code>vadillo_cuing</code> for the indirect task.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/RicardoReySaez/uSDT" class="external-link">uSDT</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">vadillo_awareness</span><span class="op">)</span></span>
@@ -134,6 +137,7 @@
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
+<li><a href="https://cloud.r-project.org/package=uSDT" class="external-link">View on CRAN</a></li>
 <li><a href="https://github.com/RicardoReySaez/uSDT/" class="external-link">Browse source code</a></li>
 <li><a href="https://github.com/RicardoReySaez/uSDT/issues" class="external-link">Report a bug</a></li>
 </ul>
@@ -167,6 +171,8 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
+<li><a href="https://CRAN.R-project.org/package=uSDT" class="external-link"><img src="https://www.r-pkg.org/badges/version/uSDT" alt="CRAN status"></a></li>
+<li><a href="https://CRAN.R-project.org/package=uSDT" class="external-link"><img src="https://cranlogs.r-pkg.org/badges/grand-total/uSDT" alt="CRAN downloads"></a></li>
 <li><a href="https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/RicardoReySaez/uSDT/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml" class="external-link"><img src="https://github.com/RicardoReySaez/uSDT/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
 </ul>

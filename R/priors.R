@@ -1,23 +1,32 @@
 # priors.R
 # Specify the priors of the Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 15-10-2026
 
 # Public functions
 
 #' Priors for the Bayesian hierarchical SDT model
 #'
-#' Specifies the prior distributions of the Bayesian model. The family of every
-#' prior is fixed by the model; you choose its parameters. Each prior is
-#' written as a string in Stan notation:
-#' * means of \eqn{d'} and of the criterion: `"normal(location, scale)"`;
-#' * between-subject standard deviations: `"student_t(df, location, scale)"`,
-#'   a Student-\eqn{t} distribution truncated at zero. With location 0 it is a
-#'   half-Student-\eqn{t};
-#' * correlations: `"scaled_beta(alpha, beta)"`, a beta distribution stretched
-#'   from \eqn{(0, 1)} to \eqn{(-1, 1)};
-#' * signal standard deviation under unequal variances:
-#'   `"lognormal(location, scale)"`.
+#' Specifies the prior distributions of the Bayesian model. Each prior is
+#' written as a string in Stan notation, `"family(arguments)"`, with the
+#' families and parameterisations of Stan, e.g. `"normal(0, 1)"`,
+#' `"student_t(4, 0, 0.5)"` or `"gamma(2, 4)"`. Each argument takes the
+#' families that cover the values its parameter can take:
+#' * means of \eqn{d'} and of the criterion can take any real value, so their
+#'   prior must be defined on the whole real line: `normal`, `std_normal`,
+#'   `student_t`, `cauchy`, `double_exponential`, `logistic`, `gumbel`,
+#'   `skew_normal`, `exp_mod_normal` or `skew_double_exponential`;
+#' * standard deviations take any of those, truncated at zero (with location
+#'   0, a `student_t` is a half-Student-\eqn{t}), or a family on the positive
+#'   values: `lognormal`, `exponential`, `gamma`, `inv_gamma`, `weibull`,
+#'   `frechet`, `rayleigh`, `chi_square`, `inv_chi_square`,
+#'   `scaled_inv_chi_square`, `loglogistic`, or `pareto_type_2` with
+#'   `mu <= 0`;
+#' * correlations take `"lkj(eta)"`, the LKJ prior on a correlation matrix and
+#'   the only correlation prior brms accepts. On a 2 x 2 matrix the
+#'   correlation follows a beta(eta, eta) distribution stretched from
+#'   \eqn{(0, 1)} to \eqn{(-1, 1)}: `lkj(1)` is uniform, and larger values of
+#'   eta concentrate it around zero.
 #'
 #' @param dprime Prior of the mean \eqn{d'} of each task.
 #' @param sd_dprime Prior of the between-subject standard deviation of
@@ -42,13 +51,11 @@
 #' The defaults are centred at zero and weakly informative on the probit
 #' scale: `normal(0, 1)` for the mean \eqn{d'}, `normal(0, 0.5)` for the mean
 #' criterion, `student_t(4, 0, 0.5)` for every between-subject standard
-#' deviation and a uniform `scaled_beta(1, 1)` for every correlation. With them,
-#' the hit and false-alarm rates of a new subject spread over \eqn{(0, 1)}
-#' without piling up at either end; see [plot.usdt_priors()]. With equal
-#' locations for both means, the prior of the difference between them (H1) is
-#' centred at zero. A symmetric scaled beta,
-#' `scaled_beta(a, a)`, equals the marginal of an LKJ(a) prior on a 2 x 2
-#' correlation matrix and is centred at zero (H2).
+#' deviation and a uniform `lkj(1)` for every correlation. With them, the hit
+#' and false-alarm rates of a new subject spread over \eqn{(0, 1)} without
+#' piling up at either end; see [plot.usdt_priors()]. With the same prior for
+#' both means, the prior of the difference between them (H1) is symmetric
+#' around zero, and every `lkj` prior is centred at zero (H2).
 #'
 #' The slope and intercept of the latent regression (H3) have no priors of their
 #' own: their priors follow from those of the means, standard deviations and
@@ -57,7 +64,8 @@
 #' are rescaled by the same factor, because the slope depends on their ratio.
 #'
 #' @return An object of class `usdt_priors`: a data frame with one row per
-#'   prior, giving the parameter, the task, the family and its arguments.
+#'   prior, giving the parameter, the task, the family, its arguments (a list
+#'   column) and the prior as a string.
 #'
 #' @examples
 #' # Default priors
@@ -68,43 +76,38 @@
 #'                           indirect = "normal(0, 0.5)"))
 #'
 #' # A correlation prior that concentrates near zero
-#' usdt_priors(cor_dprime = "scaled_beta(2, 2)")
+#' usdt_priors(cor_dprime = "lkj(2)")
 #'
 #' # Standard deviations of d' expected around 0.3 rather than near zero
 #' usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
 #'
+#' # Any family that covers the positive values, e.g. a gamma distribution
+#' usdt_priors(sd_dprime = "gamma(2, 4)")
+#'
 #' @export
 usdt_priors <- function(dprime        = "normal(0, 1)",
                         sd_dprime     = "student_t(4, 0, 0.5)",
-                        cor_dprime    = "scaled_beta(1, 1)",
+                        cor_dprime    = "lkj(1)",
                         criterion     = "normal(0, 0.5)",
                         sd_criterion  = "student_t(4, 0, 0.5)",
-                        cor_criterion = "scaled_beta(1, 1)",
+                        cor_criterion = "lkj(1)",
                         sd_signal     = "lognormal(0, 0.5)") {
+  values <- as.list(environment())
 
-  # Each argument has one admissible family; task arguments may vary by task.
-  spec <- list(
-    dprime        = list(value = dprime,        family = "normal",      tasks = TRUE),
-    sd_dprime     = list(value = sd_dprime,     family = "student_t",   tasks = TRUE),
-    cor_dprime    = list(value = cor_dprime,    family = "scaled_beta", tasks = FALSE),
-    criterion     = list(value = criterion,     family = "normal",      tasks = TRUE),
-    sd_criterion  = list(value = sd_criterion,  family = "student_t",   tasks = TRUE),
-    cor_criterion = list(value = cor_criterion, family = "scaled_beta", tasks = FALSE),
-    sd_signal     = list(value = sd_signal,     family = "lognormal",   tasks = TRUE)
-  )
-
-  rows <- lapply(names(spec), function(parameter) {
-    s <- spec[[parameter]]
-    values <- if (s$tasks) .per_task(s$value, parameter) else list(both = s$value)
-    do.call(rbind, lapply(names(values), function(task) {
-      cbind(data.frame(parameter = parameter, task = task,
-                       stringsAsFactors = FALSE),
-            .parse_prior(values[[task]], parameter, s$family))
-    }))
+  # Task arguments take one prior for both tasks or one per task.
+  rows <- lapply(names(.prior_parameters), function(parameter) {
+    value <- values[[parameter]]
+    tasks <- if (.prior_parameters[[parameter]]$tasks) {
+      .per_task(value, parameter)
+    } else {
+      list(both = value)
+    }
+    lapply(names(tasks), function(task) {
+      c(list(parameter = parameter, task = task),
+        .parse_prior(tasks[[task]], parameter))
+    })
   })
-  out <- do.call(rbind, rows)
-  rownames(out) <- NULL
-  structure(out, class = c("usdt_priors", "data.frame"))
+  .priors_frame(unlist(rows, recursive = FALSE))
 }
 
 #' @param x A `usdt_priors` object.
@@ -122,15 +125,27 @@ print.usdt_priors <- function(x, ...) {
 
 # Internal functions
 
+# The parameters that take a prior: whether each task has its own, the kind
+# of value they are, and the label they print with.
+.prior_parameters <- list(
+  dprime        = list(tasks = TRUE,  kind = "mean", label = "mean d'"),
+  sd_dprime     = list(tasks = TRUE,  kind = "sd",   label = "sd(d')"),
+  cor_dprime    = list(tasks = FALSE, kind = "cor",  label = "cor(d')"),
+  criterion     = list(tasks = TRUE,  kind = "mean", label = "mean c"),
+  sd_criterion  = list(tasks = TRUE,  kind = "sd",   label = "sd(c)"),
+  cor_criterion = list(tasks = FALSE, kind = "cor",  label = "cor(c)"),
+  sd_signal     = list(tasks = TRUE,  kind = "sd",   label = "sd(signal)")
+)
+
+# The values each kind of parameter can take.
+.prior_domains <- list(mean = c(-Inf, Inf), sd = c(0, Inf), cor = c(-1, 1))
+
 # This function prints one line per prior.
 .print_prior_rows <- function(x) {
-  labels <- c(dprime = "mean d'", sd_dprime = "sd(d')", cor_dprime = "cor(d')",
-              criterion = "mean c", sd_criterion = "sd(c)",
-              cor_criterion = "cor(c)", sd_signal = "sd(signal)")
   cat(sprintf("  %-12s %-10s %s\n", "Parameter", "Task", "Prior"))
   for (i in seq_len(nrow(x))) {
-    cat(sprintf("  %-12s %-10s %s\n", labels[[x$parameter[i]]], x$task[i],
-                x$prior[i]))
+    cat(sprintf("  %-12s %-10s %s\n", .prior_parameters[[x$parameter[i]]]$label,
+                x$task[i], x$prior[i]))
   }
   invisible(NULL)
 }
@@ -148,48 +163,78 @@ print.usdt_priors <- function(x, ...) {
   priors[keep, , drop = FALSE]
 }
 
-# The arguments of each admissible family, in Stan order.
-.prior_families <- list(
-  normal      = c("location", "scale"),
-  student_t   = c("df", "location", "scale"),
-  scaled_beta = c("alpha", "beta"),
-  lognormal   = c("location", "scale")
-)
-
-# This function reads one prior string and checks its arguments.
-.parse_prior <- function(x, arg, family) {
-  example <- switch(family, normal = "normal(0, 1)",
-                    student_t = "student_t(4, 0, 0.5)",
-                    scaled_beta = "scaled_beta(1, 1)",
-                    lognormal = "lognormal(0, 0.5)")
+# This function reads one prior of usdt_priors() and checks that its family is
+# known, that its arguments are valid, and that it covers every value its
+# parameter can take.
+.parse_prior <- function(x, parameter) {
+  kind <- .prior_parameters[[parameter]]$kind
+  example <- formals(usdt_priors)[[parameter]]
   if (!is.character(x) || length(x) != 1L || is.na(x)) {
-    .usdt_stop("`", arg, "` must be one prior written as a string, e.g. \"",
-               example, "\".")
+    .usdt_stop("`", parameter, "` must be one prior written as a string, ",
+               "e.g. \"", example, "\".")
   }
-  parts <- regmatches(x, regexec("^\\s*([A-Za-z_]+)\\s*\\((.*)\\)\\s*$", x))[[1L]]
-  if (!length(parts) || parts[2L] != family) {
-    .usdt_stop("`", arg, "` must be a ", family, " prior, e.g. \"", example,
-               "\", not \"", x, "\".")
+  read <- .read_prior(x)
+  if (is.null(read)) {
+    .usdt_stop("cannot read the prior \"", x, "\" of `", parameter, "`. ",
+               "Write it as family(arguments), e.g. \"", example, "\".")
+  }
+  family <- .distributions[[read$family]]
+  if (is.null(family)) {
+    .usdt_stop("`", parameter, "` uses `", read$family, "`, which is not a ",
+               "Stan distribution uSDT can use as a prior. The families that ",
+               "suit `", parameter, "` are ",
+               paste0("`", .families_for(kind), "`", collapse = ", "), ".")
+  }
+  n <- length(family$args)
+  if (length(read$args) != n || !all(is.finite(read$args))) {
+    .usdt_stop("`", parameter, "`: ", read$family, " takes ",
+               if (n) paste0(n, " number", if (n > 1L) "s", " (",
+                             paste(family$args, collapse = ", "), ")")
+               else "no arguments",
+               ", not \"", x, "\".")
+  }
+  if (!family$valid(read$args)) {
+    .usdt_stop("`", parameter, "`: ", read$family, " needs ", family$rule, ".")
   }
 
-  arg_names <- .prior_families[[family]]
-  values <- suppressWarnings(as.numeric(strsplit(parts[3L], ",", fixed = TRUE)[[1L]]))
-  if (length(values) != length(arg_names) || any(!is.finite(values))) {
-    .usdt_stop("`", arg, "` needs ", length(arg_names), " numbers (",
-               paste(arg_names, collapse = ", "), "), e.g. \"", example, "\".")
+  prior <- paste0(read$family, "(", paste(read$args, collapse = ", "), ")")
+  if (kind == "cor" && read$family != "lkj") {
+    .usdt_stop("`", parameter, "` is a correlation, so its prior must be ",
+               "lkj(eta), the only correlation prior brms accepts, e.g. ",
+               "\"lkj(1)\".")
   }
-  values <- stats::setNames(values, arg_names)
-  positive <- intersect(c("df", "scale", "alpha", "beta"), arg_names)
-  if (any(values[positive] <= 0)) {
-    .usdt_stop("`", arg, "` needs positive ",
-               paste(positive, collapse = " and "), ".")
+  support <- family$support(read$args)
+  domain <- .prior_domains[[kind]]
+  if (support[1L] > domain[1L] || support[2L] < domain[2L]) {
+    .usdt_stop("`", parameter, "` ",
+               switch(kind, mean = "can take any real value",
+                      sd = "is a standard deviation, which can take any positive value"),
+               ", but ", prior, " is defined only on [", support[1L], ", ",
+               support[2L], "].")
   }
-  out <- data.frame(family = family, df = NA_real_, location = NA_real_,
-                    scale = NA_real_, alpha = NA_real_, beta = NA_real_,
-                    prior = paste0(family, "(", paste(values, collapse = ", "), ")"),
-                    stringsAsFactors = FALSE)
-  out[arg_names] <- as.list(values)
-  out
+  list(family = read$family, args = read$args, prior = prior)
+}
+
+# This function names the families whose support covers every value of a kind
+# of parameter whatever their arguments.
+.families_for <- function(kind) {
+  domain <- .prior_domains[[kind]]
+  covers <- vapply(.distributions, function(f) {
+    support <- f$support(rep(NA_real_, length(f$args)))
+    isTRUE(support[1L] <= domain[1L] && support[2L] >= domain[2L])
+  }, TRUE)
+  names(.distributions)[covers]
+}
+
+# This function builds a usdt_priors table from a list of rows, each a list
+# with the parameter, the task, the family, its arguments and the prior text.
+.priors_frame <- function(rows) {
+  field <- function(name) vapply(rows, `[[`, "", name)
+  out <- data.frame(parameter = field("parameter"), task = field("task"),
+                    family = field("family"), stringsAsFactors = FALSE)
+  out$args <- lapply(rows, `[[`, "args")
+  out$prior <- field("prior")
+  structure(out, class = c("usdt_priors", "data.frame"))
 }
 
 # This function returns the rows of one prior parameter in the given task order.
@@ -199,44 +244,102 @@ print.usdt_priors <- function(x, ...) {
 }
 
 # This function turns the priors into the hyperparameters of the Stan model.
-# Criterion priors are kept only for the estimated criteria, and the signal SD
-# priors only under unequal variances.
+# The model takes normal means, Student-t SDs, LKJ correlations and lognormal
+# signal SDs; criterion priors are kept only for the estimated criteria, and
+# the signal SD priors only under unequal variances.
 .stan_priors <- function(priors, free_c, UV) {
-  vec <- function(x) array(x, dim = length(x))
+  used <- .used_priors(priors, free_c, UV)
+  families <- c(dprime = "normal", sd_dprime = "student_t", cor_dprime = "lkj",
+                criterion = "normal", sd_criterion = "student_t",
+                cor_criterion = "lkj", sd_signal = "lognormal")
+  wrong <- which(used$family != families[used$parameter])
+  if (length(wrong)) {
+    i <- wrong[1L]
+    .usdt_stop("the Stan model takes ", families[[used$parameter[i]]],
+               " priors for `", used$parameter[i], "`, not ", used$prior[i],
+               ".")
+  }
+
+  # Stan reads every hyperparameter of a task as a vector, even of length 1.
   free <- c("direct", "indirect")[free_c == 1L]
-  d <- .prior_rows(priors, "dprime")
-  sd_d <- .prior_rows(priors, "sd_dprime")
-  cor_d <- .prior_rows(priors, "cor_dprime", "both")
-  c_ <- .prior_rows(priors, "criterion", free)
-  sd_c <- .prior_rows(priors, "sd_criterion", free)
-  cor_c <- .prior_rows(priors, "cor_criterion", "both")
-  s <- .prior_rows(priors, "sd_signal",
-                   if (UV) c("direct", "indirect") else character(0))
-  list(mu_d_loc = vec(d$location), mu_d_scale = vec(d$scale),
-       sd_d_df = vec(sd_d$df), sd_d_loc = vec(sd_d$location),
-       sd_d_scale = vec(sd_d$scale),
-       rho_d_a = cor_d$alpha, rho_d_b = cor_d$beta,
-       mu_c_loc = vec(c_$location), mu_c_scale = vec(c_$scale),
-       sd_c_df = vec(sd_c$df), sd_c_loc = vec(sd_c$location),
-       sd_c_scale = vec(sd_c$scale),
-       rho_c_a = cor_c$alpha, rho_c_b = cor_c$beta,
-       sd_s_loc = vec(s$location), sd_s_scale = vec(s$scale))
+  signal <- if (UV) c("direct", "indirect") else character(0)
+  arg <- function(parameter, k, tasks = c("direct", "indirect")) {
+    x <- vapply(.prior_rows(priors, parameter, tasks)$args, `[`, 0, k)
+    array(x, dim = length(x))
+  }
+  eta <- function(parameter) .prior_rows(priors, parameter, "both")$args[[1L]]
+  list(mu_d_loc = arg("dprime", 1L), mu_d_scale = arg("dprime", 2L),
+       sd_d_df = arg("sd_dprime", 1L), sd_d_loc = arg("sd_dprime", 2L),
+       sd_d_scale = arg("sd_dprime", 3L),
+       rho_d_a = eta("cor_dprime"), rho_d_b = eta("cor_dprime"),
+       mu_c_loc = arg("criterion", 1L, free),
+       mu_c_scale = arg("criterion", 2L, free),
+       sd_c_df = arg("sd_criterion", 1L, free),
+       sd_c_loc = arg("sd_criterion", 2L, free),
+       sd_c_scale = arg("sd_criterion", 3L, free),
+       rho_c_a = eta("cor_criterion"), rho_c_b = eta("cor_criterion"),
+       sd_s_loc = arg("sd_signal", 1L, signal),
+       sd_s_scale = arg("sd_signal", 2L, signal))
 }
 
 # Number of draws that approximate a prior the model induces rather than
-# states, such as the prior of the latent intercept.
+# states, such as the prior of the latent intercept, and the smaller number
+# that suffices to draw it.
 .prior_samples <- 1e5L
+.curve_samples <- 2e4L
 
-# This function draws n values from one prior. The Student-t is truncated at
-# zero, so its draws invert the distribution function above that point.
-.r_prior <- function(row, n) {
-  switch(row$family,
-         normal = stats::rnorm(n, row$location, row$scale),
-         student_t = row$location + row$scale * stats::qt(
-           stats::runif(n, stats::pt(-row$location / row$scale, row$df), 1),
-           row$df),
-         scaled_beta = 2 * stats::rbeta(n, row$alpha, row$beta) - 1,
-         lognormal = stats::rlnorm(n, row$location, row$scale))
+# This function returns the log density, the distribution function and a
+# generator of one prior, restricted to the values its parameter can take: a
+# standard deviation prior defined on the whole real line is truncated at zero
+# and renormalised. Truncated draws are kept by rejection.
+.prior_fun <- function(row) {
+  a <- row$args[[1L]]
+  spec <- .prior_parameters[[row$parameter]]
+  if (!.known_prior(list(family = row$family, args = a))) {
+    .usdt_stop("uSDT cannot simulate the ", spec$label, " prior \"",
+               row$prior, "\". The families it can use are ",
+               paste0("`", names(.distributions), "`", collapse = ", "), ".")
+  }
+  family <- .distributions[[row$family]]
+  support <- family$support(a)
+  domain <- .prior_domains[[spec$kind]]
+  lower <- max(domain[1L], support[1L])
+  upper <- min(domain[2L], support[2L])
+
+  # The distribution function of the family, at values clamped to the domain.
+  p <- function(q) {
+    q <- pmin(pmax(q, lower), upper)
+    inside <- q > support[1L] & q < support[2L]
+    out <- as.numeric(q >= support[2L])
+    out[inside] <- family$p(q[inside], a)
+    out
+  }
+  base <- p(lower)
+  mass <- p(upper) - base
+  truncated <- lower > support[1L] || upper < support[2L]
+
+  list(
+    log_density = function(x) {
+      if (lower == -Inf && upper == Inf) return(family$logd(x, a))
+      out <- rep(-Inf, length(x))
+      inside <- x >= lower & x <= upper
+      out[inside] <- family$logd(x[inside], a) - log(mass)
+      out
+    },
+    cdf = function(q) (p(q) - base) / mass,
+    r = function(n) {
+      if (!truncated) return(family$r(n, a))
+      if (mass < 1e-4) {
+        .usdt_stop("the ", spec$label, " prior \"", row$prior, "\" puts ",
+                   "almost no mass on the values its parameter can take.")
+      }
+      draws <- numeric(0)
+      while (length(draws) < n) {
+        x <- family$r(ceiling((n - length(draws)) * 1.1 / mass) + 10L, a)
+        draws <- c(draws, x[x >= lower & x <= upper])
+      }
+      draws[seq_len(n)]
+    })
 }
 
 # This function simulates the population distribution of the two sensitivities
@@ -244,16 +347,18 @@ print.usdt_priors <- function(x, ...) {
 .prior_draws <- function(priors, n) {
   d <- .prior_rows(priors, "dprime")
   s <- .prior_rows(priors, "sd_dprime")
-  cbind(mu_D = .r_prior(d[1L, ], n), mu_I = .r_prior(d[2L, ], n),
-        sigma_D = .r_prior(s[1L, ], n), sigma_I = .r_prior(s[2L, ], n),
-        rho = .r_prior(.prior_rows(priors, "cor_dprime", "both"), n))
+  draw <- function(row) .prior_fun(row)$r(n)
+  cbind(mu_D = draw(d[1L, ]), mu_I = draw(d[2L, ]),
+        sigma_D = draw(s[1L, ]), sigma_I = draw(s[2L, ]),
+        rho = draw(.prior_rows(priors, "cor_dprime", "both")))
 }
 
 # This function adds one new subject to every population draw and returns that
 # subject's hit and false-alarm rates in each task, following the subject level
-# of the Stan model. A criterion fixed by the Meyen split takes the value that
-# makes HR + FAR = 1.
+# of the model. A criterion fixed by the Meyen split takes the value that makes
+# HR + FAR = 1.
 .prior_predictive <- function(priors, n, free_c, UV) {
+  draw <- function(row) .prior_fun(row)$r(n)
   B <- .prior_draws(priors, n)
   z <- matrix(stats::rnorm(2L * n), n)
   d <- cbind(B[, "mu_D"] + B[, "sigma_D"] * z[, 1L],
@@ -261,7 +366,7 @@ print.usdt_priors <- function(x, ...) {
                (B[, "rho"] * z[, 1L] + sqrt(1 - B[, "rho"]^2) * z[, 2L]))
   signal <- .prior_rows(priors, "sd_signal")
   sigma_s <- if (UV) {
-    vapply(1:2, function(j) .r_prior(signal[j, ], n), numeric(n))
+    vapply(1:2, function(j) draw(signal[j, ]), numeric(n))
   } else {
     matrix(1, n, 2L)
   }
@@ -273,19 +378,63 @@ print.usdt_priors <- function(x, ...) {
     sd_c <- .prior_rows(priors, "sd_criterion")
     w <- matrix(stats::rnorm(2L * n), n)
     if (length(free) == 2L) {
-      r <- .r_prior(.prior_rows(priors, "cor_criterion", "both"), n)
+      r <- draw(.prior_rows(priors, "cor_criterion", "both"))
       w[, 2L] <- r * w[, 1L] + sqrt(1 - r^2) * w[, 2L]
     }
     for (k in seq_along(free)) {
       j <- free[k]
-      criterion[, j] <- .r_prior(mean_c[j, ], n) +
-        .r_prior(sd_c[j, ], n) * w[, k]
+      criterion[, j] <- draw(mean_c[j, ]) + draw(sd_c[j, ]) * w[, k]
     }
   }
 
   list(draws = B,
        hit = stats::pnorm((d / 2 - criterion) / sigma_s),
        fa = stats::pnorm(-d / 2 - criterion))
+}
+
+# This function returns the log density and the distribution function of the
+# prior of each requested tested quantity. Each one is a + b * theta, where
+# theta has a prior of its own and a and b > 0 depend on the other parameters,
+# so its prior averages the transformed prior of theta over prior draws of a
+# and b (a Rao-Blackwell estimate over n draws), whatever the families of the
+# priors. The correlation, with a and b fixed, is exact.
+.quantity_priors <- function(priors, quantities, n = .prior_samples) {
+  mu <- .prior_rows(priors, "dprime")
+  mu_I <- .prior_fun(mu[2L, ])
+  rho <- .prior_fun(.prior_rows(priors, "cor_dprime", "both"))
+  out <- list(rho = .affine_prior(rho, 0, 1, bounds = c(-1, 1)))
+  if (any(c("diff", "intercept") %in% quantities)) {
+    mu_D <- .prior_fun(mu[1L, ])$r(n)
+  }
+  if ("diff" %in% quantities) out$diff <- .affine_prior(mu_I, -mu_D, 1)
+  if (any(c("intercept", "slope") %in% quantities)) {
+    s <- .prior_rows(priors, "sd_dprime")
+    ratio <- .prior_fun(s[2L, ])$r(n) / .prior_fun(s[1L, ])$r(n)
+    slope <- rho$r(n) * ratio
+    if ("intercept" %in% quantities) {
+      out$intercept <- .affine_prior(mu_I, -slope * mu_D, 1)
+    }
+    out$slope <- .affine_prior(rho, 0, ratio)
+  }
+  out
+}
+
+# This function gives the prior of a + b * theta from that of theta (from
+# .prior_fun()) and from draws, or fixed values, of a and b > 0.
+.affine_prior <- function(theta, a, b, bounds = NULL) {
+  list(
+    log_density = function(x) vapply(x, function(v) {
+      .log_mean_exp(theta$log_density((v - a) / b) - log(b))
+    }, 0),
+    cdf = function(x) vapply(x, function(v) mean(theta$cdf((v - a) / b)), 0),
+    bounds = bounds)
+}
+
+# This function averages probabilities given on the log scale.
+.log_mean_exp <- function(l) {
+  top <- max(l)
+  if (!is.finite(top)) return(top)
+  top + log(mean(exp(l - top)))
 }
 
 # Prior predictive check
@@ -311,19 +460,21 @@ print.usdt_priors <- function(x, ...) {
 #'
 #' @details
 #' The plot simulates 100,000 draws from the priors in R; no model is fitted
-#' and Stan is not needed. These draws match those of the Stan model sampling
-#' from its priors alone.
+#' and Stan is not needed.
 #'
 #' The rates panel shows the hit and false-alarm rates of one new subject drawn
 #' from each population draw. Rates piled up at 0 or 1 mean that the priors
 #' allow extreme performance.
 #'
-#' The H1 and H2 panels show exact prior densities: the difference between two
-#' normal means is normal, and the correlation follows its scaled beta. The H3
-#' panel shows the intercept of the latent regression, whose prior the model
-#' induces through the means, standard deviations and correlation. It is
-#' estimated from the draws and drawn over its central 95%, because its tails
-#' are heavy. Dotted lines mark the value of each hypothesis under the null.
+#' The H2 panel shows the exact prior of the correlation. The difference
+#' between the mean sensitivities (H1) and the intercept of the latent
+#' regression (H3) have no priors of their own: the model induces them through
+#' the priors of the means, standard deviations and correlation. Each is drawn
+#' as the density that the prior of the indirect mean gives it, averaged over
+#' 20,000 prior draws of the other parameters (a Rao-Blackwell estimate), the
+#' same priors that [usdt_bf()] averages over 100,000 draws. The intercept has
+#' heavy tails, so only its central 95% is drawn. Dotted lines mark the value
+#' of each hypothesis under the null.
 #'
 #' @seealso [usdt_priors()]
 #'
@@ -378,26 +529,25 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
                 labels[[j]], "False-alarm rate"))
   }))
 
-  # The difference of two normal means and the scaled beta are exact.
-  d <- .prior_rows(priors, "dprime")
-  centre <- d$location[2L] - d$location[1L]
-  spread <- sqrt(sum(d$scale^2))
-  grid <- seq(centre - 4 * spread, centre + 4 * spread, length.out = 512L)
-  h1 <- curve(panels[2L], grid, stats::dnorm(grid, centre, spread))
+  # The hypotheses take the priors of the Bayes factors. The difference spans
+  # four robust SDs either side of its median; the induced intercept prior has
+  # heavy tails, so only its central 95% is drawn. Each point of an induced
+  # density averages over prior draws, so these smooth curves take fewer
+  # points and draws than a Bayes factor, which reads one point precisely.
+  priors_of <- .quantity_priors(priors, c("diff", "intercept"),
+                                n = .curve_samples)
+  Q <- .usdt_quantities(.bivariate_primitives(simulated$draws))
+  centre <- stats::median(Q[, "diff"])
+  spread <- stats::IQR(Q[, "diff"]) / (2 * stats::qnorm(0.75))
+  grid <- seq(centre - 4 * spread, centre + 4 * spread, length.out = 128L)
+  h1 <- curve(panels[2L], grid, exp(priors_of$diff$log_density(grid)))
 
-  r <- .prior_rows(priors, "cor_dprime", "both")
   grid <- seq(-0.999, 0.999, length.out = 512L)
-  h2 <- curve(panels[3L], grid,
-              stats::dbeta((grid + 1) / 2, r$alpha, r$beta) / 2)
+  h2 <- curve(panels[3L], grid, exp(priors_of$rho$log_density(grid)))
 
-  # The induced intercept prior has heavy tails, so only its central 95% is
-  # drawn.
-  intercept <- .usdt_quantities(
-    .bivariate_primitives(simulated$draws))[, "intercept"]
-  limits <- stats::quantile(intercept, c(0.025, 0.975), names = FALSE)
-  kernel <- stats::density(intercept, from = limits[1L], to = limits[2L],
-                           n = 512L)
-  h3 <- curve(panels[4L], kernel$x, kernel$y)
+  limits <- stats::quantile(Q[, "intercept"], c(0.025, 0.975), names = FALSE)
+  grid <- seq(limits[1L], limits[2L], length.out = 128L)
+  h3 <- curve(panels[4L], grid, exp(priors_of$intercept$log_density(grid)))
 
   curves <- rbind(rates, h1, h2, h3)
   curves$panel <- factor(curves$panel, levels = panels)
@@ -490,9 +640,10 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
       caption = .wrap_caption(
         "Prior densities from 100,000 draws of the priors; no responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, "\n",
-        "H1 and H2 are exact densities; the H3 intercept is induced by the ",
-        "other priors and is shown over its central 95%. Dotted lines mark ",
-        "each null value."
+        "H2 is the exact prior of the correlation. H1 and the H3 intercept are ",
+        "induced by the other priors and averaged over 20,000 of the draws; ",
+        "the intercept is shown over its central 95%. Dotted lines mark each ",
+        "null value."
       )
     ) +
     .panel_theme() +

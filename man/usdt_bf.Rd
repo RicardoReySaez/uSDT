@@ -94,25 +94,29 @@ every draw falls on one side, the draws cannot bound the Bayes factor and
 
 \section{The prior of each quantity}{
 \itemize{
-\item \code{diff}: the difference of two normal means is normal, so its prior is
-exact.
-\item \code{rho}: the scaled beta of \code{\link[=usdt_priors]{usdt_priors()}}, exact.
+\item \code{rho}: the marginal of the \code{lkj} prior of \code{\link[=usdt_priors]{usdt_priors()}}, exact.
+\item \code{diff}: given the mean direct sensitivity \eqn{\mu_D}, the difference is
+the mean indirect sensitivity shifted by \eqn{\mu_D}, so its prior density
+and probabilities are those of the prior of \eqn{\mu_I} at
+\eqn{x + \mu_D}, averaged over 100,000 prior draws of \eqn{\mu_D} (a
+Rao-Blackwell estimate). With normal priors on both means this is the
+normal prior of their difference.
 \item \code{intercept}: induced by the other priors. Given the slope
-\eqn{\beta_1}, the intercept is normal,
-\eqn{N(m_I - \beta_1 m_D, s_I^2 + \beta_1^2 s_D^2)}, so its prior density
-and probabilities are averages of normal ones over 100,000 prior draws of
-the slope (a Rao-Blackwell estimate). The prior has no mean or variance,
+\eqn{\beta_1} and \eqn{\mu_D}, the intercept is \eqn{\mu_I} shifted by
+\eqn{\beta_1 \mu_D}, so its prior is likewise averaged over 100,000 prior
+draws of the slope and of \eqn{\mu_D}. The prior has no mean or variance,
 because the slope involves \eqn{1/\sigma_D}.
 \item \code{slope}: given the ratio \eqn{\sigma_I / \sigma_D}, the slope is a
-rescaled correlation, so its prior is likewise averaged over 100,000 prior
-draws of that ratio. Its density is infinite at zero, and the slope always
-has the sign of the correlation, so \code{slope = 0}, \code{slope > 0} and
-\code{slope < 0} are tested as the same statements about \code{rho}. The row still
-summarises the posterior of the slope.
+rescaled correlation, so its prior is averaged over 100,000 prior draws of
+that ratio. Its density is infinite at zero, and the slope always has the
+sign of the correlation, so \code{slope = 0}, \code{slope > 0} and \code{slope < 0} are
+tested as the same statements about \code{rho}. The row still summarises the
+posterior of the slope.
 }
 
-The prior draws use the random number generator; call \code{\link[=set.seed]{set.seed()}} first
-for reproducible results.
+These averages work for any family of \code{\link[=usdt_priors]{usdt_priors()}}. The prior draws use
+the random number generator; call \code{\link[=set.seed]{set.seed()}} first for reproducible
+results.
 }
 
 \section{Custom brms models}{
@@ -121,16 +125,16 @@ parameter taking its most specific prior (coefficient, then group, then
 class), and the quantities get the same priors as above. The model must
 have:
 \itemize{
-\item a normal prior on each sensitivity term, e.g.
-\code{prior(normal(0, 1), class = b)}. The flat default of brms is improper,
-and a Bayes factor needs a proper prior;
+\item a proper prior on each sensitivity term, from the families of
+\code{\link[=usdt_priors]{usdt_priors()}}, e.g. \code{prior(normal(0, 1), class = b)}. The flat default
+of brms is improper, and a Bayes factor needs a proper prior;
 \item an LKJ(\eqn{\eta}) prior on the correlations of the group-level term that
 holds both sensitivities. One correlation of a \eqn{K \times K} LKJ matrix
-has the scaled beta marginal
-\eqn{(\eta - 1 + K/2, \eta - 1 + K/2)}, so a block with other terms
-besides the two sensitivities still has an exact prior for \code{rho};
-\item for \code{intercept} and \code{slope}, Student-\eqn{t}, Cauchy or normal priors on
-the two SDs, which brms truncates at zero. The brms default,
+has the marginal of a \eqn{2 \times 2} LKJ(\eqn{\eta - 1 + K/2}), so a
+block with other terms besides the two sensitivities still has an exact
+prior for \code{rho};
+\item for \code{intercept} and \code{slope}, priors on the two SDs from the families of
+\code{\link[=usdt_priors]{usdt_priors()}}, truncated at zero as brms does. The brms default,
 \code{student_t(3, 0, 2.5)}, qualifies.
 }
 

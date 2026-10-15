@@ -31,19 +31,21 @@ latent intercept.
 }
 \details{
 The plot simulates 100,000 draws from the priors in R; no model is fitted
-and Stan is not needed. These draws match those of the Stan model sampling
-from its priors alone.
+and Stan is not needed.
 
 The rates panel shows the hit and false-alarm rates of one new subject drawn
 from each population draw. Rates piled up at 0 or 1 mean that the priors
 allow extreme performance.
 
-The H1 and H2 panels show exact prior densities: the difference between two
-normal means is normal, and the correlation follows its scaled beta. The H3
-panel shows the intercept of the latent regression, whose prior the model
-induces through the means, standard deviations and correlation. It is
-estimated from the draws and drawn over its central 95\%, because its tails
-are heavy. Dotted lines mark the value of each hypothesis under the null.
+The H2 panel shows the exact prior of the correlation. The difference
+between the mean sensitivities (H1) and the intercept of the latent
+regression (H3) have no priors of their own: the model induces them through
+the priors of the means, standard deviations and correlation. Each is drawn
+as the density that the prior of the indirect mean gives it, averaged over
+20,000 prior draws of the other parameters (a Rao-Blackwell estimate), the
+same priors that \code{\link[=usdt_bf]{usdt_bf()}} averages over 100,000 draws. The intercept has
+heavy tails, so only its central 95\% is drawn. Dotted lines mark the value
+of each hypothesis under the null.
 }
 \examples{
 plot(usdt_priors())

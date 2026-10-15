@@ -96,7 +96,7 @@ priors
   `normal(0, 1)` for $d'$ and `normal(0, 0.5)` for $c$.
 - **Between-subject standard deviations:** Student-$t$ priors truncated at
   zero, `student_t(4, 0, 0.5)`.
-- **Correlations:** `scaled_beta(1, 1)`, a uniform prior on $(-1, 1)$.
+- **Correlations:** `lkj(1)`, a uniform prior on $(-1, 1)$.
 
 The model only uses the priors of the parameters it estimates. Here the
 median split fixes the indirect criterion at zero and both tasks have equal

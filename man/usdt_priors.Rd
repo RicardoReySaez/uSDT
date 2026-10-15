@@ -8,10 +8,10 @@
 usdt_priors(
   dprime = "normal(0, 1)",
   sd_dprime = "student_t(4, 0, 0.5)",
-  cor_dprime = "scaled_beta(1, 1)",
+  cor_dprime = "lkj(1)",
   criterion = "normal(0, 0.5)",
   sd_criterion = "student_t(4, 0, 0.5)",
-  cor_criterion = "scaled_beta(1, 1)",
+  cor_criterion = "lkj(1)",
   sd_signal = "lognormal(0, 0.5)"
 )
 
@@ -45,21 +45,31 @@ variances.}
 }
 \value{
 An object of class \code{usdt_priors}: a data frame with one row per
-prior, giving the parameter, the task, the family and its arguments.
+prior, giving the parameter, the task, the family, its arguments (a list
+column) and the prior as a string.
 }
 \description{
-Specifies the prior distributions of the Bayesian model. The family of every
-prior is fixed by the model; you choose its parameters. Each prior is
-written as a string in Stan notation:
+Specifies the prior distributions of the Bayesian model. Each prior is
+written as a string in Stan notation, \code{"family(arguments)"}, with the
+families and parameterisations of Stan, e.g. \code{"normal(0, 1)"},
+\code{"student_t(4, 0, 0.5)"} or \code{"gamma(2, 4)"}. Each argument takes the
+families that cover the values its parameter can take:
 \itemize{
-\item means of \eqn{d'} and of the criterion: \code{"normal(location, scale)"};
-\item between-subject standard deviations: \code{"student_t(df, location, scale)"},
-a Student-\eqn{t} distribution truncated at zero. With location 0 it is a
-half-Student-\eqn{t};
-\item correlations: \code{"scaled_beta(alpha, beta)"}, a beta distribution stretched
-from \eqn{(0, 1)} to \eqn{(-1, 1)};
-\item signal standard deviation under unequal variances:
-\code{"lognormal(location, scale)"}.
+\item means of \eqn{d'} and of the criterion can take any real value, so their
+prior must be defined on the whole real line: \code{normal}, \code{std_normal},
+\code{student_t}, \code{cauchy}, \code{double_exponential}, \code{logistic}, \code{gumbel},
+\code{skew_normal}, \code{exp_mod_normal} or \code{skew_double_exponential};
+\item standard deviations take any of those, truncated at zero (with location
+0, a \code{student_t} is a half-Student-\eqn{t}), or a family on the positive
+values: \code{lognormal}, \code{exponential}, \code{gamma}, \code{inv_gamma}, \code{weibull},
+\code{frechet}, \code{rayleigh}, \code{chi_square}, \code{inv_chi_square},
+\code{scaled_inv_chi_square}, \code{loglogistic}, or \code{pareto_type_2} with
+\code{mu <= 0};
+\item correlations take \code{"lkj(eta)"}, the LKJ prior on a correlation matrix and
+the only correlation prior brms accepts. On a 2 x 2 matrix the
+correlation follows a beta(eta, eta) distribution stretched from
+\eqn{(0, 1)} to \eqn{(-1, 1)}: \code{lkj(1)} is uniform, and larger values of
+eta concentrate it around zero.
 }
 }
 \details{
@@ -70,13 +80,11 @@ The correlations take a single prior.
 The defaults are centred at zero and weakly informative on the probit
 scale: \code{normal(0, 1)} for the mean \eqn{d'}, \code{normal(0, 0.5)} for the mean
 criterion, \code{student_t(4, 0, 0.5)} for every between-subject standard
-deviation and a uniform \code{scaled_beta(1, 1)} for every correlation. With them,
-the hit and false-alarm rates of a new subject spread over \eqn{(0, 1)}
-without piling up at either end; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. With equal
-locations for both means, the prior of the difference between them (H1) is
-centred at zero. A symmetric scaled beta,
-\code{scaled_beta(a, a)}, equals the marginal of an LKJ(a) prior on a 2 x 2
-correlation matrix and is centred at zero (H2).
+deviation and a uniform \code{lkj(1)} for every correlation. With them, the hit
+and false-alarm rates of a new subject spread over \eqn{(0, 1)} without
+piling up at either end; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. With the same prior for
+both means, the prior of the difference between them (H1) is symmetric
+around zero, and every \code{lkj} prior is centred at zero (H2).
 
 The slope and intercept of the latent regression (H3) have no priors of their
 own: their priors follow from those of the means, standard deviations and
@@ -93,9 +101,12 @@ usdt_priors(dprime = list(direct = "normal(0, 1)",
                           indirect = "normal(0, 0.5)"))
 
 # A correlation prior that concentrates near zero
-usdt_priors(cor_dprime = "scaled_beta(2, 2)")
+usdt_priors(cor_dprime = "lkj(2)")
 
 # Standard deviations of d' expected around 0.3 rather than near zero
 usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
+
+# Any family that covers the positive values, e.g. a gamma distribution
+usdt_priors(sd_dprime = "gamma(2, 4)")
 
 }

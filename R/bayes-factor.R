@@ -1,7 +1,7 @@
 # bayes-factor.R
 # Bayes factors for the three hypotheses of a Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-10-2026
+# Last modified: 15-10-2026
 
 # Public functions
 
@@ -72,24 +72,28 @@
 #'
 #' # The prior of each quantity
 #'
-#' * `diff`: the difference of two normal means is normal, so its prior is
-#'   exact.
-#' * `rho`: the scaled beta of [usdt_priors()], exact.
+#' * `rho`: the marginal of the `lkj` prior of [usdt_priors()], exact.
+#' * `diff`: given the mean direct sensitivity \eqn{\mu_D}, the difference is
+#'   the mean indirect sensitivity shifted by \eqn{\mu_D}, so its prior density
+#'   and probabilities are those of the prior of \eqn{\mu_I} at
+#'   \eqn{x + \mu_D}, averaged over 100,000 prior draws of \eqn{\mu_D} (a
+#'   Rao-Blackwell estimate). With normal priors on both means this is the
+#'   normal prior of their difference.
 #' * `intercept`: induced by the other priors. Given the slope
-#'   \eqn{\beta_1}, the intercept is normal,
-#'   \eqn{N(m_I - \beta_1 m_D, s_I^2 + \beta_1^2 s_D^2)}, so its prior density
-#'   and probabilities are averages of normal ones over 100,000 prior draws of
-#'   the slope (a Rao-Blackwell estimate). The prior has no mean or variance,
+#'   \eqn{\beta_1} and \eqn{\mu_D}, the intercept is \eqn{\mu_I} shifted by
+#'   \eqn{\beta_1 \mu_D}, so its prior is likewise averaged over 100,000 prior
+#'   draws of the slope and of \eqn{\mu_D}. The prior has no mean or variance,
 #'   because the slope involves \eqn{1/\sigma_D}.
 #' * `slope`: given the ratio \eqn{\sigma_I / \sigma_D}, the slope is a
-#'   rescaled correlation, so its prior is likewise averaged over 100,000 prior
-#'   draws of that ratio. Its density is infinite at zero, and the slope always
-#'   has the sign of the correlation, so `slope = 0`, `slope > 0` and
-#'   `slope < 0` are tested as the same statements about `rho`. The row still
-#'   summarises the posterior of the slope.
+#'   rescaled correlation, so its prior is averaged over 100,000 prior draws of
+#'   that ratio. Its density is infinite at zero, and the slope always has the
+#'   sign of the correlation, so `slope = 0`, `slope > 0` and `slope < 0` are
+#'   tested as the same statements about `rho`. The row still summarises the
+#'   posterior of the slope.
 #'
-#' The prior draws use the random number generator; call [set.seed()] first
-#' for reproducible results.
+#' These averages work for any family of [usdt_priors()]. The prior draws use
+#' the random number generator; call [set.seed()] first for reproducible
+#' results.
 #'
 #' # Custom brms models
 #'
@@ -97,16 +101,16 @@
 #' parameter taking its most specific prior (coefficient, then group, then
 #' class), and the quantities get the same priors as above. The model must
 #' have:
-#' * a normal prior on each sensitivity term, e.g.
-#'   `prior(normal(0, 1), class = b)`. The flat default of brms is improper,
-#'   and a Bayes factor needs a proper prior;
+#' * a proper prior on each sensitivity term, from the families of
+#'   [usdt_priors()], e.g. `prior(normal(0, 1), class = b)`. The flat default
+#'   of brms is improper, and a Bayes factor needs a proper prior;
 #' * an LKJ(\eqn{\eta}) prior on the correlations of the group-level term that
 #'   holds both sensitivities. One correlation of a \eqn{K \times K} LKJ matrix
-#'   has the scaled beta marginal
-#'   \eqn{(\eta - 1 + K/2, \eta - 1 + K/2)}, so a block with other terms
-#'   besides the two sensitivities still has an exact prior for `rho`;
-#' * for `intercept` and `slope`, Student-\eqn{t}, Cauchy or normal priors on
-#'   the two SDs, which brms truncates at zero. The brms default,
+#'   has the marginal of a \eqn{2 \times 2} LKJ(\eqn{\eta - 1 + K/2}), so a
+#'   block with other terms besides the two sensitivities still has an exact
+#'   prior for `rho`;
+#' * for `intercept` and `slope`, priors on the two SDs from the families of
+#'   [usdt_priors()], truncated at zero as brms does. The brms default,
 #'   `student_t(3, 0, 2.5)`, qualifies.
 #'
 #' The Bayes factor of a point hypothesis depends on the prior of the tested
@@ -191,9 +195,9 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
   draws <- .draw_quantities(.bivariate_draws(fit, direct, indirect))
   priors <- if (.is_bayes(fit)) fit$priors else {
     .brms_priors(brms::prior_summary(fit), posterior::variables(fit), direct,
-                 indirect, quantities)
+                 indirect)
   }
-  priors <- .bf_priors(priors, quantities)
+  priors <- .quantity_priors(priors, quantities)
   results <- lapply(tests, function(h) {
     .bf_one(h, draws[, h$quantity], draws[, h$summary], priors[[h$quantity]],
             level)
@@ -301,55 +305,12 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   h
 }
 
-# This function returns the log density and the distribution function of the
-# prior of each requested quantity.
-.bf_priors <- function(priors, quantities) {
-  d <- .prior_rows(priors, "dprime")
-  r <- .prior_rows(priors, "cor_dprime", "both")
-  rho_log_density <- function(x) {
-    stats::dbeta((x + 1) / 2, r$alpha, r$beta, log = TRUE) - log(2)
-  }
-  rho_cdf <- function(x) stats::pbeta((x + 1) / 2, r$alpha, r$beta)
-  centre <- d$location[2L] - d$location[1L]
-  spread <- sqrt(sum(d$scale^2))
-  out <- list(
-    diff = list(log_density = function(x) stats::dnorm(x, centre, spread, log = TRUE),
-                cdf = function(x) stats::pnorm(x, centre, spread), bounds = NULL),
-    rho = list(log_density = rho_log_density, cdf = rho_cdf, bounds = c(-1, 1))
-  )
-
-  # The slope and intercept priors are averaged over prior draws of the
-  # quantities they depend on (Rao-Blackwell).
-  if (any(c("intercept", "slope") %in% quantities)) {
-    B <- .prior_draws(priors, .prior_samples)
-    ratio <- B[, "sigma_I"] / B[, "sigma_D"]
-    slope <- B[, "rho"] * ratio
-    location <- d$location[2L] - slope * d$location[1L]
-    scale <- sqrt(d$scale[2L]^2 + slope^2 * d$scale[1L]^2)
-    out$intercept <- list(
-      log_density = function(x) vapply(x, function(v) {
-        .log_mean_exp(stats::dnorm(v, location, scale, log = TRUE))
-      }, 0),
-      cdf = function(x) vapply(x, function(v) {
-        mean(stats::pnorm(v, location, scale))
-      }, 0),
-      bounds = NULL)
-    out$slope <- list(
-      log_density = function(x) vapply(x, function(v) {
-        .log_mean_exp(rho_log_density(v / ratio) - log(ratio))
-      }, 0),
-      cdf = function(x) vapply(x, function(v) mean(rho_cdf(v / ratio)), 0),
-      bounds = NULL)
-  }
-  out
-}
-
 # This function translates the priors of a brms model into those of uSDT, so
-# that the tested quantities get the same exact and Rao-Blackwell priors as a
-# Bayesian hsdt fit. Each parameter takes its most specific prior, as brms
-# does: that of its coefficient, then of its group, then of its class. `table`
-# is brms::prior_summary() and `variables` the names of the model's draws.
-.brms_priors <- function(table, variables, direct, indirect, quantities) {
+# that the tested quantities get the same priors as a Bayesian hsdt fit. Each
+# parameter takes its most specific prior, as brms does: that of its
+# coefficient, then of its group, then of its class. `table` is
+# brms::prior_summary() and `variables` the names of the model's draws.
+.brms_priors <- function(table, variables, direct, indirect) {
   found <- .brms_variables(variables, direct, indirect)
   terms <- c(direct = direct, indirect = indirect)
   group <- substring(found[3L], 4L, nchar(found[3L]) - nchar(direct) - 2L)
@@ -365,69 +326,41 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
     }
     ""
   }
-  parse <- function(x) {
-    pattern <- "^\\s*([A-Za-z_]+)\\s*\\((.*)\\)\\s*$"
-    parts <- regmatches(x, regexec(pattern, x))[[1L]]
-    if (!length(parts)) return(list(family = "none", args = numeric(0)))
-    list(family = parts[2L],
-         args = suppressWarnings(as.numeric(strsplit(parts[3L], ",")[[1L]])))
-  }
-  row <- function(parameter, task, family, prior, ...) {
-    out <- data.frame(parameter = parameter, task = task, family = family,
-                      df = NA_real_, location = NA_real_, scale = NA_real_,
-                      alpha = NA_real_, beta = NA_real_, prior = prior,
-                      stringsAsFactors = FALSE)
-    values <- list(...)
-    out[names(values)] <- values
-    out
+  row <- function(parameter, task, prior, read = .read_prior(prior)) {
+    list(parameter = parameter, task = task, family = read$family %||% "",
+         args = read$args %||% numeric(0), prior = prior)
   }
 
-  # Each mean needs a proper normal prior: brms leaves population-level
-  # effects flat unless told otherwise, and a flat prior has no density.
+  # Each mean needs a proper prior: brms leaves population-level effects flat
+  # unless told otherwise, and a flat prior has no density.
   means <- lapply(names(terms), function(task) {
     prior <- effective("b", terms[[task]], "")
-    p <- parse(prior)
-    if (p$family != "normal" || length(p$args) != 2L || anyNA(p$args)) {
-      .usdt_stop("Bayes factors need a normal prior on `b_", terms[[task]],
-                 "`, which has ", if (nzchar(prior)) paste0("\"", prior, "\"")
+    out <- row("dprime", task, prior)
+    if (!.known_prior(out)) {
+      .usdt_stop("Bayes factors need a proper prior on `b_", terms[[task]],
+                 "` from a family uSDT knows, and it has ",
+                 if (nzchar(prior)) paste0("\"", prior, "\"")
                  else "the flat default", ".\n  Set one, e.g. ",
                  "prior(normal(0, 1), class = b).")
     }
-    row("dprime", task, "normal", prior, location = p$args[1L],
-        scale = p$args[2L])
+    out
   })
 
-  # The SDs enter only the intercept and slope priors. A Student-t, a Cauchy
-  # (one degree of freedom) or a normal (infinite ones), all truncated at
-  # zero, is a uSDT SD prior.
+  # The SDs enter only the intercept and slope priors, which read them when
+  # they are needed, so an SD prior uSDT cannot simulate stops only those.
   sds <- lapply(names(terms), function(task) {
-    prior <- effective("sd", terms[[task]], group)
-    p <- parse(prior)
-    args <- switch(p$family,
-                   student_t = if (length(p$args) == 3L) p$args,
-                   cauchy = if (length(p$args) == 2L) c(1, p$args),
-                   normal = if (length(p$args) == 2L) c(Inf, p$args))
-    if (is.null(args) || anyNA(args)) {
-      if (any(c("intercept", "slope") %in% quantities)) {
-        .usdt_stop("the intercept and slope priors follow from the SD priors, ",
-                   "which must be student_t, cauchy or normal; `sd_", group,
-                   "__", terms[[task]], "` has \"", prior, "\".")
-      }
-      return(row("sd_dprime", task, p$family, prior))
-    }
-    row("sd_dprime", task, "student_t", prior, df = args[1L],
-        location = args[2L], scale = args[3L])
+    row("sd_dprime", task, effective("sd", terms[[task]], group))
   })
 
-  # Under LKJ(eta), one correlation of a K x K block has the scaled beta
-  # marginal (eta - 1 + K/2, eta - 1 + K/2). The block holds every term of
-  # the group that correlates with the direct sensitivity. A fitted model
-  # stores the prior on the Cholesky factor (class L), a specified one on the
-  # correlations (class cor).
+  # A fitted model stores the LKJ prior on the Cholesky factor (class L), a
+  # specified one on the correlations (class cor). One correlation of a K x K
+  # LKJ(eta) block has the marginal of a 2 x 2 LKJ(eta - 1 + K/2), and the
+  # block holds every term of the group that correlates with the direct
+  # sensitivity.
   prior <- effective(c("cor", "L"), "", group)
-  p <- parse(prior)
-  if (!p$family %in% c("lkj", "lkj_corr_cholesky") || length(p$args) != 1L ||
-      anyNA(p$args)) {
+  read <- .read_prior(prior)
+  if (is.null(read) || !read$family %in% c("lkj", "lkj_corr_cholesky") ||
+      !.known_prior(list(family = "lkj", args = read$args))) {
     .usdt_stop("Bayes factors need an LKJ prior on the correlations of `",
                group, "`, which have \"", prior, "\".")
   }
@@ -435,18 +368,11 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   members <- substring(sd_names, nchar(group) + 6L)
   pairs <- c(paste0("cor_", group, "__", direct, "__", members),
              paste0("cor_", group, "__", members, "__", direct))
-  a <- p$args - 1 + (1 + sum(pairs %in% variables)) / 2
-  cor <- row("cor_dprime", "both", "scaled_beta", prior, alpha = a, beta = a)
+  K <- 1 + sum(pairs %in% variables)
+  cor <- row("cor_dprime", "both", prior,
+             list(family = "lkj", args = read$args - 1 + K / 2))
 
-  structure(do.call(rbind, c(means, sds, list(cor))),
-            class = c("usdt_priors", "data.frame"))
-}
-
-# This function averages probabilities given on the log scale.
-.log_mean_exp <- function(l) {
-  top <- max(l)
-  if (!is.finite(top)) return(top)
-  top + log(mean(exp(l - top)))
+  .priors_frame(c(means, sds, list(cor)))
 }
 
 # This function fits a logspline density to posterior draws, within the bounds

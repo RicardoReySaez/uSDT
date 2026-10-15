@@ -12,7 +12,10 @@
   sampling shows a single progress bar and none of Stan's messages, followed
   by a summary of divergent transitions, tree depth, R-hat and effective
   sample size.
-* `usdt_priors()` specifies the priors as Stan-style strings, and
+* `usdt_priors()` specifies the priors as Stan-style strings, from any Stan
+  distribution that covers the values of its parameter (the whole real line
+  for the means; the positive values, by truncation at zero if needed, for
+  the standard deviations; `lkj(eta)` for the correlations).
   `plot.usdt_priors()` shows what they imply before any data are fitted.
 * `usdt_tests()`, `sensitivity_diff()`, `latent_cor()` and
   `latent_regression()` summarise a Bayesian fit with posterior means and
@@ -22,16 +25,18 @@
   same terms as an lme4 model.
 * `usdt_bf()` computes Bayes factors for point (Savage-Dickey), directional
   and interval hypotheses about the difference, correlation, slope and
-  intercept. The priors of the difference and correlation are exact; those of
-  the intercept and slope, induced by the other priors, are Rao-Blackwell
-  averages over 100,000 prior draws. Point hypotheses read the posterior
+  intercept. The prior of the correlation is exact; those of the difference,
+  intercept and slope, induced by the other priors, are Rao-Blackwell
+  averages over 100,000 prior draws, whatever the prior families. Point
+  hypotheses read the posterior
   density from a logspline fit to the draws; directional and interval ones
   read the posterior probability as the share of draws in H1. Each hypothesis
   prints as a report, and `usdt_bf()` draws each prior against its posterior,
   in one row for up to three hypotheses, unless `plot = FALSE`. It also takes
-  custom brms models, whose priors it reads from `prior_summary()`: normal
-  priors on the sensitivities and an LKJ prior on their correlation give the
-  same priors as a Bayesian `hsdt()` fit.
+  custom brms models, whose priors it reads from `prior_summary()`: proper
+  priors from the families of `usdt_priors()` on the sensitivities and an
+  LKJ prior on their correlation give the same priors as a Bayesian `hsdt()`
+  fit.
 * `plot()` draws the four plots of a Bayesian fit with posterior means and
   credible intervals, and `usdt_reliability()` gives the posterior of each
   task's reliability.

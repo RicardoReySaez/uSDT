@@ -37,7 +37,7 @@ test_that("Bayes factors match a case with normal prior and posterior", {
 
 test_that("the induced priors keep the symmetry of the correlation prior", {
   set.seed(2)
-  priors <- .bf_priors(usdt_priors(), c("intercept", "slope"))
+  priors <- .quantity_priors(usdt_priors(), c("intercept", "slope"))
   expect_equal(priors$intercept$cdf(0), 0.5, tolerance = 0.01)
   expect_identical(priors$slope$cdf(0), priors$rho$cdf(0))
 })
@@ -80,10 +80,12 @@ test_that("every kind of hypothesis gives a panel title that parses", {
 
 test_that("the priors of the tested quantities match simulated prior draws", {
   set.seed(4)
-  priors <- usdt_priors(dprime = list(direct = "normal(0.5, 1)",
-                                      indirect = "normal(0, 0.5)"),
-                        cor_dprime = "scaled_beta(2, 3)")
-  exact <- .bf_priors(priors, c("intercept", "slope"))
+  priors <- usdt_priors(dprime = list(direct = "student_t(5, 0.5, 1)",
+                                      indirect = "skew_normal(0, 0.5, 3)"),
+                        sd_dprime = list(direct = "gamma(3, 6)",
+                                         indirect = "student_t(4, 0, 0.5)"),
+                        cor_dprime = "lkj(2)")
+  exact <- .quantity_priors(priors, c("diff", "intercept", "slope"))
   B <- .prior_draws(priors, 1e5)
   slope <- B[, "rho"] * B[, "sigma_I"] / B[, "sigma_D"]
   simulated <- list(diff = B[, "mu_I"] - B[, "mu_D"], rho = B[, "rho"],
@@ -122,33 +124,33 @@ test_that("brms priors become the priors of the tested quantities", {
     coef = c("", "", "cond_I", "cond_D", "", "", "cond_I", "cond_D", "", ""),
     group = c("", "", "", "", "", "subj", "subj", "subj", "", "subj"),
     stringsAsFactors = FALSE)[-1L, ]
-  p <- .brms_priors(table, variables, "cond_D", "cond_I", "intercept")
+  p <- .brms_priors(table, variables, "cond_D", "cond_I")
 
-  expect_identical(.prior_rows(p, "dprime")$location, c(0, 0.5))
-  expect_identical(.prior_rows(p, "dprime")$scale, c(1, 2))
+  expect_identical(.prior_rows(p, "dprime")$args, list(c(0, 1), c(0.5, 2)))
   sd <- .prior_rows(p, "sd_dprime")
-  expect_identical(cbind(sd$df, sd$location, sd$scale),
-                   cbind(c(3, 1), c(0, 0), c(2.5, 1)))
-  # A 3 x 3 LKJ(2) block: scaled beta(2 - 1 + 3/2, 2 - 1 + 3/2), whether the
-  # prior sits on the correlations or, as in a fitted model, on their
-  # Cholesky factor.
-  expect_identical(.prior_rows(p, "cor_dprime", "both")$alpha, 2.5)
+  expect_identical(sd$family, c("student_t", "cauchy"))
+  expect_identical(sd$args, list(c(3, 0, 2.5), c(0, 1)))
+  # A 3 x 3 LKJ(2) block: one correlation has the marginal of a 2 x 2
+  # LKJ(2 - 1 + 3/2), whether the prior sits on the correlations or, as in a
+  # fitted model, on their Cholesky factor.
+  expect_identical(.prior_rows(p, "cor_dprime", "both")$args[[1L]], 2.5)
   fitted <- table
   fitted$class[fitted$class == "cor"] <- "L"
   fitted$prior[fitted$prior == "lkj(2)"] <- "lkj_corr_cholesky(2)"
   expect_identical(.prior_rows(.brms_priors(fitted, variables, "cond_D",
-                                            "cond_I", "rho"),
-                               "cor_dprime", "both")$alpha, 2.5)
+                                            "cond_I"),
+                               "cor_dprime", "both")$args[[1L]], 2.5)
 
   flat <- table
   flat$prior[flat$class == "b"] <- ""
-  expect_error(.brms_priors(flat, variables, "cond_D", "cond_I", "rho"),
+  expect_error(.brms_priors(flat, variables, "cond_D", "cond_I"),
                "flat default")
-  exponential <- table
-  exponential$prior[exponential$class == "sd" & exponential$coef == ""] <-
-    c("exponential(1)", "")
-  expect_no_error(.brms_priors(exponential, variables, "cond_D", "cond_I",
-                               c("diff", "rho")))
-  expect_error(.brms_priors(exponential, variables, "cond_D", "cond_I",
-                            "slope"), "student_t, cauchy or normal")
+
+  # An SD prior uSDT cannot simulate stops only the quantities that need it.
+  circular <- table
+  circular$prior[circular$class == "sd" & circular$coef == ""] <-
+    c("von_mises(0, 1)", "")
+  p <- .brms_priors(circular, variables, "cond_D", "cond_I")
+  expect_no_error(.quantity_priors(p, c("diff", "rho")))
+  expect_error(.quantity_priors(p, "slope"), "cannot simulate")
 })

@@ -18,7 +18,7 @@ the result reports how every column was read, which tasks were split at
 the median, and what the model will do with all of it.
 \item \code{\link[=sdt_moments]{sdt_moments()}} gives descriptive estimates for each subject.
 \item \code{\link[=hsdt]{hsdt()}} fits the model and tests the three hypotheses, by maximum
-likelihood with 'lme4' or, with \code{estimation = "bayesian"}, with Stan
+likelihood with 'lme4' or, with \code{estimation = "bayesian"}, with 'brms'
 under the priors of \code{\link[=usdt_priors]{usdt_priors()}}.
 \item \code{\link[=plot]{plot()}} and \code{\link[=usdt_reliability]{usdt_reliability()}} help to interpret the fit,
 \code{\link[=usdt_boot]{usdt_boot()}} adds intervals by simulation when the maximum likelihood

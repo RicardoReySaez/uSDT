@@ -6,11 +6,10 @@
 # Internal functions
 
 # This function builds the brms model of a design (from .bayes_design()): its
-# non-linear formula, its data, its priors, and the brms names of the
-# parameters it samples.
+# non-linear formula, its data and its priors.
 .brms_model <- function(data, design, priors) {
   list(formula = .brms_formula(design), data = .brms_data(data$agg),
-       prior = .brms_prior(priors, design), names = .brms_names(design))
+       prior = .brms_prior(priors, design))
 }
 
 # This function writes the aggregated counts with the columns the formula

@@ -8,32 +8,21 @@ bayes_data <- function(df) {
                  response_levels  = c(signal = 1, noise = 0))
 }
 
-test_that("the Stan data keep every count, with zero trials where a task is missing", {
-  set.seed(1)
-  df <- make_trials(n_subj = 6, n_trials = 20)
-  df <- df[!(df$subj == 6 & df$task == "I"), ]
-  d <- suppressWarnings(bayes_data(df))
-  design <- .bayes_design(d, "none", FALSE, "correlation")
-  stan <- .stan_data(d, design, usdt_priors())$data
-
-  expect_identical(dim(stan$hit), c(6L, 2L))
-  expect_identical(sum(stan$hit) + sum(stan$fa), sum(d$agg$y))
-  expect_identical(sum(stan$N_hit) + sum(stan$N_fa), sum(d$agg$n))
-  expect_identical(c(stan$N_hit[6, 2], stan$N_fa[6, 2]), c(0L, 0L))
-})
+# Compiling and sampling Stan takes minutes, so these checks run on request,
+# with the backend in USDT_TEST_BACKEND (rstan by default).
+test_backend <- function() Sys.getenv("USDT_TEST_BACKEND", "rstan")
 
 test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
-  # Compiling and sampling Stan takes minutes, so this check runs on request.
   skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
               "set USDT_TEST_STAN=true to fit the Stan model")
-  skip_if_not_installed("rstan")
+  skip_if_not_installed("brms")
   old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
   on.exit(options(old), add = TRUE)
 
   set.seed(2)
   d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
   m <- hsdt(d, estimation = "bayesian", chains = 2, iter = 1500, refresh = 0,
-            warmup = 500, seed = 1)
+            warmup = 500, seed = 1, backend = test_backend())
   f <- hsdt(d)
 
   expect_identical(m$tests$term, f$tests$term)
@@ -104,7 +93,7 @@ test_that("a brms model is tested from its posterior", {
       (0 + direct + indirect | subj) + (0 + cond_D + cond_I | subj),
     data = counts, family = binomial("probit"),
     prior = brms::prior(normal(0, 1), class = b), chains = 2, iter = 1000,
-    seed = 1, refresh = 0, silent = 2))
+    seed = 1, refresh = 0, silent = 2, backend = test_backend()))
 
   tests <- usdt_tests(fit, direct = "cond_D", indirect = "cond_I")
   expect_identical(tests$hypothesis, c("H1", "H2", "H3", "H3"))

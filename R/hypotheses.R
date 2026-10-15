@@ -336,7 +336,7 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 # posterior. A Bayesian hsdt fit names it itself; a brms model names it after
 # the sensitivity terms.
 .bivariate_draws <- function(fit, direct, indirect) {
-  if (.is_bayes(fit)) return(.stan_bivariate(fit$draws))
+  if (.is_bayes(fit)) return(.usdt_bivariate(.population_draws(fit)))
   rlang::check_installed(c("brms", "posterior"), reason = "to test a brms model.")
   variables <- .brms_variables(posterior::variables(fit), direct, indirect)
   B <- posterior::as_draws_array(fit, variable = variables)

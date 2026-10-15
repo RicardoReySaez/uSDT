@@ -381,7 +381,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   cat(sprintf("  Criteria:       %s\n", .criteria_line(
     .criterion_check(object$data$agg, "deviation"), design$criteria, lab,
     if (uv) "fixed by HR + FAR = 1" else "fixed to 0")))
-  cat(sprintf("  Estimation:     Stan via %s, %d chains x %s draws (warmup %s)\n",
+  cat(sprintf("  Estimation:     brms via %s, %d chains x %s draws (warmup %s)\n",
               s$backend, s$chains, .fmt_int(s$iter - s$warmup),
               .fmt_int(s$warmup)))
   cat(sprintf("  Diagnostics:    max R-hat %.3f, min ESS %s, %s divergent\n",
@@ -458,7 +458,8 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   )
 
   a <- (1 - object$level) / 2
-  draws <- posterior::subset_draws(object$draws, variable = spec$variable)
+  draws <- posterior::subset_draws(.population_draws(object),
+                                   variable = spec$variable)
   summary <- posterior::summarise_draws(
     draws, "mean", "sd", ~stats::quantile(.x, c(a, 1 - a), names = FALSE),
     "rhat", "ess_bulk")

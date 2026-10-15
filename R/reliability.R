@@ -190,8 +190,9 @@ usdt_reliability <- function(object) {
   labels <- object$data$meta$labels
   free <- object$design$free_c
   a <- (1 - object$level) / 2
+  population <- .population_draws(object)
   draw <- function(name) {
-    as.numeric(posterior::extract_variable(object$draws, name))
+    as.numeric(posterior::extract_variable(population, name))
   }
   interval <- function(x) stats::quantile(x, c(a, 1 - a), names = FALSE)
 

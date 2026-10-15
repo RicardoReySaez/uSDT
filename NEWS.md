@@ -2,16 +2,17 @@
 
 ## Bayesian estimation
 
-* `hsdt(estimation = "bayesian")` fits the hierarchical model with Stan on the
-  aggregated hit and false-alarm counts. The priors go on the means, standard
-  deviations and correlation of the two sensitivities and on the criteria. The
-  Stan model compiles once per installation into a per-user cache, through
-  rstan or cmdstanr. Equal variances are the default; unequal variances are
-  optional. By default four chains keep 5000 draws each, and up to four run
-  at once, leaving two cores free. Each chain runs in a background session, so
-  sampling shows a single progress bar and none of Stan's messages, followed
-  by a summary of divergent transitions, tree depth, R-hat and effective
-  sample size.
+* `hsdt(estimation = "bayesian")` fits the hierarchical model with brms on
+  the aggregated hit and false-alarm counts, and returns the `brmsfit` in
+  `$fit`. The priors go on the means, standard deviations and correlation of
+  the two sensitivities and on the criteria, one brms prior per parameter and
+  task. The model compiles once per set of priors into a per-user cache,
+  through rstan or cmdstanr. Equal variances are the default; unequal
+  variances are optional. By default four chains keep 5000 draws each, and up
+  to four run at once, leaving two cores free. Each chain runs in a background
+  session, so sampling shows a single progress bar and none of Stan's
+  messages, followed by a summary of divergent transitions, tree depth, R-hat
+  and effective sample size.
 * `usdt_priors()` specifies the priors as Stan-style strings, from any Stan
   distribution that covers the values of its parameter (the whole real line
   for the means; the positive values, by truncation at zero if needed, for

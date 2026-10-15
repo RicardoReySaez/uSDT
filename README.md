@@ -13,7 +13,7 @@ research on unconscious processing. It jointly models sensitivity in paired
 direct and indirect measures, allowing researchers to compare both
 sensitivities, estimate their latent association, and test indirect sensitivity
 when direct sensitivity is zero. The model can be fitted by maximum likelihood
-with `lme4` or in a Bayesian framework with Stan, where Bayes factors weigh the
+with `lme4` or in a Bayesian framework with `brms`, where Bayes factors weigh the
 evidence for and against each hypothesis.
 
 ## Documentation
@@ -54,8 +54,9 @@ Or install the development version from GitHub:
 pak::pak("RicardoReySaez/uSDT")
 ```
 
-Bayesian estimation also needs `rstan` (with `BH` and `RcppEigen`) from CRAN,
-or `cmdstanr` with CmdStan, and a C++ toolchain to compile the model once.
+Bayesian estimation also needs `brms`, with `rstan` (and `BH` and `RcppEigen`)
+from CRAN or `cmdstanr` with CmdStan, and a C++ toolchain to compile the model
+once for each set of priors.
 
 ## Example: Vadillo et al. data
 
@@ -86,7 +87,7 @@ d <- usdt_data_tasks(
 fit <- hsdt(d)
 summary(fit)
 
-# The same model with Stan, and Bayes factors for the three hypotheses
+# The same model with brms, and Bayes factors for the three hypotheses
 fit_bayes <- hsdt(d, estimation = "bayesian")
 summary(fit_bayes)
 usdt_bf(fit_bayes)

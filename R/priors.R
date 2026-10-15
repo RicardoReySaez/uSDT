@@ -274,48 +274,6 @@ print.usdt_priors <- function(x, ...) {
   rows[match(tasks, rows$task), , drop = FALSE]
 }
 
-# This function turns the priors into the hyperparameters of the Stan model,
-# which has the correlation parameterization. The model takes normal means,
-# Student-t SDs, LKJ correlations and lognormal signal SDs; criterion priors
-# are kept only for the estimated criteria, and the signal SD priors only
-# under unequal variances.
-.stan_priors <- function(priors, design) {
-  used <- .used_priors(priors, design)
-  free_c <- design$free_c
-  UV <- design$unequal_variances
-  families <- c(dprime = "normal", sd_dprime = "student_t", cor_dprime = "lkj",
-                criterion = "normal", sd_criterion = "student_t",
-                cor_criterion = "lkj", sd_signal = "lognormal")
-  wrong <- which(used$family != families[used$parameter])
-  if (length(wrong)) {
-    i <- wrong[1L]
-    .usdt_stop("the Stan model takes ", families[[used$parameter[i]]],
-               " priors for `", used$parameter[i], "`, not ", used$prior[i],
-               ".")
-  }
-
-  # Stan reads every hyperparameter of a task as a vector, even of length 1.
-  free <- c("direct", "indirect")[free_c == 1L]
-  signal <- if (UV) c("direct", "indirect") else character(0)
-  arg <- function(parameter, k, tasks = c("direct", "indirect")) {
-    x <- vapply(.prior_rows(priors, parameter, tasks)$args, `[`, 0, k)
-    array(x, dim = length(x))
-  }
-  eta <- function(parameter) .prior_rows(priors, parameter, "both")$args[[1L]]
-  list(mu_d_loc = arg("dprime", 1L), mu_d_scale = arg("dprime", 2L),
-       sd_d_df = arg("sd_dprime", 1L), sd_d_loc = arg("sd_dprime", 2L),
-       sd_d_scale = arg("sd_dprime", 3L),
-       rho_d_a = eta("cor_dprime"), rho_d_b = eta("cor_dprime"),
-       mu_c_loc = arg("criterion", 1L, free),
-       mu_c_scale = arg("criterion", 2L, free),
-       sd_c_df = arg("sd_criterion", 1L, free),
-       sd_c_loc = arg("sd_criterion", 2L, free),
-       sd_c_scale = arg("sd_criterion", 3L, free),
-       rho_c_a = eta("cor_criterion"), rho_c_b = eta("cor_criterion"),
-       sd_s_loc = arg("sd_signal", 1L, signal),
-       sd_s_scale = arg("sd_signal", 2L, signal))
-}
-
 # Number of draws that approximate a prior the model induces rather than
 # states, such as the prior of the latent intercept, and the smaller number
 # that suffices to draw it.

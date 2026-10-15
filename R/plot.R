@@ -175,7 +175,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   if (.is_bayes(object)) {
     # A posterior gives the line its mean and its band draw by draw.
-    Q <- .draw_quantities(.stan_bivariate(object$draws))
+    Q <- .draw_quantities(.usdt_bivariate(.population_draws(object)))
     lines <- Q[, c("intercept", "slope")] %*% rbind(1, x)
     fit <- colMeans(lines)
     slope <- mean(Q[, "slope"])
@@ -283,7 +283,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   # plus zero because its value there is the hypothesis of interest. A
   # posterior places that range with its mean values.
   e <- if (.is_bayes(object)) {
-    colMeans(.draw_primitives(.stan_bivariate(object$draws)))
+    colMeans(.draw_primitives(.usdt_bivariate(.population_draws(object))))
   } else {
     object$pars$est
   }
@@ -1091,8 +1091,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   far <- seq(0, 1, length.out = 201L)
   a <- (1 - object$level) / 2
   free <- object$design$free_c
+  population <- .population_draws(object)
   draw <- function(name) {
-    as.numeric(posterior::extract_variable(object$draws, name))
+    as.numeric(posterior::extract_variable(population, name))
   }
 
   curves <- vector("list", nrow(tasks))
@@ -1106,9 +1107,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       d <- draw(sprintf("mu_d[%d]", j))
       criterion <- if (free[j] == 1L) draw(sprintf("mu_c[%d]", sum(free[seq_len(j)])))
     } else {
-      k <- match(subject, object$subjects)
-      d <- draw(sprintf("d[%d,%d]", k, j))
-      criterion <- draw(sprintf("c[%d,%d]", k, j))
+      d <- as.vector(.subject_draws(object, "d", j, subject))
+      criterion <- as.vector(.subject_draws(object, "c", j, subject))
     }
     s <- if (object$design$unequal_variances) draw(sprintf("sigma_s[%d]", j)) else
       rep(1, length(d))

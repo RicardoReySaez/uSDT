@@ -16,7 +16,7 @@
 #'     the median, and what the model will do with all of it.
 #'   \item [sdt_moments()] gives descriptive estimates for each subject.
 #'   \item [hsdt()] fits the model and tests the three hypotheses, by maximum
-#'     likelihood with 'lme4' or, with `estimation = "bayesian"`, with Stan
+#'     likelihood with 'lme4' or, with `estimation = "bayesian"`, with 'brms'
 #'     under the priors of [usdt_priors()].
 #'   \item [plot()] and [usdt_reliability()] help to interpret the fit,
 #'     [usdt_boot()] adds intervals by simulation when the maximum likelihood

@@ -1,28 +1,31 @@
 # fit-bayes.R
-# Fit the Bayesian hierarchical SDT model with Stan
+# Fit the Bayesian hierarchical SDT model with brms
 # Author: Ricardo Rey-Sáez
 # Last modified: 15-10-2026
 
 # Internal functions
 
-# The variables read from every fit: the population distributions and the
-# subject-level sensitivities and criteria.
-.bayes_variables <- c("mu_d", "sigma_d", "rho_d", "mu_c", "sigma_c", "rho_c",
-                      "sigma_s", "d", "c")
-
-# This function fits the Bayesian model and builds its hsdt object.
+# This function fits the Bayesian model with brms and builds its hsdt object.
 .hsdt_bayes <- function(data, fix_criteria, level, priors, unequal_variances,
                         backend, dots, call) {
   settings <- c(.bayes_settings(dots), backend = backend)
   .check_backend(backend)
 
   design <- .bayes_design(data, fix_criteria, unequal_variances, "correlation")
-  stan <- .stan_data(data, design, priors)
+  model <- .brms_model(data, design, priors)
   if (settings$refresh > 0) .bayes_header(settings)
-  sampled <- .stan_sample(.stan_model(settings$backend), stan$data, settings,
-                          .bayes_variables)
-  tests <- .bayes_tests(.stan_bivariate(sampled$draws), level)
-  diagnostics <- .bayes_diagnostics(sampled, tests, settings)
+  fit <- .brms_sample(.brms_compiled(model, backend), model, settings)
+  object <- structure(
+    list(fit = fit, subjects = unique(as.character(data$agg$subj)),
+         tests = NULL, priors = priors, design = design, data = data,
+         diagnostics = NULL, settings = settings, call = call, level = level,
+         estimation = "bayesian"),
+    class = "hsdt")
+  population <- .population_draws(object)
+  tests <- .bayes_tests(.usdt_bivariate(population), level)
+  diagnostics <- .bayes_diagnostics(fit, population, tests, settings)
+  object$tests <- tests
+  object$diagnostics <- diagnostics
   if (settings$refresh > 0) .bayes_report(diagnostics, settings)
 
   # The warning repeats any problem, so code that runs quietly still sees it,
@@ -41,20 +44,16 @@
                "  To fix it, ", paste(remedies, collapse = ", or "), ".")
   }
 
-  structure(list(fit = sampled$fit, draws = sampled$draws,
-                 subjects = stan$subjects, tests = tests, priors = priors,
-                 design = design, data = data, diagnostics = diagnostics, settings = settings,
-                 call = call, level = level, estimation = "bayesian"),
-            class = "hsdt")
+  object
 }
 
-# This function checks that the chosen backend can compile the model. rstan
-# compiles at run time against the headers of BH and RcppEigen, which a binary
-# install of rstan does not bring, and cmdstanr needs CmdStan itself.
+# This function checks that brms and the chosen backend can compile the model.
+# rstan compiles at run time against the headers of BH and RcppEigen, which a
+# binary install of rstan does not bring, and cmdstanr needs CmdStan itself.
 .check_backend <- function(backend) {
   needs <- switch(backend, rstan = c("rstan", "BH", "RcppEigen"),
                   cmdstanr = "cmdstanr")
-  rlang::check_installed(c(needs, "posterior", "callr", "cli"),
+  rlang::check_installed(c("brms", needs, "posterior", "callr", "cli"),
                          reason = "to fit the Bayesian model.")
   if (backend == "cmdstanr" &&
       is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
@@ -177,28 +176,113 @@
        parameterization = parameterization)
 }
 
-# This function arranges the counts as subject x task matrices for Stan. A
-# subject missing from one task keeps zero trials there, which adds nothing to
-# the likelihood.
-.stan_data <- function(data, design, priors) {
-  free_c <- design$free_c
-  unequal_variances <- design$unequal_variances
-  agg <- data$agg
-  subjects <- unique(as.character(agg$subj))
-  where <- cbind(match(as.character(agg$subj), subjects),
-                 match(as.character(agg$task), c("D", "I")))
-  counts <- function(signal, column) {
-    m <- matrix(0L, length(subjects), 2L)
-    rows <- agg$sig == signal
-    m[where[rows, , drop = FALSE]] <- as.integer(agg[[column]][rows])
-    m
+# Compiled models stay in the session, so later fits skip the cache.
+.brms_models <- new.env(parent = emptyenv())
+
+# This function returns a brms fit without draws that holds the compiled model:
+# from the session, from the cache directory, or compiled once. The key hashes
+# the Stan code brms writes, which holds the priors and the brms version, and
+# the backend. Each compiled model has its own folder, which for cmdstanr also
+# holds the executable; using a model refreshes its folder, and only the most
+# recently used ones are kept. The option `uSDT.cache_dir` moves the cache,
+# for instance to a temporary folder.
+.brms_compiled <- function(model, backend) {
+  family <- stats::binomial("probit")
+  code <- brms::stancode(model$formula, data = model$data, family = family,
+                         prior = model$prior, backend = backend)
+  key <- paste0("brms-", backend, "-", rlang::hash(code))
+  if (!is.null(.brms_models[[key]])) return(.brms_models[[key]])
+
+  cache <- getOption("uSDT.cache_dir", tools::R_user_dir("uSDT", "cache"))
+  dir <- file.path(cache, key)
+  file <- file.path(dir, "compiled.rds")
+  compiled <- if (file.exists(file)) {
+    tryCatch(readRDS(file), error = function(e) NULL)
   }
-  list(subjects = subjects,
-       data = c(list(I = length(subjects),
-                     hit = counts(TRUE, "y"), fa = counts(FALSE, "y"),
-                     N_hit = counts(TRUE, "n"), N_fa = counts(FALSE, "n"),
-                     UV = as.integer(unequal_variances), free_c = free_c),
-                .stan_priors(priors, design)))
+  if (is.null(compiled)) {
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+    cli::cli_alert_info(paste("Compiling the Stan model; this happens once",
+                              "per model and set of priors."))
+    old <- options(cmdstanr_write_stan_file_dir = dir)
+    on.exit(options(old), add = TRUE)
+    # brms checks the compiled model with one iteration, whose sampler warnings
+    # say nothing about the fit.
+    utils::capture.output(compiled <- suppressMessages(suppressWarnings(
+      brms::brm(model$formula, data = model$data, family = family,
+                prior = model$prior, chains = 0, backend = backend,
+                silent = 2, refresh = 0,
+                stan_model_args = if (backend == "cmdstanr") list(dir = dir)
+                else list()))))
+    saveRDS(compiled, file)
+  }
+  Sys.setFileTime(dir, Sys.time())
+  .prune_cache(cache)
+  .brms_models[[key]] <- compiled
+  compiled
+}
+
+# This function keeps the most recently used compiled models in the cache and
+# removes the others, with the files of the Stan model of earlier versions of
+# uSDT. Nothing else in the folder is touched.
+.prune_cache <- function(cache, keep = 20L) {
+  entries <- list.files(cache, full.names = TRUE)
+  models <- entries[startsWith(basename(entries), "brms-") & dir.exists(entries)]
+  recent <- utils::head(models[order(file.mtime(models), decreasing = TRUE)],
+                        keep)
+  unlink(c(setdiff(models, recent),
+           entries[startsWith(basename(entries), "usdt-")]), recursive = TRUE)
+}
+
+# This function samples each chain of the model in its own background session
+# with brms, behind the progress bar of .run_chains(), and combines the chains
+# into one brmsfit. Chains share one seed; the chain number gives each its own
+# stream.
+.brms_sample <- function(compiled, model, settings) {
+  seed <- settings$seed %||% sample.int(.Machine$integer.max, 1L)
+  args <- list(newdata = model$data, recompile = FALSE, chains = 1L,
+               cores = 1L, iter = settings$iter, warmup = settings$warmup,
+               seed = seed, control = settings$control,
+               refresh = settings$refresh, silent = 1L)
+  id <- if (settings$backend == "rstan") "chain_id" else "chain_ids"
+  chains <- .run_chains(settings, function(chain) {
+    callr::r_bg(function(fit, args) {
+      loadNamespace("brms")
+      suppressWarnings(do.call(stats::update, c(list(fit), args)))
+    }, args = list(fit = compiled,
+                   args = c(args, stats::setNames(list(chain), id))))
+  })
+  # Combining the chains loads rstan, which brms announces.
+  suppressMessages(brms::combine_models(mlist = chains, check_data = FALSE))
+}
+
+# This function returns the draws of the population parameters of a Bayesian
+# fit under their uSDT names: mu_d, sigma_d and rho_d for the two
+# sensitivities, mu_c, sigma_c and rho_c for the estimated criteria, and
+# sigma_s under unequal variances. The latent regression samples the direct
+# mean and SD with the intercept, slope and residual SD, from which the
+# indirect mean and SD and the correlation follow draw by draw.
+.population_draws <- function(object) {
+  names <- .brms_names(object$design)
+  draws <- posterior::as_draws_array(object$fit, variable = unname(names))
+  posterior::variables(draws) <- names(names)
+  if (object$design$parameterization == "regression") {
+    get <- function(name) {
+      as.vector(posterior::extract_variable_matrix(draws, name))
+    }
+    slope <- get("slope")
+    sigma_D <- get("sigma_d[1]")
+    sigma_I <- sqrt(slope^2 * sigma_D^2 + get("sigma_e")^2)
+    derived <- posterior::draws_array(
+      `mu_d[2]` = get("intercept") + slope * get("mu_d[1]"),
+      `sigma_d[2]` = sigma_I, rho_d = slope * sigma_D / sigma_I,
+      .nchains = posterior::nchains(draws))
+    keep <- c("mu_d[1]", "mu_d[2]", "sigma_d[1]", "sigma_d[2]", "rho_d",
+              setdiff(names(names), c("mu_d[1]", "sigma_d[1]", "intercept",
+                                      "slope", "sigma_e")))
+    draws <- posterior::subset_draws(posterior::bind_draws(draws, derived),
+                                     variable = keep)
+  }
+  draws
 }
 
 # The names given to the bivariate normal of the sensitivities, whatever model
@@ -226,20 +310,49 @@
 
 # This function returns the draws of one subject-level variable of a Bayesian
 # fit, `d` or `c`, in one task (1 direct, 2 indirect): one column per subject,
-# in the order of `subjects`.
+# in the order of `subjects`. A subject's value is the population coefficient
+# plus the subject's effect; under the latent regression the indirect d' is
+# b0 + b1 * d'(direct) + e. A criterion fixed by the Meyen split makes
+# HR + FAR = 1, which is 0 under equal variances.
 .subject_draws <- function(object, variable, task, subjects = object$subjects) {
-  columns <- paste0(variable, "[", match(subjects, object$subjects), ",", task,
-                    "]")
-  m <- unclass(posterior::as_draws_matrix(
-    posterior::subset_draws(object$draws, variable = columns)))
-  dimnames(m) <- list(NULL, subjects)
-  m
+  design <- object$design
+  k <- c("D", "I")[task]
+  read <- function(variables) {
+    unclass(posterior::as_draws_matrix(object$fit, variable = variables))
+  }
+  effects <- function(nlpar, group) {
+    sprintf("r_%s__%s[%s,Intercept]", group, nlpar, subjects)
+  }
+  coefficient <- function(nlpar, group = "subj") {
+    m <- read(c(paste0("b_", nlpar, "_Intercept"), effects(nlpar, group)))
+    m[, -1L, drop = FALSE] + m[, 1L]
+  }
+
+  out <- if (variable == "d" && task == 2L &&
+             design$parameterization == "regression") {
+    m <- read(c("b_b0_Intercept", "b_b1_Intercept", effects("e", "subj")))
+    m[, 1L] + m[, 2L] * coefficient("dD") + m[, -(1:2), drop = FALSE]
+  } else if (variable == "d") {
+    coefficient(paste0("d", k))
+  } else if (design$free_c[task] == 1L) {
+    coefficient(paste0("c", k), "subj_c")
+  } else {
+    s <- if (design$unequal_variances) {
+      as.vector(read(paste0("b_s", k, "_Intercept")))
+    } else {
+      1
+    }
+    .subject_draws(object, "d", task, subjects) * (1 - s) / (2 * (1 + s))
+  }
+  dimnames(out) <- list(NULL, subjects)
+  out
 }
 
-# This function selects the bivariate normal from the draws of the uSDT model.
-.stan_bivariate <- function(draws) {
-  .select_bivariate(draws, c("mu_d[1]", "mu_d[2]", "sigma_d[1]",
-                             "sigma_d[2]", "rho_d"))
+# This function selects the bivariate normal of the sensitivities from the
+# population draws of a Bayesian fit.
+.usdt_bivariate <- function(population) {
+  .select_bivariate(population, c("mu_d[1]", "mu_d[2]", "sigma_d[1]",
+                                  "sigma_d[2]", "rho_d"))
 }
 
 # This function summarises the posterior of the three hypotheses from the draws
@@ -271,12 +384,14 @@
   out
 }
 
-# This function collects the sampler diagnostics and names any problem.
-.bayes_diagnostics <- function(sampled, tests, settings) {
-  population <- posterior::subset_draws(
-    sampled$draws, variable = intersect(
-      c("mu_d", "sigma_d", "rho_d", "mu_c", "sigma_c", "rho_c", "sigma_s"),
-      unique(sub("\\[.*$", "", posterior::variables(sampled$draws)))))
+# This function collects the sampler diagnostics of the fit and the
+# convergence of its population parameters and tested quantities, and names
+# any problem.
+.bayes_diagnostics <- function(fit, population, tests, settings) {
+  sampler <- brms::nuts_params(fit)
+  divergent <- sum(sampler$Value[sampler$Parameter == "divergent__"])
+  treedepth <- sum(sampler$Value[sampler$Parameter == "treedepth__"] >=
+                     settings$control$max_treedepth)
   summary <- posterior::summarise_draws(population, "rhat", "ess_bulk",
                                         "ess_tail")
   max_rhat <- max(summary$rhat, tests$rhat, na.rm = TRUE)
@@ -284,17 +399,101 @@
   min_tail <- min(summary$ess_tail, na.rm = TRUE)
 
   issues <- c(
-    if (sampled$divergent > 0)
-      sprintf("%d divergent transitions", sampled$divergent),
-    if (sampled$treedepth > 0)
-      sprintf("%d transitions hit the maximum tree depth", sampled$treedepth),
+    if (divergent > 0) sprintf("%d divergent transitions", divergent),
+    if (treedepth > 0)
+      sprintf("%d transitions hit the maximum tree depth", treedepth),
     if (max_rhat > 1.01) sprintf("R-hat reaches %.3f", max_rhat),
     if (min(min_bulk, min_tail) < 400)
       sprintf("the effective sample size falls to %.0f", min(min_bulk, min_tail))
   )
   list(backend = settings$backend, chains = settings$chains,
-       draws = posterior::ndraws(sampled$draws), max_rhat = max_rhat,
+       draws = posterior::ndraws(population), max_rhat = max_rhat,
        min_ess_bulk = min_bulk, min_ess_tail = min_tail,
-       divergent = sampled$divergent, treedepth = sampled$treedepth,
-       issues = issues)
+       divergent = divergent, treedepth = treedepth, issues = issues)
+}
+
+# This function runs every chain in its own background R session, at most
+# `cores` at a time, and returns what each session returned. Stan's messages
+# and warnings stay in those sessions; the iterations they report move a single
+# progress bar, which `refresh = 0` hides. Interrupting the fit stops them.
+.run_chains <- function(settings, start) {
+  chains <- settings$chains
+  done <- integer(chains)
+  results <- vector("list", chains)
+  queue <- seq_len(chains)
+  running <- list()
+  on.exit(for (p in running) p$kill(), add = TRUE)
+
+  # The bar redraws itself in place, so it shows only in a console that can
+  # do that; in knitr documents and logs a single line reports the time taken.
+  # It starts with the first progress report after the first iteration, so
+  # the seconds the sessions take to start do not distort its estimate of the
+  # time left. It shows at once, in light blue where the console has colours,
+  # and names the phase the chains are in.
+  bar <- NULL
+  label <- if (chains == 1L) "1 chain" else paste(chains, "chains")
+  dynamic <- settings$refresh > 0 && cli::is_dynamic_tty()
+  started <- Sys.time()
+  if (dynamic) {
+    old <- options(cli.progress_show_after = 0,
+                   cli.progress_bar_style = .bar_style())
+    on.exit(options(old), add = TRUE)
+  }
+  while (length(queue) || length(running)) {
+    while (length(queue) && length(running) < settings$cores) {
+      running[[as.character(queue[1L])]] <- start(queue[1L])
+      queue <- queue[-1L]
+    }
+    for (key in names(running)) {
+      p <- running[[key]]
+      chain <- as.integer(key)
+      alive <- p$is_alive()
+      lines <- p$read_output_lines()
+      p$read_error_lines()
+      at <- regmatches(lines, regexpr("Iteration:\\s*[0-9]+", lines))
+      if (length(at)) done[chain] <- max(as.integer(sub("\\D+", "", at)))
+      if (!alive) {
+        results[[chain]] <- tryCatch(p$get_result(), error = function(e) {
+          .usdt_stop("chain ", chain, " failed: ",
+                     conditionMessage(e$parent %||% e))
+        })
+        done[chain] <- settings$iter
+        running[[key]] <- NULL
+      }
+    }
+    phase <- if (all(done > settings$warmup)) "Sampling" else "Warmup  "
+    if (dynamic && is.null(bar) && max(done) > 1L) {
+      bar <- cli::cli_progress_bar(
+        total = chains * settings$iter, clear = FALSE, auto_terminate = FALSE,
+        status = phase,
+        format = paste("{cli::pb_spin} {cli::pb_status} {cli::pb_bar}",
+                       "{cli::pb_percent} | ETA: {cli::pb_eta}"),
+        format_done = paste("{cli::col_green(cli::symbol$tick)} Sampled",
+                            "{label} in {cli::pb_elapsed}."))
+    }
+    if (!is.null(bar)) {
+      cli::cli_progress_update(id = bar, set = sum(done), status = phase)
+    }
+    if (length(running)) Sys.sleep(0.1)
+  }
+  if (!is.null(bar)) {
+    cli::cli_progress_done(id = bar)
+  } else if (settings$refresh > 0) {
+    secs <- as.numeric(difftime(Sys.time(), started, units = "secs"))
+    elapsed <- if (secs < 60) sprintf("%.1fs", secs) else
+      sprintf("%dm %ds", as.integer(secs %/% 60), as.integer(round(secs %% 60)))
+    cli::cli_alert_success("Sampled {label} in {elapsed}.")
+  }
+  results
+}
+
+# This function returns the bar: light blue squares for the iterations run and
+# a grey line for those to come. Their shapes differ, so the bar reads on light
+# and dark consoles and without colours; a console that cannot draw them keeps
+# cli's plain bar (NULL).
+.bar_style <- function() {
+  if (!cli::is_utf8_output()) return(NULL)
+  done <- cli::make_ansi_style("#6CB4EE")("\u25a0")
+  list(complete = done, current = done,
+       incomplete = cli::make_ansi_style("#9AA0A6")("\u2500"))
 }

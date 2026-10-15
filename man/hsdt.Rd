@@ -28,7 +28,7 @@ hsdt(
 
 \item{estimation}{Estimation framework: \code{"frequentist"} (maximum likelihood
 via Laplace approximation with lme4) or \code{"bayesian"} (Hamiltonian Monte
-Carlo with Stan).}
+Carlo with Stan, through brms).}
 
 \item{fix_criteria}{How to handle response criteria. \code{"auto"} fixes to zero
 any criterion that is zero by design (such as a task split at the median
@@ -48,7 +48,7 @@ estimation only.}
 signal distribution of each task instead of fixing it to that of the noise
 distribution. Bayesian estimation only.}
 
-\item{backend}{Stan interface used for Bayesian estimation: \code{"rstan"}
+\item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
 (default, available from CRAN) or \code{"cmdstanr"} (installed from the Stan
 R-universe together with CmdStan). Bayesian estimation only.}
 
@@ -69,23 +69,29 @@ of \code{iter}, and \code{0} hides the progress bar).}
 \value{
 An object of class \code{hsdt} containing:
 \itemize{
-\item \verb{$fit}: The underlying fit: a \code{glmerMod} object from lme4, or the Stan fit
-of the chosen backend.
+\item \verb{$fit}: The underlying fit: a \code{glmerMod} object from lme4, or a \code{brmsfit}
+object from brms, which every brms function accepts (e.g.
+\code{\link[brms:prior_summary]{brms::prior_summary()}}, \code{\link[brms:pp_check]{brms::pp_check()}} or \code{\link[brms:loo]{brms::loo()}}).
 \item \verb{$tests}: Summary table for hypotheses H1, H2, and H3.
 \item \verb{$design}: Summary of the model specification.
 \item \verb{$diagnostics}: Convergence diagnostics.
 }
 
 A frequentist fit also contains \verb{$pars}, the parameter estimates and their
-joint covariance. A Bayesian fit also contains \verb{$draws}, the posterior draws
-of the population and subject parameters, and \verb{$priors}.
+joint covariance. A Bayesian fit also contains \verb{$priors}; its posterior
+draws are those of \verb{$fit}, where \code{b_dD_Intercept} and \code{b_dI_Intercept} are
+the mean \eqn{d'} of the direct and indirect tasks, \code{sd_subj__dD_Intercept}
+and \code{sd_subj__dI_Intercept} their SDs, \code{cor_subj__dD_Intercept__dI_Intercept}
+their correlation, \code{b_cD_Intercept} and \code{b_cI_Intercept} the mean of an
+estimated criterion (on the classical scale), and \code{b_sD_Intercept} and
+\code{b_sI_Intercept} the signal SDs under unequal variances.
 }
 \description{
 Fits a bivariate hierarchical SDT model and evaluates the core unconscious
 processing hypotheses. The model estimates task-specific sensitivities
 (\eqn{d'}) and response criteria (\eqn{c}) for the population, and their
 variation and correlation across participants. The frequentist estimation
-uses \code{\link[lme4:glmer]{lme4::glmer()}}; the Bayesian estimation uses Stan.
+uses \code{\link[lme4:glmer]{lme4::glmer()}}; the Bayesian estimation uses brms, which runs Stan.
 }
 \details{
 The model fits trial counts with a binomial probit link, directly mapping
@@ -127,16 +133,17 @@ between the tasks, \eqn{d} no longer measures the same discriminability in
 both: the measure comparable with an equal-variance \eqn{d'} is
 \eqn{d_a = d \sqrt{2 / (1 + \sigma_s^2)}}, and the mean \eqn{d_a} of a task
 is its mean \eqn{d} times that factor, which can be computed from the draws
-of \code{mu_d} and \code{sigma_s} in \verb{$draws}. The correlation (H2) is the same on
-either scale.
+of \code{b_dD_Intercept} and \code{b_sD_Intercept} (and their indirect counterparts)
+in \verb{$fit}. The correlation (H2) is the same on either scale.
 
-The Stan model is compiled the first time it is used, which needs a C++
-toolchain, and stays in a per-user cache directory for later sessions. The
-default sampling settings keep 20,000 posterior draws, from four chains
-that run in parallel behind a progress bar. A summary after the bar, and a
-warning when something fails, report divergent transitions, transitions at
-the maximum tree depth, an R-hat above 1.01 or an effective sample size
-below 400.
+The model is a brms model of the aggregated counts, with one prior per
+parameter and task. It is compiled the first time it is used with a given
+set of priors, which needs a C++ toolchain, and stays in a per-user cache
+directory for later sessions. The default sampling settings keep 20,000
+posterior draws, from four chains that run in parallel behind a progress
+bar. A summary after the bar, and a warning when something fails, report
+divergent transitions, transitions at the maximum tree depth, an R-hat above
+1.01 or an effective sample size below 400.
 }
 
 \examples{
@@ -162,8 +169,8 @@ summary(m)
 m$design$formula
 
 \donttest{
-# Bayesian estimation. The first call compiles the Stan model.
-if (requireNamespace("rstan", quietly = TRUE)) {
+# Bayesian estimation. The first call compiles the model.
+if (requireNamespace("brms", quietly = TRUE)) {
   mb <- hsdt(d, estimation = "bayesian", seed = 1)
   summary(mb)
 }

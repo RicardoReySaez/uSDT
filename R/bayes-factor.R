@@ -52,9 +52,11 @@
 #' 2010):
 #' \deqn{\mathrm{BF}_{01} = p(\theta = c \mid y) / p(\theta = c).}
 #' The posterior density comes from a logspline fit to the posterior draws.
-#' When neither logspline algorithm converges, which happens with the very
-#' heavy tails of the intercept and slope when the direct sensitivities
-#' barely vary across subjects, the draws are fitted on the scale
+#' A fit is used only if its distribution function stays within 0.05 of that
+#' of the draws at every percentile. When neither logspline algorithm gives
+#' such a fit, which happens with the very heavy tails of the intercept and
+#' slope when the direct sensitivities barely vary across subjects, the draws
+#' are fitted on the scale
 #' \eqn{\mathrm{asinh}((x - m)/s)}, with \eqn{m} their median and \eqn{s}
 #' their median absolute deviation, and the density is mapped back.
 #' Density estimates are least precise far from the posterior mass, so a test
@@ -375,25 +377,36 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   .priors_frame(c(means, sds, list(cor)))
 }
 
-# This function fits a logspline density to posterior draws, within the bounds
-# of the quantity. When neither logspline algorithm converges on an unbounded
-# quantity, it fits the draws on an asinh scale instead.
+# This function fits a density to posterior draws, within the bounds of the
+# quantity: logspline, then oldlogspline, then, for an unbounded quantity,
+# logspline on an asinh scale. A fit counts only if its distribution function
+# stays within 0.05 of that of the draws at every percentile: on very
+# heavy-tailed draws either logspline algorithm can report success and still
+# return a density far from them. Sound fits stay within 0.01.
 .bf_posterior <- function(x, bounds = NULL) {
-  fit <- .quiet_logspline(logspline::logspline, x, bounds)
-  if (!is.null(fit)) {
-    return(list(log_density = function(q) logspline::dlogspline(q, fit, log = TRUE),
-                cdf = function(q) logspline::plogspline(q, fit)))
+  at <- stats::quantile(x, seq(0.01, 0.99, by = 0.01), names = FALSE)
+  empirical <- stats::ecdf(x)(at)
+  fits <- list(
+    function() {
+      fit <- .quiet_logspline(logspline::logspline, x, bounds)
+      if (!is.null(fit)) {
+        list(log_density = function(q) logspline::dlogspline(q, fit, log = TRUE),
+             cdf = function(q) logspline::plogspline(q, fit))
+      }
+    },
+    function() {
+      fit <- .quiet_logspline(logspline::oldlogspline, x, bounds)
+      if (!is.null(fit)) {
+        list(log_density = function(q) log(logspline::doldlogspline(q, fit)),
+             cdf = function(q) logspline::poldlogspline(q, fit))
+      }
+    },
+    function() if (is.null(bounds)) .bf_posterior_asinh(x))
+  for (fit in fits) {
+    out <- fit()
+    if (!is.null(out) && max(abs(out$cdf(at) - empirical)) < 0.05) return(out)
   }
-  fit <- .quiet_logspline(logspline::oldlogspline, x, bounds)
-  if (!is.null(fit)) {
-    return(list(log_density = function(q) log(logspline::doldlogspline(q, fit)),
-                cdf = function(q) logspline::poldlogspline(q, fit)))
-  }
-  out <- if (is.null(bounds)) .bf_posterior_asinh(x)
-  if (is.null(out)) {
-    .usdt_stop("the posterior density could not be estimated from the draws.")
-  }
-  out
+  .usdt_stop("the posterior density could not be estimated from the draws.")
 }
 
 # This function runs one logspline algorithm without its messages and

@@ -1,7 +1,7 @@
 # fit-bayes.R
 # Fit the Bayesian hierarchical SDT model with Stan
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 15-10-2026
 
 # Internal functions
 
@@ -16,8 +16,8 @@
   settings <- c(.bayes_settings(dots), backend = backend)
   .check_backend(backend)
 
-  free_c <- .bayes_free_criteria(data, fix_criteria)
-  stan <- .stan_data(data, free_c, unequal_variances, priors)
+  design <- .bayes_design(data, fix_criteria, unequal_variances, "correlation")
+  stan <- .stan_data(data, design, priors)
   if (settings$refresh > 0) .bayes_header(settings)
   sampled <- .stan_sample(.stan_model(settings$backend), stan$data, settings,
                           .bayes_variables)
@@ -43,10 +43,7 @@
 
   structure(list(fit = sampled$fit, draws = sampled$draws,
                  subjects = stan$subjects, tests = tests, priors = priors,
-                 design = list(criteria = c("c_D", "c_I")[free_c == 1L],
-                               free_c = free_c,
-                               unequal_variances = unequal_variances),
-                 data = data, diagnostics = diagnostics, settings = settings,
+                 design = design, data = data, diagnostics = diagnostics, settings = settings,
                  call = call, level = level, estimation = "bayesian"),
             class = "hsdt")
 }
@@ -161,22 +158,31 @@
   s
 }
 
-# This function decides which criteria the model estimates. The Stan model
-# uses the classical criterion whatever the coding of the data, so a criterion
-# fixed by the Meyen split is judged on the deviation scale.
-.bayes_free_criteria <- function(data, fix_criteria) {
-  if (fix_criteria == "none") return(c(1L, 1L))
-  check <- .criterion_check(data$agg, "deviation")
-  fixed <- vapply(c("direct", "indirect"), function(k) {
-    data$meta$tasks[[k]]$dichotomized && check[[k]]$negligible
-  }, TRUE)
-  as.integer(!fixed)
+# This function describes the Bayesian model: which criteria it estimates
+# (`free_c`, 1 for estimated, and their names), whether the signal SDs are
+# free, and how it parameterizes the two sensitivities ("correlation" or
+# "regression"). The model uses the classical criterion whatever the coding of
+# the data, so a criterion fixed by the Meyen split is judged on the deviation
+# scale.
+.bayes_design <- function(data, fix_criteria, unequal_variances,
+                          parameterization) {
+  free_c <- if (fix_criteria == "none") c(1L, 1L) else {
+    check <- .criterion_check(data$agg, "deviation")
+    as.integer(!vapply(c("direct", "indirect"), function(k) {
+      data$meta$tasks[[k]]$dichotomized && check[[k]]$negligible
+    }, TRUE))
+  }
+  list(criteria = c("c_D", "c_I")[free_c == 1L], free_c = free_c,
+       unequal_variances = unequal_variances,
+       parameterization = parameterization)
 }
 
 # This function arranges the counts as subject x task matrices for Stan. A
 # subject missing from one task keeps zero trials there, which adds nothing to
 # the likelihood.
-.stan_data <- function(data, free_c, unequal_variances, priors) {
+.stan_data <- function(data, design, priors) {
+  free_c <- design$free_c
+  unequal_variances <- design$unequal_variances
   agg <- data$agg
   subjects <- unique(as.character(agg$subj))
   where <- cbind(match(as.character(agg$subj), subjects),
@@ -192,7 +198,7 @@
                      hit = counts(TRUE, "y"), fa = counts(FALSE, "y"),
                      N_hit = counts(TRUE, "n"), N_fa = counts(FALSE, "n"),
                      UV = as.integer(unequal_variances), free_c = free_c),
-                .stan_priors(priors, free_c, unequal_variances)))
+                .stan_priors(priors, design)))
 }
 
 # The names given to the bivariate normal of the sensitivities, whatever model

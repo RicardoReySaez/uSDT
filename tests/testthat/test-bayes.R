@@ -13,7 +13,8 @@ test_that("the Stan data keep every count, with zero trials where a task is miss
   df <- make_trials(n_subj = 6, n_trials = 20)
   df <- df[!(df$subj == 6 & df$task == "I"), ]
   d <- suppressWarnings(bayes_data(df))
-  stan <- .stan_data(d, c(1L, 1L), FALSE, usdt_priors())$data
+  design <- .bayes_design(d, "none", FALSE, "correlation")
+  stan <- .stan_data(d, design, usdt_priors())$data
 
   expect_identical(dim(stan$hit), c(6L, 2L))
   expect_identical(sum(stan$hit) + sum(stan$fa), sum(d$agg$y))

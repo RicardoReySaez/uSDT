@@ -18,12 +18,16 @@ test_that("the Stan hyperparameters follow the estimated criteria and variances"
   p <- usdt_priors(criterion = list(direct = "normal(0.1, 1)",
                                     indirect = "normal(0.2, 1)"),
                    sd_dprime = "student_t(4, 0.3, 0.2)")
-  one <- .stan_priors(p, free_c = c(1L, 0L), UV = 0L)
+  design <- function(free_c, UV) {
+    list(free_c = free_c, unequal_variances = UV,
+         parameterization = "correlation")
+  }
+  one <- .stan_priors(p, design(c(1L, 0L), FALSE))
   expect_identical(as.vector(one$mu_c_loc), 0.1)
   expect_identical(as.vector(one$sd_d_loc), c(0.3, 0.3))
   expect_length(one$sd_s_scale, 0L)
 
-  both <- .stan_priors(p, free_c = c(1L, 1L), UV = 1L)
+  both <- .stan_priors(p, design(c(1L, 1L), TRUE))
   expect_identical(as.vector(both$mu_c_loc), c(0.1, 0.2))
   expect_identical(as.vector(both$sd_s_scale), c(0.5, 0.5))
   expect_identical(dim(both$mu_d_loc), 2L)

@@ -412,7 +412,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 
   # The priors in use take the task labels of the data.
   cat("\n", .rule("Priors"), "\n\n", sep = "")
-  used <- .used_priors(object$priors, design$free_c, uv)
+  used <- .used_priors(object$priors, design)
   used$task <- ifelse(used$task == "both", "both", lab[used$task])
   .print_prior_rows(used)
 

@@ -12,7 +12,10 @@ usdt_priors(
   criterion = "normal(0, 0.5)",
   sd_criterion = "student_t(4, 0, 0.5)",
   cor_criterion = "lkj(1)",
-  sd_signal = "lognormal(0, 0.5)"
+  sd_signal = "lognormal(0, 0.5)",
+  intercept = "normal(0, 0.5)",
+  slope = "normal(0, 1)",
+  sd_residual = "student_t(4, 0, 0.5)"
 )
 
 \method{print}{usdt_priors}(x, ...)
@@ -38,6 +41,14 @@ used only when both criteria are estimated.}
 \item{sd_signal}{Prior of the standard deviation of the signal distribution,
 relative to the noise distribution. It is used only under unequal
 variances.}
+
+\item{intercept, slope}{Priors of the intercept and slope of the latent
+regression of indirect on direct \eqn{d'}. They are used only by the
+latent regression parameterization.}
+
+\item{sd_residual}{Prior of the residual standard deviation of the
+indirect \eqn{d'} around the latent regression line. It is used only by
+the latent regression parameterization.}
 
 \item{x}{A \code{usdt_priors} object.}
 
@@ -86,11 +97,20 @@ piling up at either end; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}
 both means, the prior of the difference between them (H1) is symmetric
 around zero, and every \code{lkj} prior is centred at zero (H2).
 
-The slope and intercept of the latent regression (H3) have no priors of their
-own: their priors follow from those of the means, standard deviations and
-correlation. With the defaults, the intercept prior is symmetric around zero
-but has heavy tails. It does not change when both standard deviation priors
-are rescaled by the same factor, because the slope depends on their ratio.
+The model describes the two sensitivities by their means, standard
+deviations and correlation, so the slope and intercept of the latent
+regression (H3) have no priors of their own: their priors follow from
+those of the means, standard deviations and correlation. With the defaults,
+the intercept prior is symmetric around zero but has heavy tails. It does
+not change when both standard deviation priors are rescaled by the same
+factor, because the slope depends on their ratio.
+
+The latent regression parameterization describes the indirect sensitivity
+of each subject instead as \verb{intercept + slope * d'(direct) + residual}, with
+priors on the intercept, the slope and the residual standard deviation, and
+the indirect mean, standard deviation and correlation follow from them.
+Then \code{dprime} and \code{sd_dprime} apply to the direct task only, and
+\code{cor_dprime} is not used.
 }
 \examples{
 # Default priors

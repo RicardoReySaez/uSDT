@@ -42,6 +42,12 @@
 #' @param sd_signal Prior of the standard deviation of the signal distribution,
 #'   relative to the noise distribution. It is used only under unequal
 #'   variances.
+#' @param intercept,slope Priors of the intercept and slope of the latent
+#'   regression of indirect on direct \eqn{d'}. They are used only by the
+#'   latent regression parameterization.
+#' @param sd_residual Prior of the residual standard deviation of the
+#'   indirect \eqn{d'} around the latent regression line. It is used only by
+#'   the latent regression parameterization.
 #'
 #' @details
 #' `dprime`, `sd_dprime`, `criterion`, `sd_criterion` and `sd_signal` take one
@@ -57,11 +63,20 @@
 #' both means, the prior of the difference between them (H1) is symmetric
 #' around zero, and every `lkj` prior is centred at zero (H2).
 #'
-#' The slope and intercept of the latent regression (H3) have no priors of their
-#' own: their priors follow from those of the means, standard deviations and
-#' correlation. With the defaults, the intercept prior is symmetric around zero
-#' but has heavy tails. It does not change when both standard deviation priors
-#' are rescaled by the same factor, because the slope depends on their ratio.
+#' The model describes the two sensitivities by their means, standard
+#' deviations and correlation, so the slope and intercept of the latent
+#' regression (H3) have no priors of their own: their priors follow from
+#' those of the means, standard deviations and correlation. With the defaults,
+#' the intercept prior is symmetric around zero but has heavy tails. It does
+#' not change when both standard deviation priors are rescaled by the same
+#' factor, because the slope depends on their ratio.
+#'
+#' The latent regression parameterization describes the indirect sensitivity
+#' of each subject instead as `intercept + slope * d'(direct) + residual`, with
+#' priors on the intercept, the slope and the residual standard deviation, and
+#' the indirect mean, standard deviation and correlation follow from them.
+#' Then `dprime` and `sd_dprime` apply to the direct task only, and
+#' `cor_dprime` is not used.
 #'
 #' @return An object of class `usdt_priors`: a data frame with one row per
 #'   prior, giving the parameter, the task, the family, its arguments (a list
@@ -91,7 +106,10 @@ usdt_priors <- function(dprime        = "normal(0, 1)",
                         criterion     = "normal(0, 0.5)",
                         sd_criterion  = "student_t(4, 0, 0.5)",
                         cor_criterion = "lkj(1)",
-                        sd_signal     = "lognormal(0, 0.5)") {
+                        sd_signal     = "lognormal(0, 0.5)",
+                        intercept     = "normal(0, 0.5)",
+                        slope         = "normal(0, 1)",
+                        sd_residual   = "student_t(4, 0, 0.5)") {
   values <- as.list(environment())
 
   # Task arguments take one prior for both tasks or one per task.
@@ -119,6 +137,8 @@ print.usdt_priors <- function(x, ...) {
   .print_prior_rows(x)
   cat("\n  Standard deviation priors are truncated at zero. cor(c) applies when\n",
       "  both criteria are estimated, and sd(signal) under unequal variances.\n",
+      "  Under the latent regression, intercept, slope and sd(residual) replace\n",
+      "  the indirect mean d', sd(d') and cor(d').\n",
       sep = "")
   invisible(x)
 }
@@ -134,7 +154,10 @@ print.usdt_priors <- function(x, ...) {
   criterion     = list(tasks = TRUE,  kind = "mean", label = "mean c"),
   sd_criterion  = list(tasks = TRUE,  kind = "sd",   label = "sd(c)"),
   cor_criterion = list(tasks = FALSE, kind = "cor",  label = "cor(c)"),
-  sd_signal     = list(tasks = TRUE,  kind = "sd",   label = "sd(signal)")
+  sd_signal     = list(tasks = TRUE,  kind = "sd",   label = "sd(signal)"),
+  intercept     = list(tasks = FALSE, kind = "mean", label = "intercept"),
+  slope         = list(tasks = FALSE, kind = "mean", label = "slope"),
+  sd_residual   = list(tasks = FALSE, kind = "sd",   label = "sd(residual)")
 )
 
 # The values each kind of parameter can take.
@@ -150,16 +173,24 @@ print.usdt_priors <- function(x, ...) {
   invisible(NULL)
 }
 
-# This function keeps the priors a fit uses: those of the estimated criteria,
-# the criterion correlation when both are estimated, and the signal SDs under
-# unequal variances.
-.used_priors <- function(priors, free_c, UV) {
-  free <- c("direct", "indirect")[free_c == 1L]
-  keep <- priors$parameter %in% c("dprime", "sd_dprime", "cor_dprime") |
+# This function keeps the priors a fit with the given design uses: those of
+# its parameterization of the two sensitivities, of the estimated criteria, of
+# the criterion correlation when both are estimated, and of the signal SDs
+# under unequal variances.
+.used_priors <- function(priors, design) {
+  free <- c("direct", "indirect")[design$free_c == 1L]
+  sensitivities <- if (design$parameterization == "regression") {
+    (priors$parameter %in% c("dprime", "sd_dprime") &
+       priors$task == "direct") |
+      priors$parameter %in% c("intercept", "slope", "sd_residual")
+  } else {
+    priors$parameter %in% c("dprime", "sd_dprime", "cor_dprime")
+  }
+  keep <- sensitivities |
     (priors$parameter %in% c("criterion", "sd_criterion") &
        priors$task %in% free) |
     (priors$parameter == "cor_criterion" & length(free) == 2L) |
-    (priors$parameter == "sd_signal" & UV)
+    (priors$parameter == "sd_signal" & design$unequal_variances)
   priors[keep, , drop = FALSE]
 }
 
@@ -243,12 +274,15 @@ print.usdt_priors <- function(x, ...) {
   rows[match(tasks, rows$task), , drop = FALSE]
 }
 
-# This function turns the priors into the hyperparameters of the Stan model.
-# The model takes normal means, Student-t SDs, LKJ correlations and lognormal
-# signal SDs; criterion priors are kept only for the estimated criteria, and
-# the signal SD priors only under unequal variances.
-.stan_priors <- function(priors, free_c, UV) {
-  used <- .used_priors(priors, free_c, UV)
+# This function turns the priors into the hyperparameters of the Stan model,
+# which has the correlation parameterization. The model takes normal means,
+# Student-t SDs, LKJ correlations and lognormal signal SDs; criterion priors
+# are kept only for the estimated criteria, and the signal SD priors only
+# under unequal variances.
+.stan_priors <- function(priors, design) {
+  used <- .used_priors(priors, design)
+  free_c <- design$free_c
+  UV <- design$unequal_variances
   families <- c(dprime = "normal", sd_dprime = "student_t", cor_dprime = "lkj",
                 criterion = "normal", sd_criterion = "student_t",
                 cor_criterion = "lkj", sd_signal = "lognormal")

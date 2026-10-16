@@ -54,6 +54,34 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   expect_s3_class(plot(b), "ggplot")
 })
 
+test_that("the latent regression reports the same quantities", {
+  skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
+              "set USDT_TEST_STAN=true to fit the Stan model")
+  skip_if_not_installed("brms")
+  old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
+  on.exit(options(old), add = TRUE)
+
+  set.seed(2)
+  d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
+  # So short a run can leave the correlation with a small effective sample.
+  m <- suppressWarnings(hsdt(
+    d, estimation = "bayesian", parameterization = "regression", chains = 2,
+    iter = 1500, warmup = 500, refresh = 0, seed = 1,
+    backend = test_backend()))
+  f <- hsdt(d)
+  expect_identical(m$tests$term, f$tests$term)
+  expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
+
+  # The intercept and slope of H3 are the sampled ones, and a correlation
+  # compared with zero is tested on the slope.
+  draws <- unclass(posterior::as_draws_matrix(m$fit))
+  expect_equal(m$tests$estimate[3:4],
+               unname(colMeans(draws[, c("b_b0_Intercept", "b_b1_Intercept")])))
+  skip_if_not_installed("logspline")
+  expect_match(usdt_bf(m, "rho = 0", plot = FALSE)$test, "on slope = 0",
+               fixed = TRUE)
+})
+
 test_that("brms variables are found whatever the order of the correlation", {
   variables <- c("b_direct", "b_taskD:cond", "b_taskI:cond", "sd_subj__direct",
                  "sd_subj__taskD:cond", "sd_subj__taskI:cond",

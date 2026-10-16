@@ -14,6 +14,7 @@ hsdt(
   optimizer = "bobyqa",
   priors = usdt_priors(),
   unequal_variances = FALSE,
+  parameterization = c("correlation", "regression"),
   backend = c("rstan", "cmdstanr"),
   ...
 )
@@ -47,6 +48,13 @@ estimation only.}
 \item{unequal_variances}{Logical. Estimate the standard deviation of the
 signal distribution of each task instead of fixing it to that of the noise
 distribution. Bayesian estimation only.}
+
+\item{parameterization}{How the Bayesian model describes the two
+sensitivities: by their means, standard deviations and correlation
+(\code{"correlation"}, the default), or by the direct mean and standard
+deviation and the latent regression of the indirect on the direct
+sensitivity (\code{"regression"}), with priors on its intercept, slope and
+residual standard deviation. Bayesian estimation only.}
 
 \item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
 (default, available from CRAN) or \code{"cmdstanr"} (installed from the Stan
@@ -124,6 +132,16 @@ posterior p-value, \eqn{2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}}.
 The p-value falls below \code{1 - level} exactly when zero lies outside the
 credible interval, so with the default \code{level = 0.95} a p-value below .05
 means that the 95\% credible interval excludes zero.
+
+With \code{parameterization = "regression"}, the indirect sensitivity of each
+subject is \eqn{\beta_0 + \beta_1 d'_{\mathrm{Direct}} + e}, with
+\eqn{e \sim N(0, \sigma_e^2)}, and the priors go on \eqn{\beta_0},
+\eqn{\beta_1} and \eqn{\sigma_e} instead of the indirect mean, standard
+deviation and correlation. The intercept tested by H3 then has the prior
+you give it rather than a heavy-tailed one induced by the other priors, and
+the correlation has an induced prior instead; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. The
+fit reports the same parameters and hypotheses either way: the indirect
+mean and standard deviation and the correlation are derived draw by draw.
 
 With \code{unequal_variances = TRUE}, the noise distribution of each task is
 \eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so

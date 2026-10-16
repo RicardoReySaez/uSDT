@@ -378,6 +378,10 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
               m$n_rows, .fmt_int(m$n_trials)))
   cat(sprintf("  Family:         binomial (probit), %s variances\n",
               if (uv) "unequal" else "equal"))
+  if (design$parameterization == "regression") {
+    cat(sprintf("  Model:          latent regression of %s d' on %s d'\n",
+                lab[["indirect"]], lab[["direct"]]))
+  }
   cat(sprintf("  Criteria:       %s\n", .criteria_line(
     .criterion_check(object$data$agg, "deviation"), design$criteria, lab,
     if (uv) "fixed by HR + FAR = 1" else "fixed to 0")))

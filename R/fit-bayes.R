@@ -7,11 +7,12 @@
 
 # This function fits the Bayesian model with brms and builds its hsdt object.
 .hsdt_bayes <- function(data, fix_criteria, level, priors, unequal_variances,
-                        backend, dots, call) {
+                        parameterization, backend, dots, call) {
   settings <- c(.bayes_settings(dots), backend = backend)
   .check_backend(backend)
 
-  design <- .bayes_design(data, fix_criteria, unequal_variances, "correlation")
+  design <- .bayes_design(data, fix_criteria, unequal_variances,
+                          parameterization)
   model <- .brms_model(data, design, priors)
   if (settings$refresh > 0) .bayes_header(settings)
   fit <- .brms_sample(.brms_compiled(model, backend), model, settings)

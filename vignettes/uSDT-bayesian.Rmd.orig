@@ -355,11 +355,12 @@ The prior check shows what changes:
 plot(priors, data = data_usdt, parameterization = "regression")
 ```
 
-The intercept (H3) now has the prior you give it, `normal(0, 0.5)`. The price
-is paid by the correlation (H2): its prior is induced, piles up near $\pm 1$
-and peaks at zero. Choose this parameterization when you have a view about
-the intercept, which is the test of unconscious processing, rather than
-about the correlation.
+The intercept (H3) now has the prior you give it: by default `normal(0, 1)`,
+like the slope, weakly informative priors that leave the estimates to the
+data. The price is paid by the correlation (H2): its prior is induced, piles
+up near $\pm 1$ and peaks at zero. Choose this parameterization when you have
+a view about the intercept, which is the test of unconscious processing,
+rather than about the correlation.
 
 ```{r}
 #| label: fit-regression
@@ -383,10 +384,10 @@ tests_reg <- fit_reg$tests
 ```
 
 $\Delta d' = `r fmt(tests_reg$estimate[1])`$ (95% CrI `r cri(tests_reg[1, ])`)
-as before. The intercept, with a prior of its own, has a much narrower
-credible interval (`r cri(tests_reg[3, ])`). A comparison of the correlation
-with zero is now tested on the slope, which has the same sign and a prior of
-its own:
+as before. The intercept, with a prior of its own, has the 95% credible
+interval `r cri(tests_reg[3, ])`, against `r cri(tests[3, ])` when its
+prior was induced by the others. A comparison of the correlation with zero is
+now tested on the slope, which has the same sign and a prior of its own:
 
 ```{r}
 #| label: bf-regression

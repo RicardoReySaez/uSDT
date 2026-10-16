@@ -13,7 +13,7 @@ usdt_priors(
   sd_criterion = "student_t(4, 0, 0.5)",
   cor_criterion = "lkj(1)",
   sd_signal = "lognormal(0, 0.5)",
-  intercept = "normal(0, 0.5)",
+  intercept = "normal(0, 1)",
   slope = "normal(0, 1)",
   sd_residual = "student_t(4, 0, 0.5)"
 )
@@ -110,7 +110,8 @@ of each subject instead as \verb{intercept + slope * d'(direct) + residual}, wit
 priors on the intercept, the slope and the residual standard deviation, and
 the indirect mean, standard deviation and correlation follow from them.
 Then \code{dprime} and \code{sd_dprime} apply to the direct task only, and
-\code{cor_dprime} is not used.
+\code{cor_dprime} is not used. The intercept and slope take \code{normal(0, 1)} by
+default, weakly informative priors that leave the estimates to the data.
 }
 \examples{
 # Default priors

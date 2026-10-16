@@ -76,7 +76,8 @@
 #' priors on the intercept, the slope and the residual standard deviation, and
 #' the indirect mean, standard deviation and correlation follow from them.
 #' Then `dprime` and `sd_dprime` apply to the direct task only, and
-#' `cor_dprime` is not used.
+#' `cor_dprime` is not used. The intercept and slope take `normal(0, 1)` by
+#' default, weakly informative priors that leave the estimates to the data.
 #'
 #' @return An object of class `usdt_priors`: a data frame with one row per
 #'   prior, giving the parameter, the task, the family, its arguments (a list
@@ -107,7 +108,7 @@ usdt_priors <- function(dprime        = "normal(0, 1)",
                         sd_criterion  = "student_t(4, 0, 0.5)",
                         cor_criterion = "lkj(1)",
                         sd_signal     = "lognormal(0, 0.5)",
-                        intercept     = "normal(0, 0.5)",
+                        intercept     = "normal(0, 1)",
                         slope         = "normal(0, 1)",
                         sd_residual   = "student_t(4, 0, 0.5)") {
   values <- as.list(environment())

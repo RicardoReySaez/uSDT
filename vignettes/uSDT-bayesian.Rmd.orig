@@ -2,8 +2,8 @@
 title: "Bayesian estimation with uSDT"
 description: >
   The Bayesian side of uSDT on the contextual cuing data of the tutorial:
-  priors, a Stan fit of the hierarchical SDT model, the three hypotheses,
-  Bayes factors and the plots.
+  priors, a brms fit of the hierarchical SDT model, the three hypotheses,
+  Bayes factors, the plots and the latent regression parameterization.
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Bayesian estimation with uSDT}
@@ -11,8 +11,8 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-<!-- This vignette is precomputed, because fitting the Stan model takes too
-long for CRAN. Edit uSDT-bayesian.Rmd.orig and, from the vignettes folder,
+<!-- This vignette is precomputed, because fitting the model takes too long
+for CRAN. Edit uSDT-bayesian.Rmd.orig and, from the vignettes folder,
 run knitr::knit("uSDT-bayesian.Rmd.orig", "uSDT-bayesian.Rmd"). -->
 
 ```{r}
@@ -31,7 +31,7 @@ knitr::opts_chunk$set(
 
 # As in the tutorial, the tables are ruled with box characters in a UTF-8
 # locale, so the vignette asks for one when the session is not already there.
-old_options <- options(width = 80)
+old_options <- options(width = 80, brms.backend = "cmdstanr")
 old_ctype   <- Sys.getlocale("LC_CTYPE")
 if (!isTRUE(l10n_info()[["UTF-8"]])) {
   for (loc in c("en_US.UTF-8", "C.UTF-8", "English_United States.utf8")) {
@@ -42,6 +42,13 @@ if (!isTRUE(l10n_info()[["UTF-8"]])) {
     invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
   }
 }
+
+# Numbers quoted in the text come from the fits.
+fmt <- function(x, digits = 2) formatC(x, format = "f", digits = digits)
+cri <- function(row, digits = 2) {
+  sprintf("$[%s, %s]$", fmt(row$conf.low, digits), fmt(row$conf.high, digits))
+}
+pval <- function(p) sub("^0", "", formatC(p, format = "f", digits = 3))
 ```
 
 ```{r}
@@ -52,14 +59,17 @@ library(uSDT)
 The [tutorial](uSDT-tutorial.html) fits the hierarchical SDT model by maximum
 likelihood. This article fits the same model to the same contextual cuing data
 in a Bayesian framework. The data, the model and the three hypotheses do not
-change. What changes is that you place **priors** on the parameters, Stan
-draws from the **posterior**, and you can weigh each hypothesis with **Bayes
+change. What changes is that you place **priors** on the parameters, the model
+is fitted with [brms](https://paulbuerkner.com/brms/), which draws from the
+**posterior** with Stan, and you can weigh each hypothesis with **Bayes
 factors**.
 
-Bayesian estimation needs either `rstan` (together with `BH` and `RcppEigen`)
-or `cmdstanr`. The Stan model is compiled the first time you use it, which
-needs a C++ toolchain and takes a minute or two, and it is cached for later
-sessions.
+Bayesian estimation needs `brms` and a Stan backend: `rstan` (together with
+`BH` and `RcppEigen`) or `cmdstanr`. As in brms, the backend is the
+`brms.backend` option, rstan when it is not set; this article was built with
+`options(brms.backend = "cmdstanr")`. The model is compiled the first time
+you fit it with a given set of priors, which needs a C++ toolchain and takes
+a minute or so, and it is cached for later sessions.
 
 ## The data
 
@@ -96,7 +106,15 @@ priors
   `normal(0, 1)` for $d'$ and `normal(0, 0.5)` for $c$.
 - **Between-subject standard deviations:** Student-$t$ priors truncated at
   zero, `student_t(4, 0, 0.5)`.
-- **Correlations:** `lkj(1)`, a uniform prior on $(-1, 1)$.
+- **Correlations:** `lkj(1)`, a uniform prior on $(-1, 1)$. Larger values of
+  its argument concentrate the correlation around zero.
+- **Intercept, slope and residual SD:** used only by the latent regression
+  parameterization, at the end of this article.
+
+Any Stan distribution that covers the values of its parameter works: one on
+the whole real line for a mean, such as `student_t(5, 0, 1)` or
+`skew_normal(0, 1, 2)`, and for a standard deviation also one on the positive
+values, such as `gamma(2, 4)` or `lognormal(-1, 0.5)`.
 
 The model only uses the priors of the parameters it estimates. Here the
 median split fixes the indirect criterion at zero and both tasks have equal
@@ -117,7 +135,7 @@ plot(priors, data = data_usdt)
 - **Hit and false-alarm rates (top left):** the rates of a new subject spread
   over the whole $(0, 1)$ range without piling up at either end. The indirect
   rates are more concentrated because the median split fixes their criterion.
-- **H1 and H2 (top right, bottom left):** the exact priors of $\Delta d'$, a
+- **H1 and H2 (top right, bottom left):** the priors of $\Delta d'$, a
   normal centred at zero, and of $\rho$, uniform.
 - **H3 (bottom right):** the intercept of the latent regression has no prior
   of its own. Its prior follows from those of the means, standard deviations
@@ -129,16 +147,17 @@ tasks or per task, and the result to `hsdt()`:
 ```{r}
 #| label: priors-custom
 #| eval: false
-priors_narrow <- usdt_priors(
-  dprime = list(direct = "normal(0, 1)", indirect = "normal(0, 0.5)")
+priors_custom <- usdt_priors(
+  dprime    = list(direct = "normal(0, 1)", indirect = "normal(0, 0.5)"),
+  sd_dprime = "gamma(2, 4)"
 )
-hsdt(data_usdt, estimation = "bayesian", priors = priors_narrow)
+hsdt(data_usdt, estimation = "bayesian", priors = priors_custom)
 ```
 
 ## Fitting the model
 
 Setting `estimation = "bayesian"` in [`hsdt()`](../reference/hsdt.html) fits
-the model with Stan:
+the model with brms:
 
 ```{r}
 #| label: fit
@@ -158,8 +177,8 @@ run. When they finish, the model reports its convergence checks:
   draws for stable summaries.
 
 Here all four checks pass. Sampling options such as `chains`, `iter`,
-`warmup`, `cores`, `seed` and `control` go through `...`, and
-`backend = "cmdstanr"` uses CmdStan instead of rstan.
+`warmup`, `cores`, `seed` and `control` go through `...`, and `backend`
+chooses rstan or cmdstanr.
 
 The summary has the same structure as the frequentist one:
 
@@ -168,11 +187,36 @@ The summary has the same structure as the frequentist one:
 summary(fit_bayes)
 ```
 
+```{r}
+#| label: numbers
+#| include: false
+tests <- fit_bayes$tests
+means <- brms::fixef(fit_bayes$fit)
+```
+
 Each estimate is now the **posterior mean**, with its **posterior standard
 deviation** and a 95% **credible interval** (CrI), and R-hat and effective
 sample size are reported for every parameter. The fixed and random effects
-closely match the frequentist ones: $d' = 0.23$ in the direct task and
-$d' = 0.13$ in the indirect task.
+closely match the frequentist ones: $d' = `r fmt(means["dD_Intercept", "Estimate"])`$
+in the direct task and $d' = `r fmt(means["dI_Intercept", "Estimate"])`$ in
+the indirect task.
+
+### The brms fit
+
+`fit_bayes$fit` is the `brmsfit` itself, so every brms function works on it,
+from `pp_check()` to `loo()`. The model has one non-linear parameter per
+quantity: `dD` and `dI` are the $d'$ of each task, `cD` the direct criterion
+(on the classical scale), and each has one prior of its own, so the prior
+table of brms lists them task by task:
+
+```{r}
+#| label: brms-priors
+prior_table <- brms::prior_summary(fit_bayes$fit)
+prior_table[prior_table$source == "user", ]
+```
+
+The criteria vary over `subj_c`, a copy of the subject column, so that brms
+gives them a correlation prior of their own when both are estimated.
 
 ## The three hypotheses
 
@@ -181,17 +225,20 @@ $2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}$. It falls below .05
 exactly when the 95% credible interval excludes zero.
 
 - **H1 ($\Delta d'$):** direct recognition is again stronger than indirect
-  cuing ($\Delta d' = -0.11$, 95% CrI $[-0.18, -0.04]$, $p = .003$), the same
+  cuing ($\Delta d' = `r fmt(tests$estimate[1])`$, 95% CrI
+  `r cri(tests[1, ])`, $p = `r pval(tests$p.value[1])`$), the same
   conclusion as in the tutorial.
 - **H2 ($\rho$):** the posterior of the latent correlation spans almost the
-  whole range (95% CrI $[-0.71, 0.95]$). The data say little about it.
+  whole range (95% CrI `r cri(tests[2, ])`). The data say little about it.
 - **H3 (latent regression):** the 95% credible interval of the intercept
-  covers zero ($[-0.75, 0.65]$). Its posterior mean ($-0.02$) and standard
-  deviation ($4.39$) are dominated by heavy tails: the direct sensitivity
-  barely varies across subjects ($\text{sd}(d') = 0.11$), so the slope
-  $\rho \, \sigma_I / \sigma_D$ can take very large values. With posteriors
-  like this one, read the credible interval rather than the mean and standard
-  deviation.
+  covers zero (`r cri(tests[3, ])`). Its posterior mean
+  ($`r fmt(tests$estimate[3])`$) and standard deviation
+  ($`r fmt(tests$est.error[3])`$) are dominated by heavy tails: the direct
+  sensitivity barely varies across subjects
+  ($\text{sd}(d') = `r fmt(brms::VarCorr(fit_bayes$fit)$subj$sd["dD_Intercept", "Estimate"])`$),
+  so the slope $\rho \, \sigma_I / \sigma_D$ can take very large values. With
+  posteriors like this one, read the credible interval rather than the mean
+  and standard deviation.
 
 ## Bayes factors
 
@@ -206,20 +253,23 @@ quantity:
 #| fig.width: 9
 #| fig.height: 4
 set.seed(2026)
-usdt_bf(fit_bayes)
+bf <- usdt_bf(fit_bayes)
+bf
 ```
 
-- **$\Delta d' = 0$:** the evidence for a difference is only anecdotal
-  ($\log \text{BF}_{10} = 0.62$, $\text{BF}_{10} = 1.9$), even though the
-  credible interval excludes zero. The Bayes factor compares the posterior
-  with the whole prior, and a $\text{normal}(0, 1)$ prior on each mean expects
-  much larger differences than $-0.11$.
-- **$\rho = 0$:** the evidence is anecdotal in either direction
-  ($\log \text{BF}_{10} = -0.10$).
-- **Intercept $= 0$:** there is moderate evidence for the null
-  ($\log \text{BF}_{10} = -1.99$, $\text{BF}_{01} = 7.3$). The data favour no
-  indirect sensitivity in participants without direct sensitivity, which the
-  credible interval alone could not tell.
+- **$\Delta d' = 0$:** the evidence for a difference is `r bf$evidence[1]`
+  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[1])`$,
+  $\text{BF}_{10} = `r fmt(bf$BF10[1], 1)`$), even though the credible
+  interval excludes zero. The Bayes factor compares the posterior with the
+  whole prior, and a $\text{normal}(0, 1)$ prior on each mean expects much
+  larger differences than $`r fmt(tests$estimate[1])`$.
+- **$\rho = 0$:** the evidence is `r bf$evidence[2]`
+  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[2])`$).
+- **Intercept $= 0$:** there is `r bf$evidence[3]` evidence for the null
+  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[3])`$,
+  $\text{BF}_{01} = `r fmt(bf$BF01[3], 1)`$). The data favour no indirect
+  sensitivity in participants without direct sensitivity, which the credible
+  interval alone could not tell.
 
 In the plot, the solid curve is the posterior and the dashed curve the prior.
 For a point null, the Bayes factor is the ratio between the two marked
@@ -231,16 +281,27 @@ practical equivalence around zero:
 ```{r}
 #| label: bf-other
 set.seed(2026)
-usdt_bf(fit_bayes, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
+bf_other <- usdt_bf(fit_bayes, c("intercept > 0", "diff in [-0.1, 0.1]"),
+                    plot = FALSE)
+bf_other
+```
+
+```{r}
+#| label: bf-prior
+#| include: false
+prior_prob <- stats::plogis(stats::qlogis(bf_other$post.prob) - bf_other$log_BF10)
 ```
 
 These Bayes factors compare the posterior odds of H1, the share of posterior
 draws inside it, with its prior odds. A positive intercept has a posterior
-probability of .73 against .50 a priori, which is anecdotal evidence. The
-region $[-0.1, 0.1]$ holds 43% of the posterior but only about 6% of the prior,
-so the Bayes factor is strong ($\log \text{BF}_{10} = 2.53$) even though the
-posterior mean lies just outside it. Read interval Bayes factors together with
-the posterior probability.
+probability of `r pval(bf_other$post.prob[1])` against
+`r pval(prior_prob[1])` a priori, which is `r bf_other$evidence[1]` evidence.
+The region $[-0.1, 0.1]$ holds `r round(100 * bf_other$post.prob[2])`% of the
+posterior but only about `r round(100 * prior_prob[2])`% of the prior, so the
+Bayes factor is `r bf_other$evidence[2]`
+($\log \text{BF}_{10} = `r fmt(bf_other$log_BF10[2])`$) even though the
+posterior mean lies just outside it. Read interval Bayes factors together
+with the posterior probability.
 
 Bayes factors depend on the priors: a wider prior puts less density at the
 null value and favours the null. Report them with the priors you used, and
@@ -272,10 +333,66 @@ plot(fit_bayes, type = "caterpillar")
 ```
 
 The right panels show each participant's posterior mean $d'$ with its 95%
-credible interval. Partial pooling reduces the share of intervals that
-include zero from 86% to 54% in the direct task and from 79% to 64% in the
-indirect task. `type = "shrinkage"` and `type = "roc"` work as in the
-tutorial.
+credible interval. Partial pooling pulls the estimates towards the group mean
+and narrows their intervals. `type = "shrinkage"` and `type = "roc"` work as
+in the tutorial.
+
+## The latent regression parameterization
+
+The intercept of H3 has no prior of its own above: the model places its
+priors on the means, standard deviations and correlation of the two
+sensitivities, and the intercept prior they induce has very heavy tails. Its
+Bayes factor depends on all of them. With
+`parameterization = "regression"`, the model writes the indirect sensitivity
+of each subject as $\beta_0 + \beta_1 d'_{\text{Direct}} + e$ and places the
+priors on the intercept $\beta_0$, the slope $\beta_1$ and the residual
+standard deviation of $e$ instead, the last three rows of `usdt_priors()`.
+The prior check shows what changes:
+
+```{r}
+#| label: prior-check-regression
+#| fig.height: 6
+plot(priors, data = data_usdt, parameterization = "regression")
+```
+
+The intercept (H3) now has the prior you give it, `normal(0, 0.5)`. The price
+is paid by the correlation (H2): its prior is induced, piles up near $\pm 1$
+and peaks at zero. Choose this parameterization when you have a view about
+the intercept, which is the test of unconscious processing, rather than
+about the correlation.
+
+```{r}
+#| label: fit-regression
+#| collapse: true
+fit_reg <- hsdt(data_usdt, estimation = "bayesian",
+                parameterization = "regression", seed = 2026)
+```
+
+The fit reports the same parameters and hypotheses, now derived draw by draw
+from the regression, and its header names the parameterization:
+
+```{r}
+#| label: summary-regression
+summary(fit_reg)
+```
+
+```{r}
+#| label: numbers-regression
+#| include: false
+tests_reg <- fit_reg$tests
+```
+
+$\Delta d' = `r fmt(tests_reg$estimate[1])`$ (95% CrI `r cri(tests_reg[1, ])`)
+as before. The intercept, with a prior of its own, has a much narrower
+credible interval (`r cri(tests_reg[3, ])`). A comparison of the correlation
+with zero is now tested on the slope, which has the same sign and a prior of
+its own:
+
+```{r}
+#| label: bf-regression
+set.seed(2026)
+usdt_bf(fit_reg, c("intercept = 0", "rho = 0"), plot = FALSE)
+```
 
 ## Where to go from here
 
@@ -286,19 +403,24 @@ posterior of each task's reliability:
 
 ```{r}
 #| label: reliability
-usdt_reliability(fit_bayes)
+reliability <- usdt_reliability(fit_bayes)
+reliability
 ```
 
-The posterior means (`.12` and `.32`) are close to the frequentist estimates,
-and the credible intervals show how uncertain they are: the reliability of the
-direct task could be anywhere between 0 and `.33`.
+The posterior means (`r pval(reliability$tasks$reliability[1])` and
+`r pval(reliability$tasks$reliability[2])`) are close to the frequentist
+estimates, and the credible intervals show how uncertain they are: the
+reliability of the direct task could be anywhere between
+`r fmt(reliability$tasks$conf.low[1])` and
+`r pval(reliability$tasks$conf.high[1])`.
 
 ### Custom models fitted with brms
 
 When you need covariates, you can fit your own model with `brms` and test it
 with the same functions. [`usdt_aggregate()`](../reference/usdt_aggregate.html)
 counts the trials first, which makes the fit much faster. `usdt_bf()` reads
-the priors from the model, so the two sensitivities need proper normal priors:
+the priors from the model, so the two sensitivities need proper priors from
+the families of `usdt_priors()`:
 
 ```{r}
 #| label: brms

@@ -15,7 +15,7 @@ hsdt(
   priors = usdt_priors(),
   unequal_variances = FALSE,
   parameterization = c("correlation", "regression"),
-  backend = c("rstan", "cmdstanr"),
+  backend = getOption("brms.backend", "rstan"),
   ...
 )
 
@@ -57,8 +57,9 @@ sensitivity (\code{"regression"}), with priors on its intercept, slope and
 residual standard deviation. Bayesian estimation only.}
 
 \item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
-(default, available from CRAN) or \code{"cmdstanr"} (installed from the Stan
-R-universe together with CmdStan). Bayesian estimation only.}
+(available from CRAN) or \code{"cmdstanr"} (installed from the Stan R-universe
+together with CmdStan). As in brms, the default is the \code{brms.backend}
+option, or \code{"rstan"} when it is not set. Bayesian estimation only.}
 
 \item{...}{For frequentist estimation, additional arguments passed to
 \code{\link[lme4:glmer]{lme4::glmer()}}; the model formula, family and data remain managed by the

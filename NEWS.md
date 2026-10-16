@@ -12,7 +12,14 @@
   to four run at once, leaving two cores free. Each chain runs in a background
   session, so sampling shows a single progress bar and none of Stan's
   messages, followed by a summary of divergent transitions, tree depth, R-hat
-  and effective sample size.
+  and effective sample size. As in brms, the backend defaults to the
+  `brms.backend` option.
+* `hsdt(parameterization = "regression")` writes the indirect sensitivity of
+  each subject as the latent regression on the direct one, with priors on its
+  intercept, slope and residual standard deviation, so that the intercept
+  tested by H3 has the prior you give it. It reports the same parameters and
+  hypotheses as the default parameterization by means, standard deviations
+  and correlation.
 * `usdt_priors()` specifies the priors as Stan-style strings, from any Stan
   distribution that covers the values of its parameter (the whole real line
   for the means; the positive values, by truncation at zero if needed, for
@@ -26,12 +33,15 @@
   same terms as an lme4 model.
 * `usdt_bf()` computes Bayes factors for point (Savage-Dickey), directional
   and interval hypotheses about the difference, correlation, slope and
-  intercept. The prior of the correlation is exact; those of the difference,
-  intercept and slope, induced by the other priors, are Rao-Blackwell
-  averages over 100,000 prior draws, whatever the prior families. Point
-  hypotheses read the posterior
-  density from a logspline fit to the draws; directional and interval ones
-  read the posterior probability as the share of draws in H1. Each hypothesis
+  intercept. A quantity with a prior of its own (the correlation, or the
+  intercept and slope of the latent regression) gets it exactly; the others,
+  induced by the other priors, get Rao-Blackwell averages over 100,000 prior
+  draws, whatever the prior families. A comparison of the slope or the
+  correlation with zero is tested on whichever of the two has a prior of its
+  own. Point hypotheses read the posterior density from a logspline fit to
+  the draws, used only if it stays close to the draws; directional and
+  interval ones read the posterior probability as the share of draws in H1.
+  Each hypothesis
   prints as a report, and `usdt_bf()` draws each prior against its posterior,
   in one row for up to three hypotheses, unless `plot = FALSE`. It also takes
   custom brms models, whose priors it reads from `prior_summary()`: proper

@@ -38,8 +38,9 @@
 #'   sensitivity (`"regression"`), with priors on its intercept, slope and
 #'   residual standard deviation. Bayesian estimation only.
 #' @param backend Stan interface brms uses for Bayesian estimation: `"rstan"`
-#'   (default, available from CRAN) or `"cmdstanr"` (installed from the Stan
-#'   R-universe together with CmdStan). Bayesian estimation only.
+#'   (available from CRAN) or `"cmdstanr"` (installed from the Stan R-universe
+#'   together with CmdStan). As in brms, the default is the `brms.backend`
+#'   option, or `"rstan"` when it is not set. Bayesian estimation only.
 #' @param ... For frequentist estimation, additional arguments passed to
 #'   [lme4::glmer()]; the model formula, family and data remain managed by the
 #'   package. For Bayesian estimation, sampling options: `chains` (default 4),
@@ -170,7 +171,7 @@ hsdt <- function(data,
                  priors       = usdt_priors(),
                  unequal_variances = FALSE,
                  parameterization = c("correlation", "regression"),
-                 backend      = c("rstan", "cmdstanr"),
+                 backend      = getOption("brms.backend", "rstan"),
                  ...) {
 
   # The function checks the data and the requested options.
@@ -201,8 +202,10 @@ hsdt <- function(data,
       .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
     }
     parameterization <- .check_parameterization(parameterization)
-    backend <- tryCatch(match.arg(backend), error = function(e)
-      .usdt_stop("`backend` must be `\"rstan\"` or `\"cmdstanr\"`."))
+    if (!is.character(backend) || length(backend) != 1L ||
+        !backend %in% c("rstan", "cmdstanr")) {
+      .usdt_stop("`backend` must be `\"rstan\"` or `\"cmdstanr\"`.")
+    }
     return(.hsdt_bayes(data, fix_criteria, level, priors, unequal_variances,
                        parameterization, backend, dots, match.call()))
   }

@@ -4,7 +4,13 @@
 \alias{plot.usdt_priors}
 \title{Prior predictive check for the Bayesian hierarchical SDT model}
 \usage{
-\method{plot}{usdt_priors}(x, data = NULL, unequal_variances = FALSE, ...)
+\method{plot}{usdt_priors}(
+  x,
+  data = NULL,
+  unequal_variances = FALSE,
+  parameterization = c("correlation", "regression"),
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{usdt_priors} object from \code{\link[=usdt_priors]{usdt_priors()}}.}
@@ -16,6 +22,11 @@ criteria are fixed.}
 
 \item{unequal_variances}{Logical. Simulate the signal standard deviation
 from its prior instead of fixing it to 1.}
+
+\item{parameterization}{How the model describes the two sensitivities, as
+in \code{\link[=hsdt]{hsdt()}}: by their means, standard deviations and correlation
+(\code{"correlation"}, the default) or by the latent regression of the
+indirect on the direct one (\code{"regression"}).}
 
 \item{...}{Ignored.}
 }
@@ -37,15 +48,17 @@ The rates panel shows the hit and false-alarm rates of one new subject drawn
 from each population draw. Rates piled up at 0 or 1 mean that the priors
 allow extreme performance.
 
-The H2 panel shows the exact prior of the correlation. The difference
-between the mean sensitivities (H1) and the intercept of the latent
-regression (H3) have no priors of their own: the model induces them through
-the priors of the means, standard deviations and correlation. Each is drawn
-as the density that the prior of the indirect mean gives it, averaged over
-20,000 prior draws of the other parameters (a Rao-Blackwell estimate), the
-same priors that \code{\link[=usdt_bf]{usdt_bf()}} averages over 100,000 draws. The intercept has
-heavy tails, so only its central 95\% is drawn. Dotted lines mark the value
-of each hypothesis under the null.
+Each hypothesis panel shows the prior of the quantity it tests. A quantity
+with a prior of its own is drawn exactly: the correlation (H2) under the
+correlation parameterization, the intercept (H3) under the latent
+regression. The others have priors that the model induces through the
+remaining priors. Each of these is drawn as the density that one prior
+gives it, averaged over 20,000 prior draws of the other parameters (a
+Rao-Blackwell estimate), the same priors that \code{\link[=usdt_bf]{usdt_bf()}} averages over
+100,000 draws. The difference (H1) and the intercept (H3) span four robust
+standard deviations either side of their median, since an induced intercept
+prior has heavy tails. Dotted lines mark the value of each hypothesis under
+the null.
 }
 \examples{
 plot(usdt_priors())
@@ -53,6 +66,10 @@ plot(usdt_priors())
 # A narrower prior for the mean indirect sensitivity
 plot(usdt_priors(dprime = list(direct = "normal(0, 1)",
                                indirect = "normal(0, 0.5)")))
+
+# The latent regression, with a prior on its intercept
+plot(usdt_priors(intercept = "normal(0, 0.3)"),
+     parameterization = "regression")
 
 }
 \seealso{

@@ -93,6 +93,18 @@
 #'   tested as the same statements about `rho`. The row still summarises the
 #'   posterior of the slope.
 #'
+#' Under the latent regression parameterization the intercept and slope have
+#' priors of their own, so theirs are exact, and the others are induced:
+#' * `diff`: \eqn{\beta_0 + (\beta_1 - 1) \mu_D}, so its prior is that of the
+#'   intercept, shifted and averaged over 100,000 prior draws of the slope and
+#'   of \eqn{\mu_D}.
+#' * `rho`: \eqn{\beta_1 \sigma_D / \sqrt{\beta_1^2 \sigma_D^2 + \sigma_e^2}},
+#'   an increasing function of the slope, so its prior is that of the slope at
+#'   \eqn{\rho r / \sqrt{1 - \rho^2}}, \eqn{r = \sigma_e / \sigma_D}, times the
+#'   Jacobian, averaged over 100,000 prior draws of \eqn{r}. It is the
+#'   correlation that is then tested on the slope: `rho = 0`, `rho > 0` and
+#'   `rho < 0` are the same statements about `slope`.
+#'
 #' These averages work for any family of [usdt_priors()]. The prior draws use
 #' the random number generator; call [set.seed()] first for reproducible
 #' results.
@@ -192,14 +204,16 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
   .check_confidence_level(level)
   rlang::check_installed("logspline", reason = "to estimate posterior densities.")
 
-  tests <- lapply(hypothesis, .bf_parse)
+  parameterization <- if (.is_bayes(fit)) fit$design$parameterization else
+    "correlation"
+  tests <- lapply(hypothesis, .bf_parse, parameterization = parameterization)
   quantities <- unique(vapply(tests, `[[`, "", "quantity"))
   draws <- .draw_quantities(.bivariate_draws(fit, direct, indirect))
   priors <- if (.is_bayes(fit)) fit$priors else {
     .brms_priors(brms::prior_summary(fit), posterior::variables(fit), direct,
                  indirect)
   }
-  priors <- .quantity_priors(priors, quantities)
+  priors <- .quantity_priors(priors, quantities, parameterization)
   results <- lapply(tests, function(h) {
     .bf_one(h, draws[, h$quantity], draws[, h$summary], priors[[h$quantity]],
             level)
@@ -262,8 +276,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 
 # Internal functions
 
-# This function reads one hypothesis string.
-.bf_parse <- function(text) {
+# This function reads one hypothesis string about a fit with the given
+# parameterization.
+.bf_parse <- function(text, parameterization) {
   quantities <- c("diff", "rho", "slope", "intercept")
   number <- "([-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
   region <- regmatches(text, regexec(paste0(
@@ -297,13 +312,16 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   }
   h$text <- text
 
-  # The slope has the sign of the correlation, and its prior is infinite at
-  # zero, so a hypothesis that compares the slope with zero is tested on the
-  # correlation, while the row still summarises the slope.
+  # The slope has the sign of the correlation, and whichever of the two the
+  # parameterization derives can have an infinite prior density at zero, so a
+  # comparison of either with zero is tested on the one with a prior of its
+  # own: the correlation, or the slope of the latent regression. The row still
+  # summarises the quantity named.
+  own <- if (parameterization == "regression") "slope" else "rho"
   h$summary <- h$quantity
-  h$as_rho <- h$quantity == "slope" && h$op %in% c("=", "<", ">") &&
-    h$value == 0
-  if (h$as_rho) h$quantity <- "rho"
+  h$swapped <- h$quantity %in% c("rho", "slope") && h$quantity != own &&
+    h$op %in% c("=", "<", ">") && h$value == 0
+  if (h$swapped) h$quantity <- own
   h
 }
 
@@ -441,6 +459,33 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
        cdf = function(q) logspline::plogspline(asinh(z(q)), fit))
 }
 
+# This function writes the part of the caption of the prior and posterior
+# plot that depends on the panels: which priors are induced by the others,
+# what the difference is, and which comparisons with zero are tested on the
+# quantity with a prior of its own.
+.bf_caption <- function(curves) {
+  field <- function(name) vapply(curves, `[[`, curves[[1L]][[name]], name)
+  labels <- c(diff = "difference", rho = "correlation", slope = "slope",
+              intercept = "intercept")
+  tested <- field("tested")
+  induced <- unname(labels[unique(tested[field("induced")])])
+  swaps <- unique(paste(field("quantity"), tested)[field("swapped")])
+  paste0(c(
+    if (length(induced)) {
+      sprintf(" The %s prior%s induced by the other priors.",
+              paste(induced, collapse = " and "),
+              if (length(induced) > 1L) "s are" else " is")
+    },
+    if ("diff" %in% field("quantity")) {
+      " The difference is the indirect minus the direct mean sensitivity."
+    },
+    vapply(strsplit(swaps, " ", fixed = TRUE), function(s) {
+      sprintf(paste(" A %s compared with zero is tested on %s, which has its",
+                    "sign and a prior of its own, so that panel shows %s."),
+              s[1L], s[2L], s[2L])
+    }, "")), collapse = "")
+}
+
 # This function returns the printed name of a quantity. The difference is
 # named as in summary(), Delta d' (indirect minus direct).
 .bf_name <- function(quantity) {
@@ -483,9 +528,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
                  "<" = , ">" = "Directional test", "Interval test")
   short <- switch(h$op, "=" = "Savage-Dickey", "<" = , ">" = "directional",
                   "interval")
-  if (h$as_rho) {
-    test <- sprintf("%s, on rho %s 0", test, h$op)
-    short <- paste0(short, ", on rho")
+  if (h$swapped) {
+    test <- sprintf("%s, on %s %s 0", test, h$quantity, h$op)
+    short <- paste0(short, ", on ", h$quantity)
   }
 
   if (h$op == "=") {
@@ -535,7 +580,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
     grid <- grid[grid > prior$bounds[1L] & grid < prior$bounds[2L]]
   }
   curve <- list(hypothesis = .bf_math(h, short), quantity = h$summary,
-                op = h$op, as_rho = h$as_rho, value = h$value, grid = grid,
+                tested = h$quantity, swapped = h$swapped,
+                induced = prior$induced, op = h$op, value = h$value, grid = grid,
                 prior = exp(prior$log_density(grid)),
                 posterior = exp(post$log_density(grid)),
                 at = if (h$op == "=") {
@@ -693,16 +739,7 @@ plot.usdt_bf <- function(x, ...) {
         "quantity. For a point hypothesis the Bayes factor is the ratio of ",
         "the two marked heights at the dotted line (Savage-Dickey); for a ",
         "directional or interval hypothesis the shaded area is the posterior ",
-        "probability of H1. The intercept and slope priors are induced by the ",
-        "other priors.",
-        if (any(vapply(curves, `[[`, "", "quantity") == "diff")) {
-          paste0(" The difference is the indirect minus the direct mean ",
-                 "sensitivity.")
-        },
-        if (any(vapply(curves, `[[`, TRUE, "as_rho"))) {
-          paste0(" A slope compared with zero is tested on rho, which has ",
-                 "its sign, so that panel shows rho.")
-        },
+        "probability of H1.", .bf_caption(curves),
         width = max(88L, 50L * columns)
       )
     ) +

@@ -1,16 +1,24 @@
 test_that("hypotheses are read into a quantity, an operator and values", {
-  h <- .bf_parse("intercept >= 0.1")
+  parse <- function(text, parameterization = "correlation") {
+    .bf_parse(text, parameterization)
+  }
+  h <- parse("intercept >= 0.1")
   expect_identical(c(h$quantity, h$op), c("intercept", ">"))
   expect_identical(h$value, 0.1)
-  expect_identical(.bf_parse("diff in (0.1, -0.1)")$value, c(-0.1, 0.1))
+  expect_identical(parse("diff in (0.1, -0.1)")$value, c(-0.1, 0.1))
 
-  slope <- .bf_parse("slope < 0")
+  # A comparison with zero of the slope or the correlation is tested on the
+  # one of the two with a prior of its own.
+  slope <- parse("slope < 0")
   expect_identical(c(slope$quantity, slope$summary), c("rho", "slope"))
-  expect_identical(.bf_parse("slope in [-1, 1]")$quantity, "slope")
+  expect_identical(parse("slope in [-1, 1]")$quantity, "slope")
+  rho <- parse("rho = 0", "regression")
+  expect_identical(c(rho$quantity, rho$summary), c("slope", "rho"))
+  expect_identical(parse("slope = 0", "regression")$quantity, "slope")
 
-  expect_error(.bf_parse("beta = 0"), "quantities")
-  expect_error(.bf_parse("rho = 1"), "inside")
-  expect_error(.bf_parse("diff >> 0"), "cannot read")
+  expect_error(parse("beta = 0"), "quantities")
+  expect_error(parse("rho = 1"), "inside")
+  expect_error(parse("diff >> 0"), "cannot read")
 })
 
 test_that("Bayes factors match a case with normal prior and posterior", {
@@ -18,17 +26,18 @@ test_that("Bayes factors match a case with normal prior and posterior", {
   set.seed(1)
   draws <- stats::rnorm(2e4, 0.3, 0.1)
   prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
-                cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL)
+                cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL,
+                induced = FALSE)
 
   # The tested value lies one posterior SD from the mean. Far in a tail, the
   # logspline density changes with the draws and with the platform: at three
   # SDs its log BF10 is off by up to 0.2 (point) and 0.45 (directional).
-  point <- .bf_one(.bf_parse("diff = 0.2"), draws, draws, prior, 0.95)$row
+  point <- .bf_one(.bf_parse("diff = 0.2", "correlation"), draws, draws, prior, 0.95)$row
   expected <- stats::dnorm(0.2, 0, 1, log = TRUE) -
     stats::dnorm(0.2, 0.3, 0.1, log = TRUE)
   expect_equal(point$log_BF10, expected, tolerance = 0.05)
 
-  directional <- .bf_one(.bf_parse("diff > 0.2"), draws, draws, prior,
+  directional <- .bf_one(.bf_parse("diff > 0.2", "correlation"), draws, draws, prior,
                          0.95)$row
   expect_equal(directional$post.prob, stats::pnorm(1), tolerance = 0.02)
   odds <- stats::qlogis(stats::pnorm(1)) - stats::qlogis(stats::pnorm(-0.2))
@@ -37,7 +46,7 @@ test_that("Bayes factors match a case with normal prior and posterior", {
 
 test_that("the induced priors keep the symmetry of the correlation prior", {
   set.seed(2)
-  priors <- .quantity_priors(usdt_priors(), c("intercept", "slope"))
+  priors <- .quantity_priors(usdt_priors(), c("intercept", "slope"), "correlation")
   expect_equal(priors$intercept$cdf(0), 0.5, tolerance = 0.01)
   expect_identical(priors$slope$cdf(0), priors$rho$cdf(0))
 })
@@ -47,9 +56,10 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
   set.seed(3)
   draws <- stats::rnorm(2e4, 0.3, 0.1)
   prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
-                cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL)
+                cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL,
+                induced = FALSE)
   results <- lapply(c("diff = 0", "diff > 0"), function(text) {
-    .bf_one(.bf_parse(text), draws, draws, prior, 0.95)
+    .bf_one(.bf_parse(text, "correlation"), draws, draws, prior, 0.95)
   })
   b <- structure(do.call(rbind, lapply(results, `[[`, "row")),
                  curves = lapply(results, `[[`, "curve"), level = 0.95,
@@ -74,7 +84,7 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
 test_that("every kind of hypothesis gives a panel title that parses", {
   for (text in c("diff = 0", "rho < -0.2", "slope > 0", "intercept in [-1, 1]",
                  "diff out [-0.1, 0.1]")) {
-    expect_no_error(parse(text = .bf_math(.bf_parse(text), "test")))
+    expect_no_error(parse(text = .bf_math(.bf_parse(text, "correlation"), "test")))
   }
 })
 
@@ -84,17 +94,29 @@ test_that("the priors of the tested quantities match simulated prior draws", {
                                       indirect = "skew_normal(0, 0.5, 3)"),
                         sd_dprime = list(direct = "gamma(3, 6)",
                                          indirect = "student_t(4, 0, 0.5)"),
-                        cor_dprime = "lkj(2)")
-  exact <- .quantity_priors(priors, c("diff", "intercept", "slope"))
-  B <- .prior_draws(priors, 1e5)
-  slope <- B[, "rho"] * B[, "sigma_I"] / B[, "sigma_D"]
-  simulated <- list(diff = B[, "mu_I"] - B[, "mu_D"], rho = B[, "rho"],
-                    intercept = B[, "mu_I"] - slope * B[, "mu_D"],
-                    slope = slope)
-  for (q in names(simulated)) {
-    at <- stats::quantile(simulated[[q]], c(0.1, 0.3, 0.5, 0.7, 0.9))
-    expect_equal(exact[[q]]$cdf(at), c(0.1, 0.3, 0.5, 0.7, 0.9),
-                 tolerance = 0.01, ignore_attr = TRUE, label = q)
+                        cor_dprime = "lkj(2)",
+                        intercept = "student_t(5, 0.2, 0.4)",
+                        slope = "skew_normal(0.3, 0.8, 2)",
+                        sd_residual = "gamma(4, 10)")
+  quantities <- c("diff", "rho", "intercept", "slope")
+  for (parameterization in c("correlation", "regression")) {
+    exact <- .quantity_priors(priors, quantities, parameterization)
+    Q <- .usdt_quantities(.bivariate_primitives(
+      .prior_draws(priors, 1e5, parameterization)))
+    for (q in quantities) {
+      label <- paste(parameterization, q)
+      at <- stats::quantile(Q[, q], c(0.1, 0.3, 0.5, 0.7, 0.9), names = FALSE)
+      expect_equal(exact[[q]]$cdf(at), c(0.1, 0.3, 0.5, 0.7, 0.9),
+                   tolerance = 0.01, label = label)
+      # The density is the derivative of the distribution function, which
+      # checks the Jacobian of a transformed prior. It is read at the 70%
+      # quantile, away from the peak at zero that the slope prior has under
+      # the correlation parameterization.
+      h <- 1e-3 * (at[4L] - at[2L])
+      slope_of_cdf <- diff(exact[[q]]$cdf(at[4L] + c(-h, h))) / (2 * h)
+      expect_equal(exp(exact[[q]]$log_density(at[4L])), slope_of_cdf,
+                   tolerance = 1e-3, label = label)
+    }
   }
 })
 
@@ -151,6 +173,6 @@ test_that("brms priors become the priors of the tested quantities", {
   circular$prior[circular$class == "sd" & circular$coef == ""] <-
     c("von_mises(0, 1)", "")
   p <- .brms_priors(circular, variables, "cond_D", "cond_I")
-  expect_no_error(.quantity_priors(p, c("diff", "rho")))
-  expect_error(.quantity_priors(p, "slope"), "cannot simulate")
+  expect_no_error(.quantity_priors(p, c("diff", "rho"), "correlation"))
+  expect_error(.quantity_priors(p, "slope", "correlation"), "cannot simulate")
 })

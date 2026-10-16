@@ -334,37 +334,52 @@ print.usdt_priors <- function(x, ...) {
     })
 }
 
+# This function draws n values from the prior of one parameter in one task.
+.prior_sample <- function(priors, parameter, task, n) {
+  .prior_fun(.prior_rows(priors, parameter, task))$r(n)
+}
+
 # This function simulates the population distribution of the two sensitivities
-# from its priors, one draw per row.
-.prior_draws <- function(priors, n) {
-  d <- .prior_rows(priors, "dprime")
-  s <- .prior_rows(priors, "sd_dprime")
-  draw <- function(row) .prior_fun(row)$r(n)
-  cbind(mu_D = draw(d[1L, ]), mu_I = draw(d[2L, ]),
-        sigma_D = draw(s[1L, ]), sigma_I = draw(s[2L, ]),
-        rho = draw(.prior_rows(priors, "cor_dprime", "both")))
+# from its priors, one draw per row: their means, SDs and correlation. Under
+# the latent regression the indirect mean and SD and the correlation follow
+# from the intercept, slope and residual SD.
+.prior_draws <- function(priors, n, parameterization) {
+  draw <- function(parameter, task) .prior_sample(priors, parameter, task, n)
+  if (parameterization == "regression") {
+    mu_D <- draw("dprime", "direct")
+    sigma_D <- draw("sd_dprime", "direct")
+    slope <- draw("slope", "both")
+    sigma_I <- sqrt(slope^2 * sigma_D^2 + draw("sd_residual", "both")^2)
+    return(cbind(mu_D = mu_D, mu_I = draw("intercept", "both") + slope * mu_D,
+                 sigma_D = sigma_D, sigma_I = sigma_I,
+                 rho = slope * sigma_D / sigma_I))
+  }
+  cbind(mu_D = draw("dprime", "direct"), mu_I = draw("dprime", "indirect"),
+        sigma_D = draw("sd_dprime", "direct"),
+        sigma_I = draw("sd_dprime", "indirect"),
+        rho = draw("cor_dprime", "both"))
 }
 
 # This function adds one new subject to every population draw and returns that
 # subject's hit and false-alarm rates in each task, following the subject level
-# of the model. A criterion fixed by the Meyen split takes the value that makes
-# HR + FAR = 1.
-.prior_predictive <- function(priors, n, free_c, UV) {
+# of the model with the given design (from .bayes_design()). A criterion fixed
+# by the Meyen split takes the value that makes HR + FAR = 1.
+.prior_predictive <- function(priors, n, design) {
   draw <- function(row) .prior_fun(row)$r(n)
-  B <- .prior_draws(priors, n)
+  B <- .prior_draws(priors, n, design$parameterization)
   z <- matrix(stats::rnorm(2L * n), n)
   d <- cbind(B[, "mu_D"] + B[, "sigma_D"] * z[, 1L],
              B[, "mu_I"] + B[, "sigma_I"] *
                (B[, "rho"] * z[, 1L] + sqrt(1 - B[, "rho"]^2) * z[, 2L]))
   signal <- .prior_rows(priors, "sd_signal")
-  sigma_s <- if (UV) {
+  sigma_s <- if (design$unequal_variances) {
     vapply(1:2, function(j) draw(signal[j, ]), numeric(n))
   } else {
     matrix(1, n, 2L)
   }
 
   criterion <- d * (1 - sigma_s) / (2 * (1 + sigma_s))
-  free <- which(free_c == 1L)
+  free <- which(design$free_c == 1L)
   if (length(free)) {
     mean_c <- .prior_rows(priors, "criterion")
     sd_c <- .prior_rows(priors, "sd_criterion")
@@ -385,41 +400,83 @@ print.usdt_priors <- function(x, ...) {
 }
 
 # This function returns the log density and the distribution function of the
-# prior of each requested tested quantity. Each one is a + b * theta, where
-# theta has a prior of its own and a and b > 0 depend on the other parameters,
-# so its prior averages the transformed prior of theta over prior draws of a
-# and b (a Rao-Blackwell estimate over n draws), whatever the families of the
-# priors. The correlation, with a and b fixed, is exact.
-.quantity_priors <- function(priors, quantities, n = .prior_samples) {
-  mu <- .prior_rows(priors, "dprime")
-  mu_I <- .prior_fun(mu[2L, ])
-  rho <- .prior_fun(.prior_rows(priors, "cor_dprime", "both"))
-  out <- list(rho = .affine_prior(rho, 0, 1, bounds = c(-1, 1)))
-  if (any(c("diff", "intercept") %in% quantities)) {
-    mu_D <- .prior_fun(mu[1L, ])$r(n)
+# prior of each requested tested quantity under a parameterization. A quantity
+# with a prior of its own is exact: the correlation, or the intercept and
+# slope of the latent regression. Any other one is an increasing function of
+# a parameter theta with a prior of its own, given the other parameters, so
+# its prior averages the transformed prior of theta over n prior draws of
+# them (a Rao-Blackwell estimate), whatever the families of the priors.
+.quantity_priors <- function(priors, quantities, parameterization,
+                             n = .prior_samples) {
+  prior <- function(parameter, task = "both") {
+    .prior_fun(.prior_rows(priors, parameter, task))
   }
-  if ("diff" %in% quantities) out$diff <- .affine_prior(mu_I, -mu_D, 1)
-  if (any(c("intercept", "slope") %in% quantities)) {
-    s <- .prior_rows(priors, "sd_dprime")
-    ratio <- .prior_fun(s[2L, ])$r(n) / .prior_fun(s[1L, ])$r(n)
-    slope <- rho$r(n) * ratio
-    if ("intercept" %in% quantities) {
-      out$intercept <- .affine_prior(mu_I, -slope * mu_D, 1)
+  draw <- function(parameter, task = "both") {
+    .prior_sample(priors, parameter, task, n)
+  }
+  exact <- function(theta, bounds = NULL) {
+    .transformed_prior(theta, identity, function(x) 0, bounds,
+                       induced = FALSE)
+  }
+  out <- list()
+
+  if (parameterization == "regression") {
+    # diff = b0 + (b1 - 1) mu_D, and rho = b1 sigma_D / sqrt(b1^2 sigma_D^2 +
+    # sigma_e^2), so b1 = rho r / sqrt(1 - rho^2) with r = sigma_e / sigma_D.
+    b0 <- prior("intercept")
+    b1 <- prior("slope")
+    out$intercept <- exact(b0)
+    out$slope <- exact(b1)
+    if ("diff" %in% quantities) {
+      shift <- (draw("slope") - 1) * draw("dprime", "direct")
+      out$diff <- .transformed_prior(b0, function(x) x - shift, function(x) 0)
     }
-    out$slope <- .affine_prior(rho, 0, ratio)
+    if ("rho" %in% quantities) {
+      r <- draw("sd_residual") / draw("sd_dprime", "direct")
+      out$rho <- .transformed_prior(
+        b1, function(x) x * r / sqrt(1 - x^2),
+        function(x) log(r) - 1.5 * log1p(-x^2), bounds = c(-1, 1))
+    }
+    return(out)
+  }
+
+  # intercept = mu_I - slope mu_D, diff = mu_I - mu_D, and slope = rho r with
+  # r = sigma_I / sigma_D.
+  rho <- prior("cor_dprime")
+  mu_I <- prior("dprime", "indirect")
+  out$rho <- exact(rho, bounds = c(-1, 1))
+  if (any(c("diff", "intercept") %in% quantities)) {
+    mu_D <- draw("dprime", "direct")
+  }
+  if ("diff" %in% quantities) {
+    out$diff <- .transformed_prior(mu_I, function(x) x + mu_D, function(x) 0)
+  }
+  if (any(c("intercept", "slope") %in% quantities)) {
+    r <- draw("sd_dprime", "indirect") / draw("sd_dprime", "direct")
+    slope <- rho$r(n) * r
+    if ("intercept" %in% quantities) {
+      out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_D,
+                                          function(x) 0)
+    }
+    out$slope <- .transformed_prior(rho, function(x) x / r,
+                                    function(x) -log(r))
   }
   out
 }
 
-# This function gives the prior of a + b * theta from that of theta (from
-# .prior_fun()) and from draws, or fixed values, of a and b > 0.
-.affine_prior <- function(theta, a, b, bounds = NULL) {
+# This function gives the prior of q = g(theta), with g increasing, from that
+# of theta (from .prior_fun()), the inverse of g and the log of the derivative
+# of that inverse at q. Both may depend on draws of other parameters, over
+# which the density and the distribution function are averaged; such a prior
+# is induced by those parameters.
+.transformed_prior <- function(theta, inverse, log_jacobian, bounds = NULL,
+                               induced = TRUE) {
   list(
     log_density = function(x) vapply(x, function(v) {
-      .log_mean_exp(theta$log_density((v - a) / b) - log(b))
+      .log_mean_exp(theta$log_density(inverse(v)) + log_jacobian(v))
     }, 0),
-    cdf = function(x) vapply(x, function(v) mean(theta$cdf((v - a) / b)), 0),
-    bounds = bounds)
+    cdf = function(x) vapply(x, function(v) mean(theta$cdf(inverse(v))), 0),
+    bounds = bounds, induced = induced)
 }
 
 # This function averages probabilities given on the log scale.
@@ -446,6 +503,10 @@ print.usdt_priors <- function(x, ...) {
 #'   criteria are fixed.
 #' @param unequal_variances Logical. Simulate the signal standard deviation
 #'   from its prior instead of fixing it to 1.
+#' @param parameterization How the model describes the two sensitivities, as
+#'   in [hsdt()]: by their means, standard deviations and correlation
+#'   (`"correlation"`, the default) or by the latent regression of the
+#'   indirect on the direct one (`"regression"`).
 #' @param ... Ignored.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -458,15 +519,17 @@ print.usdt_priors <- function(x, ...) {
 #' from each population draw. Rates piled up at 0 or 1 mean that the priors
 #' allow extreme performance.
 #'
-#' The H2 panel shows the exact prior of the correlation. The difference
-#' between the mean sensitivities (H1) and the intercept of the latent
-#' regression (H3) have no priors of their own: the model induces them through
-#' the priors of the means, standard deviations and correlation. Each is drawn
-#' as the density that the prior of the indirect mean gives it, averaged over
-#' 20,000 prior draws of the other parameters (a Rao-Blackwell estimate), the
-#' same priors that [usdt_bf()] averages over 100,000 draws. The intercept has
-#' heavy tails, so only its central 95% is drawn. Dotted lines mark the value
-#' of each hypothesis under the null.
+#' Each hypothesis panel shows the prior of the quantity it tests. A quantity
+#' with a prior of its own is drawn exactly: the correlation (H2) under the
+#' correlation parameterization, the intercept (H3) under the latent
+#' regression. The others have priors that the model induces through the
+#' remaining priors. Each of these is drawn as the density that one prior
+#' gives it, averaged over 20,000 prior draws of the other parameters (a
+#' Rao-Blackwell estimate), the same priors that [usdt_bf()] averages over
+#' 100,000 draws. The difference (H1) and the intercept (H3) span four robust
+#' standard deviations either side of their median, since an induced intercept
+#' prior has heavy tails. Dotted lines mark the value of each hypothesis under
+#' the null.
 #'
 #' @seealso [usdt_priors()]
 #'
@@ -477,8 +540,14 @@ print.usdt_priors <- function(x, ...) {
 #' plot(usdt_priors(dprime = list(direct = "normal(0, 1)",
 #'                                indirect = "normal(0, 0.5)")))
 #'
+#' # The latent regression, with a prior on its intercept
+#' plot(usdt_priors(intercept = "normal(0, 0.3)"),
+#'      parameterization = "regression")
+#'
 #' @export
-plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
+plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
+                             parameterization = c("correlation", "regression"),
+                             ...) {
   if (!is.null(data) && !inherits(data, "usdt_data")) {
     .usdt_stop("`data` must come from usdt_data_long() or usdt_data_tasks(), ",
                "not a plain ", class(data)[1L], ".")
@@ -487,20 +556,34 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
       is.na(unequal_variances)) {
     .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
   }
+  parameterization <- .check_parameterization(parameterization)
   if (length(list(...))) {
     .usdt_stop("`...` is not used by the prior predictive plot.")
   }
-  .plot_priors(.prior_check_data(x, data, unequal_variances))
+  .plot_priors(.prior_check_data(x, data, unequal_variances,
+                                 parameterization))
 }
 
-# This function collects the curves drawn by the prior predictive check.
-.prior_check_data <- function(priors, data, unequal_variances) {
+# This function reads the parameterization of the two sensitivities.
+.check_parameterization <- function(x) {
+  tryCatch(match.arg(x, c("correlation", "regression")), error = function(e)
+    .usdt_stop("`parameterization` must be `\"correlation\"` or ",
+               "`\"regression\"`."))
+}
+
+# This function collects the curves drawn by the prior predictive check. With
+# data, the criteria fixed by the median split are those hsdt() fixes.
+.prior_check_data <- function(priors, data, unequal_variances,
+                              parameterization) {
   labels <- if (is.null(data)) c(direct = "Direct", indirect = "Indirect") else
     data$meta$labels
-  free_c <- if (is.null(data)) c(1L, 1L) else
-    as.integer(!unlist(data$meta$criterion_zero)[c("direct", "indirect")])
-  simulated <- .prior_predictive(priors, .prior_samples, free_c,
-                                 unequal_variances)
+  design <- if (is.null(data)) {
+    list(free_c = c(1L, 1L), unequal_variances = unequal_variances,
+         parameterization = parameterization)
+  } else {
+    .bayes_design(data, "auto", unequal_variances, parameterization)
+  }
+  simulated <- .prior_predictive(priors, .prior_samples, design)
 
   # Panel titles are drawn on a graphics device, so they stay ASCII.
   panels <- c("Hit and false-alarm rates of a new subject",
@@ -521,34 +604,35 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
                 labels[[j]], "False-alarm rate"))
   }))
 
-  # The hypotheses take the priors of the Bayes factors. The difference spans
-  # four robust SDs either side of its median; the induced intercept prior has
-  # heavy tails, so only its central 95% is drawn. Each point of an induced
-  # density averages over prior draws, so these smooth curves take fewer
-  # points and draws than a Bayes factor, which reads one point precisely.
-  priors_of <- .quantity_priors(priors, c("diff", "intercept"),
-                                n = .curve_samples)
+  # The hypotheses take the priors of the Bayes factors. The difference and
+  # the intercept span four robust SDs either side of their median, since an
+  # induced intercept prior has heavy tails. Each point of an induced density
+  # averages over prior draws, so these smooth curves take fewer points and
+  # draws than a Bayes factor, which reads one point precisely.
+  priors_of <- .quantity_priors(priors, c("diff", "rho", "intercept"),
+                                parameterization, n = .curve_samples)
   Q <- .usdt_quantities(.bivariate_primitives(simulated$draws))
-  centre <- stats::median(Q[, "diff"])
-  spread <- stats::IQR(Q[, "diff"]) / (2 * stats::qnorm(0.75))
-  grid <- seq(centre - 4 * spread, centre + 4 * spread, length.out = 128L)
-  h1 <- curve(panels[2L], grid, exp(priors_of$diff$log_density(grid)))
+  span <- function(x) {
+    spread <- stats::IQR(x) / (2 * stats::qnorm(0.75))
+    stats::median(x) + c(-4, 4) * spread
+  }
+  density <- function(panel, quantity, range) {
+    grid <- seq(range[1L], range[2L], length.out = 128L)
+    curve(panel, grid, exp(priors_of[[quantity]]$log_density(grid)))
+  }
 
-  grid <- seq(-0.999, 0.999, length.out = 512L)
-  h2 <- curve(panels[3L], grid, exp(priors_of$rho$log_density(grid)))
-
-  limits <- stats::quantile(Q[, "intercept"], c(0.025, 0.975), names = FALSE)
-  grid <- seq(limits[1L], limits[2L], length.out = 128L)
-  h3 <- curve(panels[4L], grid, exp(priors_of$intercept$log_density(grid)))
-
-  curves <- rbind(rates, h1, h2, h3)
+  curves <- rbind(rates,
+                  density(panels[2L], "diff", span(Q[, "diff"])),
+                  density(panels[3L], "rho", c(-0.999, 0.999)),
+                  density(panels[4L], "intercept", span(Q[, "intercept"])))
   curves$panel <- factor(curves$panel, levels = panels)
   curves$task <- factor(curves$task, levels = unname(labels))
   curves$rate <- factor(curves$rate,
                         levels = c("Hit rate", "False-alarm rate"))
   list(curves = curves, labels = labels,
-       fixed = unname(labels[c("direct", "indirect")][free_c == 0L]),
+       fixed = unname(labels[c("direct", "indirect")][design$free_c == 0L]),
        unequal_variances = unequal_variances,
+       parameterization = parameterization,
        nulls = data.frame(panel = factor(panels[-1L], levels = panels), x = 0))
 }
 
@@ -632,10 +716,15 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE, ...) {
       caption = .wrap_caption(
         "Prior densities from 100,000 draws of the priors; no responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, "\n",
-        "H2 is the exact prior of the correlation. H1 and the H3 intercept are ",
-        "induced by the other priors and averaged over 20,000 of the draws; ",
-        "the intercept is shown over its central 95%. Dotted lines mark each ",
-        "null value."
+        if (values$parameterization == "regression") {
+          paste0("H3 is the exact prior of the intercept. H1 and H2 are ",
+                 "induced by the other priors")
+        } else {
+          paste0("H2 is the exact prior of the correlation. H1 and H3 are ",
+                 "induced by the other priors")
+        },
+        " and averaged over 20,000 of the draws. H1 and H3 span four robust ",
+        "SDs either side of their median. Dotted lines mark each null value."
       )
     ) +
     .panel_theme() +

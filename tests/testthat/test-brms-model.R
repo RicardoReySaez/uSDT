@@ -10,7 +10,6 @@ design_of <- function(i) {
 }
 
 test_that("the brms formula gives every row its SDT predictor", {
-  skip_if_not_installed("brms")
   agg <- expand.grid(subj = c("s1", "s2"), sig = c(TRUE, FALSE),
                      task = factor(c("D", "I")), stringsAsFactors = FALSE)
   agg$y <- 3L
@@ -36,7 +35,6 @@ test_that("the brms formula gives every row its SDT predictor", {
 })
 
 test_that("each prior a design uses becomes one brms prior of its own", {
-  skip_if_not_installed("brms")
   set.seed(6)
   d <- suppressWarnings(usdt_data_long(
     make_trials(n_subj = 8, n_trials = 20), task_col = "task",

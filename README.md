@@ -54,9 +54,10 @@ Or install the development version from GitHub:
 pak::pak("RicardoReySaez/uSDT")
 ```
 
-Bayesian estimation also needs `brms`, with `rstan` (and `BH` and `RcppEigen`)
-from CRAN or `cmdstanr` with CmdStan, and a C++ toolchain to compile the model
-once for each set of priors.
+uSDT installs `brms` for Bayesian estimation, which also needs a C++ toolchain
+to compile the model once for each set of priors. With the default `rstan`
+backend, compiling needs `BH` and `RcppEigen` too; the `cmdstanr` backend needs
+CmdStan instead.
 
 ## Example: Vadillo et al. data
 

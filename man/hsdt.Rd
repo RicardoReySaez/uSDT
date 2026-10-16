@@ -189,10 +189,8 @@ m$design$formula
 
 \donttest{
 # Bayesian estimation. The first call compiles the model.
-if (requireNamespace("brms", quietly = TRUE)) {
-  mb <- hsdt(d, estimation = "bayesian", seed = 1)
-  summary(mb)
-}
+mb <- hsdt(d, estimation = "bayesian", seed = 1)
+summary(mb)
 }
 
 }

@@ -22,7 +22,6 @@ test_that("hypotheses are read into a quantity, an operator and values", {
 })
 
 test_that("Bayes factors match a case with normal prior and posterior", {
-  skip_if_not_installed("logspline")
   set.seed(1)
   draws <- stats::rnorm(2e4, 0.3, 0.1)
   prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
@@ -52,7 +51,6 @@ test_that("the induced priors keep the symmetry of the correlation prior", {
 })
 
 test_that("each hypothesis prints as a report; a row subset plots its own", {
-  skip_if_not_installed("logspline")
   set.seed(3)
   draws <- stats::rnorm(2e4, 0.3, 0.1)
   prior <- list(log_density = function(x) stats::dnorm(x, 0, 1, log = TRUE),
@@ -121,7 +119,6 @@ test_that("the priors of the tested quantities match simulated prior draws", {
 })
 
 test_that("very heavy-tailed draws still give a posterior density", {
-  skip_if_not_installed("logspline")
   # Cauchy draws like these defeat both logspline algorithms on some
   # platforms; whichever fit converges, a density must come back, and the
   # asinh fit, the last resort, must be close to the exact one.

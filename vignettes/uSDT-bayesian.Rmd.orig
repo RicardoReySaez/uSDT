@@ -64,8 +64,8 @@ is fitted with [brms](https://paulbuerkner.com/brms/), which draws from the
 **posterior** with Stan, and you can weigh each hypothesis with **Bayes
 factors**.
 
-Bayesian estimation needs `brms` and a Stan backend: `rstan` (together with
-`BH` and `RcppEigen`) or `cmdstanr`. As in brms, the backend is the
+uSDT installs `brms`, which fits the model with a Stan backend: `rstan`
+(which also needs `BH` and `RcppEigen`) or `cmdstanr`. As in brms, the backend is the
 `brms.backend` option, rstan when it is not set; this article was built with
 `options(brms.backend = "cmdstanr")`. The model is compiled the first time
 you fit it with a given set of priors, which needs a C++ toolchain and takes

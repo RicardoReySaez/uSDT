@@ -13,7 +13,9 @@
   session, so sampling shows a single progress bar and none of Stan's
   messages, followed by a summary of divergent transitions, tree depth, R-hat
   and effective sample size. As in brms, the backend defaults to the
-  `brms.backend` option.
+  `brms.backend` option. brms, posterior, logspline, callr and cli are now
+  imported, so the Bayesian estimation needs no optional package apart from
+  `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
 * `hsdt(parameterization = "regression")` writes the indirect sensitivity of
   each subject as the latent regression on the direct one, with priors on its
   intercept, slope and residual standard deviation, so that the intercept

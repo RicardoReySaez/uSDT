@@ -146,23 +146,19 @@ usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
 
 \donttest{
 # 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
-if (requireNamespace("brms", quietly = TRUE)) {
-  fit_b <- brms::brm(
-    y | trials(n) ~ 0 + direct + task:size + task:cond +
-      (0 + direct | subj) + (0 + task:cond | subj),
-    data = counts, family = binomial("probit"),
-    prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
-  )
+fit_b <- brms::brm(
+  y | trials(n) ~ 0 + direct + task:size + task:cond +
+    (0 + direct | subj) + (0 + task:cond | subj),
+  data = counts, family = binomial("probit"),
+  prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
+)
 
-  # The same term names; the tests now summarise the posterior
-  usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
+# The same term names; the tests now summarise the posterior
+usdt_tests(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
 
-  # With a proper prior on the sensitivities, also Bayes factors
-  if (requireNamespace("logspline", quietly = TRUE)) {
-    set.seed(1)
-    usdt_bf(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
-  }
-}
+# With a proper prior on the sensitivities, also Bayes factors
+set.seed(1)
+usdt_bf(fit_b, direct = "taskD:cond", indirect = "taskI:cond")
 }
 
 }

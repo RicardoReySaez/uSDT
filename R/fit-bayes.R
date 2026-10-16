@@ -48,14 +48,14 @@
   object
 }
 
-# This function checks that brms and the chosen backend can compile the model.
-# rstan compiles at run time against the headers of BH and RcppEigen, which a
-# binary install of rstan does not bring, and cmdstanr needs CmdStan itself.
+# This function checks that the chosen backend can compile the model. brms
+# brings rstan, which compiles at run time against the headers of BH and
+# RcppEigen that a binary install of rstan does not bring; cmdstanr, which is
+# not on CRAN, needs CmdStan itself.
 .check_backend <- function(backend) {
-  needs <- switch(backend, rstan = c("rstan", "BH", "RcppEigen"),
-                  cmdstanr = "cmdstanr")
-  rlang::check_installed(c("brms", needs, "posterior", "callr", "cli"),
-                         reason = "to fit the Bayesian model.")
+  needs <- switch(backend, rstan = c("BH", "RcppEigen"), cmdstanr = "cmdstanr")
+  rlang::check_installed(needs, reason = paste0("to compile the model with ",
+                                                backend, "."))
   if (backend == "cmdstanr" &&
       is.null(cmdstanr::cmdstan_version(error_on_NA = FALSE))) {
     .usdt_stop("cmdstanr cannot find CmdStan. Install it once with ",

@@ -15,7 +15,6 @@ test_backend <- function() Sys.getenv("USDT_TEST_BACKEND", "rstan")
 test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
               "set USDT_TEST_STAN=true to fit the Stan model")
-  skip_if_not_installed("brms")
   old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
   on.exit(options(old), add = TRUE)
 
@@ -45,7 +44,6 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
                tolerance = 0.2)
 
   # The default Bayes factors test the three point nulls and draw.
-  skip_if_not_installed("logspline")
   b <- usdt_bf(m, plot = FALSE)
   expect_identical(b$hypothesis,
                    c(paste0(.usdt_chars()$delta, "d' = 0"), "rho = 0",
@@ -57,7 +55,6 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
 test_that("the latent regression reports the same quantities", {
   skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
               "set USDT_TEST_STAN=true to fit the Stan model")
-  skip_if_not_installed("brms")
   old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
   on.exit(options(old), add = TRUE)
 
@@ -77,7 +74,6 @@ test_that("the latent regression reports the same quantities", {
   draws <- unclass(posterior::as_draws_matrix(m$fit))
   expect_equal(m$tests$estimate[3:4],
                unname(colMeans(draws[, c("b_b0_Intercept", "b_b1_Intercept")])))
-  skip_if_not_installed("logspline")
   expect_match(usdt_bf(m, "rho = 0", plot = FALSE)$test, "on slope = 0",
                fixed = TRUE)
 })
@@ -106,7 +102,6 @@ test_that("aggregated counts keep every trial and response", {
 test_that("a brms model is tested from its posterior", {
   skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
               "set USDT_TEST_STAN=true to fit the brms model")
-  skip_if_not_installed("brms")
 
   set.seed(3)
   df <- make_trials(n_subj = 30, n_trials = 60)
@@ -129,7 +124,6 @@ test_that("a brms model is tested from its posterior", {
                    tests$p.value[2L])
 
   # Its priors are read from the model, so it also gets Bayes factors.
-  skip_if_not_installed("logspline")
   b <- usdt_bf(fit, direct = "cond_D", indirect = "cond_I", plot = FALSE)
   expect_true(all(is.finite(b$log_BF10)))
   expect_equal(b$estimate, tests$estimate[c(1L, 2L, 3L)])
@@ -137,7 +131,6 @@ test_that("a brms model is tested from its posterior", {
 
 test_that("chains run in background sessions and report their results", {
   skip_on_cran()
-  skip_if_not_installed("callr")
   settings <- list(chains = 3L, cores = 2L, iter = 10L, refresh = 0L)
   out <- .run_chains(settings, function(chain) {
     callr::r_bg(function(k) {

@@ -179,20 +179,17 @@ d <- usdt_data_tasks(
   dichotomize      = list(direct = FALSE, indirect = TRUE)
 )
 
-if (requireNamespace("rstan", quietly = TRUE) &&
-    requireNamespace("logspline", quietly = TRUE)) {
-  m <- hsdt(d, estimation = "bayesian", seed = 1)
+m <- hsdt(d, estimation = "bayesian", seed = 1)
 
-  # The three point nulls, with their figure
-  set.seed(1)
-  usdt_bf(m)
+# The three point nulls, with their figure
+set.seed(1)
+usdt_bf(m)
 
-  # Unconscious processing as a directional hypothesis, and a region of
-  # practical equivalence for the difference, without the figure
-  b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
-  b
-  plot(b[1, ])
-}
+# Unconscious processing as a directional hypothesis, and a region of
+# practical equivalence for the difference, without the figure
+b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
+b
+plot(b[1, ])
 }
 
 }

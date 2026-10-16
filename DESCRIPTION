@@ -32,9 +32,9 @@ Description: Fits hierarchical signal detection theory (SDT) models to paired
     unconscious processing. Frequentist estimation uses 'lme4'. Bayesian
     estimation uses 'brms', which runs 'Stan' through 'rstan' or 'cmdstanr',
     with priors on the means, standard deviations and correlation of the two
-    sensitivities, and
-    weighs each hypothesis with Bayes factors: the Savage-Dickey density ratio
-    for point hypotheses (Wagenmakers et al., 2010
+    sensitivities or on the latent regression between them, and weighs each
+    hypothesis with Bayes factors: the Savage-Dickey density ratio for point
+    hypotheses (Wagenmakers et al., 2010
     <doi:10.1016/j.cogpsych.2009.12.001>) and the change from prior to
     posterior odds for directional and interval ones. The tests and Bayes
     factors also accept custom models fitted with 'lme4' or 'brms'.
@@ -50,20 +50,19 @@ Imports:
     utils,
     lme4,
     ggplot2,
-    rlang
+    rlang,
+    brms,
+    posterior,
+    logspline,
+    callr,
+    cli
 Suggests:
     testthat (>= 3.1.7),
     knitr,
     rmarkdown,
-    brms,
-    posterior,
-    logspline,
-    rstan,
     BH,
     RcppEigen,
-    cmdstanr,
-    callr,
-    cli
+    cmdstanr
 Additional_repositories: https://stan-dev.r-universe.dev
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)

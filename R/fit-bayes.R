@@ -1,7 +1,7 @@
 # fit-bayes.R
 # Fit the Bayesian hierarchical SDT model with brms
 # Author: Ricardo Rey-Sáez
-# Last modified: 15-10-2026
+# Last modified: 18-10-2026
 
 # Internal functions
 
@@ -259,30 +259,11 @@
 # This function returns the draws of the population parameters of a Bayesian
 # fit under their uSDT names: mu_d, sigma_d and rho_d for the two
 # sensitivities, mu_c, sigma_c and rho_c for the estimated criteria, and
-# sigma_s under unequal variances. The latent regression samples the direct
-# mean and SD with the intercept, slope and residual SD, from which the
-# indirect mean and SD and the correlation follow draw by draw.
+# sigma_s under unequal variances. Both parameterizations sample them all.
 .population_draws <- function(object) {
   names <- .brms_names(object$design)
   draws <- posterior::as_draws_array(object$fit, variable = unname(names))
   posterior::variables(draws) <- names(names)
-  if (object$design$parameterization == "regression") {
-    get <- function(name) {
-      as.vector(posterior::extract_variable_matrix(draws, name))
-    }
-    slope <- get("slope")
-    sigma_D <- get("sigma_d[1]")
-    sigma_I <- sqrt(slope^2 * sigma_D^2 + get("sigma_e")^2)
-    derived <- posterior::draws_array(
-      `mu_d[2]` = get("intercept") + slope * get("mu_d[1]"),
-      `sigma_d[2]` = sigma_I, rho_d = slope * sigma_D / sigma_I,
-      .nchains = posterior::nchains(draws))
-    keep <- c("mu_d[1]", "mu_d[2]", "sigma_d[1]", "sigma_d[2]", "rho_d",
-              setdiff(names(names), c("mu_d[1]", "sigma_d[1]", "intercept",
-                                      "slope", "sigma_e")))
-    draws <- posterior::subset_draws(posterior::bind_draws(draws, derived),
-                                     variable = keep)
-  }
   draws
 }
 
@@ -312,8 +293,7 @@
 # This function returns the draws of one subject-level variable of a Bayesian
 # fit, `d` or `c`, in one task (1 direct, 2 indirect): one column per subject,
 # in the order of `subjects`. A subject's value is the population coefficient
-# plus the subject's effect; under the latent regression the indirect d' is
-# b0 + b1 * d'(direct) + e. A criterion fixed by the Meyen split makes
+# plus the subject's effect. A criterion fixed by the Meyen split makes
 # HR + FAR = 1, which is 0 under equal variances.
 .subject_draws <- function(object, variable, task, subjects = object$subjects) {
   design <- object$design
@@ -329,11 +309,7 @@
     m[, -1L, drop = FALSE] + m[, 1L]
   }
 
-  out <- if (variable == "d" && task == 2L &&
-             design$parameterization == "regression") {
-    m <- read(c("b_b0_Intercept", "b_b1_Intercept", effects("e", "subj")))
-    m[, 1L] + m[, 2L] * coefficient("dD") + m[, -(1:2), drop = FALSE]
-  } else if (variable == "d") {
+  out <- if (variable == "d") {
     coefficient(paste0("d", k))
   } else if (design$free_c[task] == 1L) {
     coefficient(paste0("c", k), "subj_c")

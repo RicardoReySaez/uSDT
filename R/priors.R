@@ -1,7 +1,7 @@
 # priors.R
 # Specify the priors of the Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 15-10-2026
+# Last modified: 18-10-2026
 
 # Public functions
 
@@ -42,12 +42,10 @@
 #' @param sd_signal Prior of the standard deviation of the signal distribution,
 #'   relative to the noise distribution. It is used only under unequal
 #'   variances.
-#' @param intercept,slope Priors of the intercept and slope of the latent
-#'   regression of indirect on direct \eqn{d'}. They are used only by the
-#'   latent regression parameterization.
-#' @param sd_residual Prior of the residual standard deviation of the
-#'   indirect \eqn{d'} around the latent regression line. It is used only by
-#'   the latent regression parameterization.
+#' @param intercept Prior of the intercept of the latent regression of
+#'   indirect on direct \eqn{d'}. It is used only by the latent regression
+#'   parameterization, where it replaces the prior of the indirect mean
+#'   \eqn{d'}.
 #'
 #' @details
 #' `dprime`, `sd_dprime`, `criterion`, `sd_criterion` and `sd_signal` take one
@@ -71,13 +69,24 @@
 #' not change when both standard deviation priors are rescaled by the same
 #' factor, because the slope depends on their ratio.
 #'
-#' The latent regression parameterization describes the indirect sensitivity
-#' of each subject instead as `intercept + slope * d'(direct) + residual`, with
-#' priors on the intercept, the slope and the residual standard deviation, and
-#' the indirect mean, standard deviation and correlation follow from them.
-#' Then `dprime` and `sd_dprime` apply to the direct task only, and
-#' `cor_dprime` is not used. The intercept and slope take `normal(0, 1)` by
-#' default, weakly informative priors that leave the estimates to the data.
+#' The latent regression parameterization moves the prior of the indirect mean
+#' to the intercept \eqn{\beta_0} of the latent regression, so that both the
+#' intercept (H3) and the correlation (H2) have the priors you give them. It
+#' keeps the priors of the direct mean, of both standard deviations and of the
+#' correlation, and the indirect mean follows from them as
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}; `dprime`
+#' then applies to the direct task only. The intercept takes `normal(0, 1)` by
+#' default, a weakly informative prior that leaves the estimate to the data.
+#' Two things follow:
+#' * the difference between the means (H1) has an induced prior,
+#'   \eqn{\beta_0 + (\rho \sigma_I / \sigma_D - 1) \mu_D}, with the heavy tails
+#'   the intercept has under the correlation parameterization;
+#' * the intercept and the correlation are independent a priori but not a
+#'   posteriori. The data fix the indirect mean, the sum of \eqn{\beta_0} and
+#'   \eqn{\rho (\sigma_I / \sigma_D) \mu_D}, so a narrow intercept prior also
+#'   narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_D} is small.
+#'   The Bayes factor of a correlation hypothesis then depends on the
+#'   intercept prior too.
 #'
 #' @return An object of class `usdt_priors`: a data frame with one row per
 #'   prior, giving the parameter, the task, the family, its arguments (a list
@@ -108,9 +117,7 @@ usdt_priors <- function(dprime        = "normal(0, 1)",
                         sd_criterion  = "student_t(4, 0, 0.5)",
                         cor_criterion = "lkj(1)",
                         sd_signal     = "lognormal(0, 0.5)",
-                        intercept     = "normal(0, 1)",
-                        slope         = "normal(0, 1)",
-                        sd_residual   = "student_t(4, 0, 0.5)") {
+                        intercept     = "normal(0, 1)") {
   values <- as.list(environment())
 
   # Task arguments take one prior for both tasks or one per task.
@@ -138,8 +145,7 @@ print.usdt_priors <- function(x, ...) {
   .print_prior_rows(x)
   cat("\n  Standard deviation priors are truncated at zero. cor(c) applies when\n",
       "  both criteria are estimated, and sd(signal) under unequal variances.\n",
-      "  Under the latent regression, intercept, slope and sd(residual) replace\n",
-      "  the indirect mean d', sd(d') and cor(d').\n",
+      "  Under the latent regression, intercept replaces the indirect mean d'.\n",
       sep = "")
   invisible(x)
 }
@@ -156,9 +162,7 @@ print.usdt_priors <- function(x, ...) {
   sd_criterion  = list(tasks = TRUE,  kind = "sd",   label = "sd(c)"),
   cor_criterion = list(tasks = FALSE, kind = "cor",  label = "cor(c)"),
   sd_signal     = list(tasks = TRUE,  kind = "sd",   label = "sd(signal)"),
-  intercept     = list(tasks = FALSE, kind = "mean", label = "intercept"),
-  slope         = list(tasks = FALSE, kind = "mean", label = "slope"),
-  sd_residual   = list(tasks = FALSE, kind = "sd",   label = "sd(residual)")
+  intercept     = list(tasks = FALSE, kind = "mean", label = "intercept")
 )
 
 # The values each kind of parameter can take.
@@ -180,13 +184,10 @@ print.usdt_priors <- function(x, ...) {
 # under unequal variances.
 .used_priors <- function(priors, design) {
   free <- c("direct", "indirect")[design$free_c == 1L]
-  sensitivities <- if (design$parameterization == "regression") {
-    (priors$parameter %in% c("dprime", "sd_dprime") &
-       priors$task == "direct") |
-      priors$parameter %in% c("intercept", "slope", "sd_residual")
-  } else {
-    priors$parameter %in% c("dprime", "sd_dprime", "cor_dprime")
-  }
+  regression <- design$parameterization == "regression"
+  sensitivities <- priors$parameter %in% c("sd_dprime", "cor_dprime") |
+    (priors$parameter == "dprime" & (!regression | priors$task == "direct")) |
+    (priors$parameter == "intercept" & regression)
   keep <- sensitivities |
     (priors$parameter %in% c("criterion", "sd_criterion") &
        priors$task %in% free) |
@@ -342,18 +343,18 @@ print.usdt_priors <- function(x, ...) {
 
 # This function simulates the population distribution of the two sensitivities
 # from its priors, one draw per row: their means, SDs and correlation. Under
-# the latent regression the indirect mean and SD and the correlation follow
-# from the intercept, slope and residual SD.
+# the latent regression the indirect mean follows from the intercept as
+# mu_I = b0 + rho * sigma_I / sigma_D * mu_D.
 .prior_draws <- function(priors, n, parameterization) {
   draw <- function(parameter, task) .prior_sample(priors, parameter, task, n)
   if (parameterization == "regression") {
     mu_D <- draw("dprime", "direct")
     sigma_D <- draw("sd_dprime", "direct")
-    slope <- draw("slope", "both")
-    sigma_I <- sqrt(slope^2 * sigma_D^2 + draw("sd_residual", "both")^2)
-    return(cbind(mu_D = mu_D, mu_I = draw("intercept", "both") + slope * mu_D,
-                 sigma_D = sigma_D, sigma_I = sigma_I,
-                 rho = slope * sigma_D / sigma_I))
+    sigma_I <- draw("sd_dprime", "indirect")
+    rho <- draw("cor_dprime", "both")
+    return(cbind(mu_D = mu_D,
+                 mu_I = draw("intercept", "both") + rho * sigma_I / sigma_D * mu_D,
+                 sigma_D = sigma_D, sigma_I = sigma_I, rho = rho))
   }
   cbind(mu_D = draw("dprime", "direct"), mu_I = draw("dprime", "indirect"),
         sigma_D = draw("sd_dprime", "direct"),
@@ -402,11 +403,11 @@ print.usdt_priors <- function(x, ...) {
 
 # This function returns the log density and the distribution function of the
 # prior of each requested tested quantity under a parameterization. A quantity
-# with a prior of its own is exact: the correlation, or the intercept and
-# slope of the latent regression. Any other one is an increasing function of
-# a parameter theta with a prior of its own, given the other parameters, so
-# its prior averages the transformed prior of theta over n prior draws of
-# them (a Rao-Blackwell estimate), whatever the families of the priors.
+# with a prior of its own is exact: the correlation, and under the latent
+# regression the intercept. Any other one is an increasing function of a
+# parameter theta with a prior of its own, given the other parameters, so its
+# prior averages the transformed prior of theta over n prior draws of them (a
+# Rao-Blackwell estimate), whatever the families of the priors.
 .quantity_priors <- function(priors, quantities, parameterization,
                              n = .prior_samples) {
   prior <- function(parameter, task = "both") {
@@ -419,48 +420,39 @@ print.usdt_priors <- function(x, ...) {
     .transformed_prior(theta, identity, function(x) 0, bounds,
                        induced = FALSE)
   }
-  out <- list()
+  regression <- parameterization == "regression"
 
-  if (parameterization == "regression") {
-    # diff = b0 + (b1 - 1) mu_D, and rho = b1 sigma_D / sqrt(b1^2 sigma_D^2 +
-    # sigma_e^2), so b1 = rho r / sqrt(1 - rho^2) with r = sigma_e / sigma_D.
-    b0 <- prior("intercept")
-    b1 <- prior("slope")
-    out$intercept <- exact(b0)
-    out$slope <- exact(b1)
-    if ("diff" %in% quantities) {
-      shift <- (draw("slope") - 1) * draw("dprime", "direct")
-      out$diff <- .transformed_prior(b0, function(x) x - shift, function(x) 0)
-    }
-    if ("rho" %in% quantities) {
-      r <- draw("sd_residual") / draw("sd_dprime", "direct")
-      out$rho <- .transformed_prior(
-        b1, function(x) x * r / sqrt(1 - x^2),
-        function(x) log(r) - 1.5 * log1p(-x^2), bounds = c(-1, 1))
-    }
-    return(out)
-  }
-
-  # intercept = mu_I - slope mu_D, diff = mu_I - mu_D, and slope = rho r with
-  # r = sigma_I / sigma_D.
+  # slope = rho r with r = sigma_I / sigma_D. The difference and the intercept
+  # shift the indirect mean or, under the latent regression, the intercept:
+  # diff = mu_I - mu_D = b0 + (slope - 1) mu_D and b0 = mu_I - slope mu_D.
   rho <- prior("cor_dprime")
-  mu_I <- prior("dprime", "indirect")
-  out$rho <- exact(rho, bounds = c(-1, 1))
+  out <- list(rho = exact(rho, bounds = c(-1, 1)))
+  shifted <- if (regression) "diff" else "intercept"
   if (any(c("diff", "intercept") %in% quantities)) {
     mu_D <- draw("dprime", "direct")
   }
+  if (any(c(shifted, "slope") %in% quantities)) {
+    r <- draw("sd_dprime", "indirect") / draw("sd_dprime", "direct")
+    slope <- rho$r(n) * r
+    out$slope <- .transformed_prior(rho, function(x) x / r,
+                                    function(x) -log(r))
+  }
+  if (regression) {
+    b0 <- prior("intercept")
+    out$intercept <- exact(b0)
+    if ("diff" %in% quantities) {
+      out$diff <- .transformed_prior(b0, function(x) x - (slope - 1) * mu_D,
+                                     function(x) 0)
+    }
+    return(out)
+  }
+  mu_I <- prior("dprime", "indirect")
   if ("diff" %in% quantities) {
     out$diff <- .transformed_prior(mu_I, function(x) x + mu_D, function(x) 0)
   }
-  if (any(c("intercept", "slope") %in% quantities)) {
-    r <- draw("sd_dprime", "indirect") / draw("sd_dprime", "direct")
-    slope <- rho$r(n) * r
-    if ("intercept" %in% quantities) {
-      out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_D,
-                                          function(x) 0)
-    }
-    out$slope <- .transformed_prior(rho, function(x) x / r,
-                                    function(x) -log(r))
+  if ("intercept" %in% quantities) {
+    out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_D,
+                                        function(x) 0)
   }
   out
 }
@@ -521,16 +513,17 @@ print.usdt_priors <- function(x, ...) {
 #' allow extreme performance.
 #'
 #' Each hypothesis panel shows the prior of the quantity it tests. A quantity
-#' with a prior of its own is drawn exactly: the correlation (H2) under the
-#' correlation parameterization, the intercept (H3) under the latent
-#' regression. The others have priors that the model induces through the
-#' remaining priors. Each of these is drawn as the density that one prior
-#' gives it, averaged over 20,000 prior draws of the other parameters (a
-#' Rao-Blackwell estimate), the same priors that [usdt_bf()] averages over
-#' 100,000 draws. The difference (H1) and the intercept (H3) span four robust
-#' standard deviations either side of their median, since an induced intercept
-#' prior has heavy tails. Dotted lines mark the value of each hypothesis under
-#' the null.
+#' with a prior of its own is drawn exactly: the correlation (H2), and under
+#' the latent regression also the intercept (H3). The others have priors that
+#' the model induces through the remaining priors: the intercept under the
+#' correlation parameterization, the difference (H1) under the latent
+#' regression. Each of these is drawn as the density that one prior gives it,
+#' averaged over 20,000 prior draws of the other parameters (a Rao-Blackwell
+#' estimate), the same priors that [usdt_bf()] averages over 100,000 draws.
+#' The difference (H1) and the intercept (H3) span four robust standard
+#' deviations either side of their median, since an induced prior of either
+#' has heavy tails. Dotted lines mark the value of each hypothesis under the
+#' null.
 #'
 #' @seealso [usdt_priors()]
 #'
@@ -607,7 +600,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
 
   # The hypotheses take the priors of the Bayes factors. The difference and
   # the intercept span four robust SDs either side of their median, since an
-  # induced intercept prior has heavy tails. Each point of an induced density
+  # induced prior of either has heavy tails. Each point of an induced density
   # averages over prior draws, so these smooth curves take fewer points and
   # draws than a Bayes factor, which reads one point precisely.
   priors_of <- .quantity_priors(priors, c("diff", "rho", "intercept"),
@@ -718,8 +711,8 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
         "Prior densities from 100,000 draws of the priors; no responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, "\n",
         if (values$parameterization == "regression") {
-          paste0("H3 is the exact prior of the intercept. H1 and H2 are ",
-                 "induced by the other priors")
+          paste0("H2 and H3 are the exact priors of the correlation and the ",
+                 "intercept. H1 is induced by the other priors")
         } else {
           paste0("H2 is the exact prior of the correlation. H1 and H3 are ",
                  "induced by the other priors")

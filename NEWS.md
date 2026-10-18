@@ -16,12 +16,14 @@
   `brms.backend` option. brms, posterior, logspline, callr and cli are now
   imported, so the Bayesian estimation needs no optional package apart from
   `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
-* `hsdt(parameterization = "regression")` writes the indirect sensitivity of
-  each subject as the latent regression on the direct one, with priors on its
-  intercept, slope and residual standard deviation, so that the intercept
-  tested by H3 has the prior you give it. It reports the same parameters and
-  hypotheses as the default parameterization by means, standard deviations
-  and correlation.
+* `hsdt(parameterization = "regression")` moves the prior of the indirect
+  mean sensitivity to the intercept of the latent regression of the indirect
+  on the direct one, so that both the intercept tested by H3 and the
+  correlation tested by H2 have the priors you give them. The difference
+  tested by H1 then has an induced, heavy-tailed prior, and the intercept
+  prior also informs the posterior of the correlation. It samples the same
+  parameters and reports the same hypotheses as the default
+  parameterization.
 * `usdt_priors()` specifies the priors as Stan-style strings, from any Stan
   distribution that covers the values of its parameter (the whole real line
   for the means; the positive values, by truncation at zero if needed, for
@@ -35,13 +37,13 @@
   same terms as an lme4 model.
 * `usdt_bf()` computes Bayes factors for point (Savage-Dickey), directional
   and interval hypotheses about the difference, correlation, slope and
-  intercept. A quantity with a prior of its own (the correlation, or the
-  intercept and slope of the latent regression) gets it exactly; the others,
-  induced by the other priors, get Rao-Blackwell averages over 100,000 prior
-  draws, whatever the prior families. A comparison of the slope or the
-  correlation with zero is tested on whichever of the two has a prior of its
-  own. Point hypotheses read the posterior density from a logspline fit to
-  the draws, used only if it stays close to the draws; directional and
+  intercept. A quantity with a prior of its own (the correlation, and under
+  the latent regression the intercept) gets it exactly; the others, induced
+  by the other priors, get Rao-Blackwell averages over 100,000 prior draws,
+  whatever the prior families. A comparison of the slope with zero is tested
+  on the correlation, which has its sign and a prior of its own. Point
+  hypotheses read the posterior density from a logspline fit to the draws,
+  used only if it stays close to the draws; directional and
   interval ones read the posterior probability as the share of draws in H1.
   Each hypothesis
   prints as a report, and `usdt_bf()` draws each prior against its posterior,

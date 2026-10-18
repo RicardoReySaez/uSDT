@@ -108,8 +108,8 @@ priors
   zero, `student_t(4, 0, 0.5)`.
 - **Correlations:** `lkj(1)`, a uniform prior on $(-1, 1)$. Larger values of
   its argument concentrate the correlation around zero.
-- **Intercept, slope and residual SD:** used only by the latent regression
-  parameterization, at the end of this article.
+- **Intercept:** used only by the latent regression parameterization, at the
+  end of this article, in place of the prior of the indirect mean.
 
 Any Stan distribution that covers the values of its parameter works: one on
 the whole real line for a mean, such as `student_t(5, 0, 1)` or
@@ -343,10 +343,11 @@ The intercept of H3 has no prior of its own above: the model places its
 priors on the means, standard deviations and correlation of the two
 sensitivities, and the intercept prior they induce has very heavy tails. Its
 Bayes factor depends on all of them. With
-`parameterization = "regression"`, the model writes the indirect sensitivity
-of each subject as $\beta_0 + \beta_1 d'_{\text{Direct}} + e$ and places the
-priors on the intercept $\beta_0$, the slope $\beta_1$ and the residual
-standard deviation of $e$ instead, the last three rows of `usdt_priors()`.
+`parameterization = "regression"`, the prior of the indirect mean moves to the
+intercept $\beta_0$ of the latent regression, the last row of
+`usdt_priors()`. The indirect mean follows from it as
+$\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D$, and the priors of
+the direct mean, the standard deviations and the correlation do not change.
 The prior check shows what changes:
 
 ```{r}
@@ -355,12 +356,15 @@ The prior check shows what changes:
 plot(priors, data = data_usdt, parameterization = "regression")
 ```
 
-The intercept (H3) now has the prior you give it: by default `normal(0, 1)`,
-like the slope, weakly informative priors that leave the estimates to the
-data. The price is paid by the correlation (H2): its prior is induced, piles
-up near $\pm 1$ and peaks at zero. Choose this parameterization when you have
-a view about the intercept, which is the test of unconscious processing,
-rather than about the correlation.
+The intercept (H3) now has the prior you give it, by default `normal(0, 1)`,
+a weakly informative prior that leaves the estimate to the data, and the
+correlation (H2) keeps its uniform prior. The price is paid by the difference
+(H1): $\Delta d' = \beta_0 + (\rho \, \sigma_I / \sigma_D - 1) \, \mu_D$ has
+an induced prior, with the heavy tails the intercept had before. So does the
+indirect mean, which is why the indirect rates of a new subject now pile up
+near 0 and 1. Choose this parameterization when you have a view about the
+intercept, which is the test of unconscious processing, rather than about
+the difference between the means.
 
 ```{r}
 #| label: fit-regression
@@ -369,8 +373,27 @@ fit_reg <- hsdt(data_usdt, estimation = "bayesian",
                 parameterization = "regression", seed = 2026)
 ```
 
-The fit reports the same parameters and hypotheses, now derived draw by draw
-from the regression, and its header names the parameterization:
+```{r}
+#| label: divergences-regression
+#| include: false
+nuts <- brms::nuts_params(fit_reg$fit)
+divergent <- nuts$Value[nuts$Parameter == "divergent__"] == 1
+sd_direct <- posterior::as_draws_df(fit_reg$fit)$sd_subj__dD_Intercept
+above <- floor(1000 * mean(sd_direct > max(sd_direct[divergent]))) / 10
+```
+
+The fit leaves `r sum(divergent)` divergent
+transition`r if (sum(divergent) > 1) "s"` among 20,000 draws, where
+$\sigma_D$ nearly vanishes ($\sigma_D \le `r fmt(max(sd_direct[divergent]), 4)`$,
+smaller than in `r above`% of the draws). There the intercept prior pins
+$\rho$ near zero, because any other correlation would need an intercept far
+from zero, and the sampler cannot always follow so narrow a region. Raising
+`adapt_delta` does not remove these divergences reliably. In our runs, fits
+with and without them gave the same summaries; to check this with your data,
+refit with another seed.
+
+The model samples the same parameters as before, so the fit reports the same
+tables and hypotheses, and its header names the parameterization:
 
 ```{r}
 #| label: summary-regression
@@ -386,8 +409,16 @@ tests_reg <- fit_reg$tests
 $\Delta d' = `r fmt(tests_reg$estimate[1])`$ (95% CrI `r cri(tests_reg[1, ])`)
 as before. The intercept, with a prior of its own, has the 95% credible
 interval `r cri(tests_reg[3, ])`, against `r cri(tests[3, ])` when its
-prior was induced by the others. A comparison of the correlation with zero is
-now tested on the slope, which has the same sign and a prior of its own:
+prior was induced by the others.
+
+The intercept and the correlation are independent a priori, but not a
+posteriori. The data fix the indirect mean, the sum of $\beta_0$ and
+$\rho \, (\sigma_I / \sigma_D) \, \mu_D$, so a correlation that would need an
+intercept far from zero loses weight, all the more when $\sigma_D$ is small,
+as here. The 95% credible interval of $\rho$ is now `r cri(tests_reg[2, ])`,
+against `r cri(tests[2, ])` before, and a narrower intercept prior would
+narrow it further. The Bayes factors of the correlation therefore depend on
+the intercept prior as well:
 
 ```{r}
 #| label: bf-regression

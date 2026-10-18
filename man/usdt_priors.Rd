@@ -13,9 +13,7 @@ usdt_priors(
   sd_criterion = "student_t(4, 0, 0.5)",
   cor_criterion = "lkj(1)",
   sd_signal = "lognormal(0, 0.5)",
-  intercept = "normal(0, 1)",
-  slope = "normal(0, 1)",
-  sd_residual = "student_t(4, 0, 0.5)"
+  intercept = "normal(0, 1)"
 )
 
 \method{print}{usdt_priors}(x, ...)
@@ -42,13 +40,10 @@ used only when both criteria are estimated.}
 relative to the noise distribution. It is used only under unequal
 variances.}
 
-\item{intercept, slope}{Priors of the intercept and slope of the latent
-regression of indirect on direct \eqn{d'}. They are used only by the
-latent regression parameterization.}
-
-\item{sd_residual}{Prior of the residual standard deviation of the
-indirect \eqn{d'} around the latent regression line. It is used only by
-the latent regression parameterization.}
+\item{intercept}{Prior of the intercept of the latent regression of
+indirect on direct \eqn{d'}. It is used only by the latent regression
+parameterization, where it replaces the prior of the indirect mean
+\eqn{d'}.}
 
 \item{x}{A \code{usdt_priors} object.}
 
@@ -105,13 +100,26 @@ the intercept prior is symmetric around zero but has heavy tails. It does
 not change when both standard deviation priors are rescaled by the same
 factor, because the slope depends on their ratio.
 
-The latent regression parameterization describes the indirect sensitivity
-of each subject instead as \verb{intercept + slope * d'(direct) + residual}, with
-priors on the intercept, the slope and the residual standard deviation, and
-the indirect mean, standard deviation and correlation follow from them.
-Then \code{dprime} and \code{sd_dprime} apply to the direct task only, and
-\code{cor_dprime} is not used. The intercept and slope take \code{normal(0, 1)} by
-default, weakly informative priors that leave the estimates to the data.
+The latent regression parameterization moves the prior of the indirect mean
+to the intercept \eqn{\beta_0} of the latent regression, so that both the
+intercept (H3) and the correlation (H2) have the priors you give them. It
+keeps the priors of the direct mean, of both standard deviations and of the
+correlation, and the indirect mean follows from them as
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}; \code{dprime}
+then applies to the direct task only. The intercept takes \code{normal(0, 1)} by
+default, a weakly informative prior that leaves the estimate to the data.
+Two things follow:
+\itemize{
+\item the difference between the means (H1) has an induced prior,
+\eqn{\beta_0 + (\rho \sigma_I / \sigma_D - 1) \mu_D}, with the heavy tails
+the intercept has under the correlation parameterization;
+\item the intercept and the correlation are independent a priori but not a
+posteriori. The data fix the indirect mean, the sum of \eqn{\beta_0} and
+\eqn{\rho (\sigma_I / \sigma_D) \mu_D}, so a narrow intercept prior also
+narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_D} is small.
+The Bayes factor of a correlation hypothesis then depends on the
+intercept prior too.
+}
 }
 \examples{
 # Default priors

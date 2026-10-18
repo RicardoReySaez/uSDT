@@ -32,9 +32,9 @@ Description: Fits hierarchical signal detection theory (SDT) models to paired
     unconscious processing. Frequentist estimation uses 'lme4'. Bayesian
     estimation uses 'brms', which runs 'Stan' through 'rstan' or 'cmdstanr',
     with priors on the means, standard deviations and correlation of the two
-    sensitivities or on the latent regression between them, and weighs each
-    hypothesis with Bayes factors: the Savage-Dickey density ratio for point
-    hypotheses (Wagenmakers et al., 2010
+    sensitivities, or on the intercept of the latent regression in place of
+    the indirect mean, and weighs each hypothesis with Bayes factors: the
+    Savage-Dickey density ratio for point hypotheses (Wagenmakers et al., 2010
     <doi:10.1016/j.cogpsych.2009.12.001>) and the change from prior to
     posterior odds for directional and interval ones. The tests and Bayes
     factors also accept custom models fitted with 'lme4' or 'brms'.

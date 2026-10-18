@@ -69,13 +69,22 @@ test_that("the latent regression reports the same quantities", {
   expect_identical(m$tests$term, f$tests$term)
   expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
 
-  # The intercept and slope of H3 are the sampled ones, and a correlation
-  # compared with zero is tested on the slope.
+  # The model samples the indirect mean under the prior of the intercept,
+  # which then has an exact prior like the correlation, and a slope compared
+  # with zero is tested on the correlation.
+  table <- brms::prior_summary(m$fit)
+  expect_true(any(startsWith(table$prior, "target += normal_lpdf(b_dI[1]")))
   draws <- unclass(posterior::as_draws_matrix(m$fit))
-  expect_equal(m$tests$estimate[3:4],
-               unname(colMeans(draws[, c("b_b0_Intercept", "b_b1_Intercept")])))
-  expect_match(usdt_bf(m, "rho = 0", plot = FALSE)$test, "on slope = 0",
-               fixed = TRUE)
+  slope <- draws[, "cor_subj__dD_Intercept__dI_Intercept"] *
+    draws[, "sd_subj__dI_Intercept"] / draws[, "sd_subj__dD_Intercept"]
+  expect_equal(m$tests$estimate[3L], mean(draws[, "b_dI_Intercept"] -
+                                            slope * draws[, "b_dD_Intercept"]))
+  set.seed(3)
+  b <- usdt_bf(m, c("intercept = 0", "rho = 0", "slope = 0", "diff = 0"),
+               plot = FALSE)
+  induced <- vapply(attr(b, "curves"), `[[`, TRUE, "induced")
+  expect_identical(induced, c(FALSE, FALSE, FALSE, TRUE))
+  expect_match(b$test[3L], "on rho = 0", fixed = TRUE)
 })
 
 test_that("brms variables are found whatever the order of the correlation", {

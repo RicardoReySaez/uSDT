@@ -1,7 +1,7 @@
 # bayes-factor.R
 # Bayes factors for the three hypotheses of a Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 15-10-2026
+# Last modified: 18-10-2026
 
 # Public functions
 
@@ -93,17 +93,18 @@
 #'   tested as the same statements about `rho`. The row still summarises the
 #'   posterior of the slope.
 #'
-#' Under the latent regression parameterization the intercept and slope have
-#' priors of their own, so theirs are exact, and the others are induced:
+#' Under the latent regression parameterization the intercept has a prior of
+#' its own instead of \eqn{\mu_I}, so it is exact like `rho`, and `slope` is
+#' as above. The difference is induced:
 #' * `diff`: \eqn{\beta_0 + (\beta_1 - 1) \mu_D}, so its prior is that of the
 #'   intercept, shifted and averaged over 100,000 prior draws of the slope and
-#'   of \eqn{\mu_D}.
-#' * `rho`: \eqn{\beta_1 \sigma_D / \sqrt{\beta_1^2 \sigma_D^2 + \sigma_e^2}},
-#'   an increasing function of the slope, so its prior is that of the slope at
-#'   \eqn{\rho r / \sqrt{1 - \rho^2}}, \eqn{r = \sigma_e / \sigma_D}, times the
-#'   Jacobian, averaged over 100,000 prior draws of \eqn{r}. It is the
-#'   correlation that is then tested on the slope: `rho = 0`, `rho > 0` and
-#'   `rho < 0` are the same statements about `slope`.
+#'   of \eqn{\mu_D}. Like the induced intercept above, it has heavy tails and
+#'   no mean or variance.
+#'
+#' The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_D}, so under the latent
+#' regression a narrow intercept prior also moves the posterior of the slope
+#' and of `rho`, even though their priors are independent of it: the Bayes
+#' factors of `rho` and `slope` then depend on the intercept prior as well.
 #'
 #' These averages work for any family of [usdt_priors()]. The prior draws use
 #' the random number generator; call [set.seed()] first for reproducible
@@ -202,7 +203,7 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
 
   parameterization <- if (.is_bayes(fit)) fit$design$parameterization else
     "correlation"
-  tests <- lapply(hypothesis, .bf_parse, parameterization = parameterization)
+  tests <- lapply(hypothesis, .bf_parse)
   quantities <- unique(vapply(tests, `[[`, "", "quantity"))
   draws <- .draw_quantities(.bivariate_draws(fit, direct, indirect))
   priors <- if (.is_bayes(fit)) fit$priors else {
@@ -272,9 +273,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 
 # Internal functions
 
-# This function reads one hypothesis string about a fit with the given
-# parameterization.
-.bf_parse <- function(text, parameterization) {
+# This function reads one hypothesis string.
+.bf_parse <- function(text) {
   quantities <- c("diff", "rho", "slope", "intercept")
   number <- "([-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
   region <- regmatches(text, regexec(paste0(
@@ -308,16 +308,13 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   }
   h$text <- text
 
-  # The slope has the sign of the correlation, and whichever of the two the
-  # parameterization derives can have an infinite prior density at zero, so a
-  # comparison of either with zero is tested on the one with a prior of its
-  # own: the correlation, or the slope of the latent regression. The row still
-  # summarises the quantity named.
-  own <- if (parameterization == "regression") "slope" else "rho"
+  # The slope has the sign of the correlation and an infinite prior density at
+  # zero, so a comparison of the slope with zero is tested on the correlation,
+  # which has a prior of its own. The row still summarises the slope.
   h$summary <- h$quantity
-  h$swapped <- h$quantity %in% c("rho", "slope") && h$quantity != own &&
-    h$op %in% c("=", "<", ">") && h$value == 0
-  if (h$swapped) h$quantity <- own
+  h$swapped <- h$quantity == "slope" && h$op %in% c("=", "<", ">") &&
+    h$value == 0
+  if (h$swapped) h$quantity <- "rho"
   h
 }
 

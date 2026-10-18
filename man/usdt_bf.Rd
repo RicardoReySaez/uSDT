@@ -116,19 +116,20 @@ tested as the same statements about \code{rho}. The row still summarises the
 posterior of the slope.
 }
 
-Under the latent regression parameterization the intercept and slope have
-priors of their own, so theirs are exact, and the others are induced:
+Under the latent regression parameterization the intercept has a prior of
+its own instead of \eqn{\mu_I}, so it is exact like \code{rho}, and \code{slope} is
+as above. The difference is induced:
 \itemize{
 \item \code{diff}: \eqn{\beta_0 + (\beta_1 - 1) \mu_D}, so its prior is that of the
 intercept, shifted and averaged over 100,000 prior draws of the slope and
-of \eqn{\mu_D}.
-\item \code{rho}: \eqn{\beta_1 \sigma_D / \sqrt{\beta_1^2 \sigma_D^2 + \sigma_e^2}},
-an increasing function of the slope, so its prior is that of the slope at
-\eqn{\rho r / \sqrt{1 - \rho^2}}, \eqn{r = \sigma_e / \sigma_D}, times the
-Jacobian, averaged over 100,000 prior draws of \eqn{r}. It is the
-correlation that is then tested on the slope: \code{rho = 0}, \code{rho > 0} and
-\code{rho < 0} are the same statements about \code{slope}.
+of \eqn{\mu_D}. Like the induced intercept above, it has heavy tails and
+no mean or variance.
 }
+
+The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_D}, so under the latent
+regression a narrow intercept prior also moves the posterior of the slope
+and of \code{rho}, even though their priors are independent of it: the Bayes
+factors of \code{rho} and \code{slope} then depend on the intercept prior as well.
 
 These averages work for any family of \code{\link[=usdt_priors]{usdt_priors()}}. The prior draws use
 the random number generator; call \code{\link[=set.seed]{set.seed()}} first for reproducible

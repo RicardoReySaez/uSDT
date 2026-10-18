@@ -1,7 +1,7 @@
 # fit-hsdt.R
 # Fit hierarchical Signal Detection Theory models
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 18-10-2026
 
 # Public functions
 
@@ -31,12 +31,12 @@
 #' @param unequal_variances Logical. Estimate the standard deviation of the
 #'   signal distribution of each task instead of fixing it to that of the noise
 #'   distribution. Bayesian estimation only.
-#' @param parameterization How the Bayesian model describes the two
-#'   sensitivities: by their means, standard deviations and correlation
-#'   (`"correlation"`, the default), or by the direct mean and standard
-#'   deviation and the latent regression of the indirect on the direct
-#'   sensitivity (`"regression"`), with priors on its intercept, slope and
-#'   residual standard deviation. Bayesian estimation only.
+#' @param parameterization Where the Bayesian model places the prior on the
+#'   location of the indirect sensitivity: on its mean (`"correlation"`, the
+#'   default), or on the intercept of the latent regression of the indirect on
+#'   the direct sensitivity (`"regression"`). Both keep the priors on the
+#'   direct mean, the standard deviations and the correlation. Bayesian
+#'   estimation only.
 #' @param backend Stan interface brms uses for Bayesian estimation: `"rstan"`
 #'   (available from CRAN) or `"cmdstanr"` (installed from the Stan R-universe
 #'   together with CmdStan). As in brms, the default is the `brms.backend`
@@ -99,15 +99,21 @@
 #' credible interval, so with the default `level = 0.95` a p-value below .05
 #' means that the 95% credible interval excludes zero.
 #'
-#' With `parameterization = "regression"`, the indirect sensitivity of each
-#' subject is \eqn{\beta_0 + \beta_1 d'_{\mathrm{Direct}} + e}, with
-#' \eqn{e \sim N(0, \sigma_e^2)}, and the priors go on \eqn{\beta_0},
-#' \eqn{\beta_1} and \eqn{\sigma_e} instead of the indirect mean, standard
-#' deviation and correlation. The intercept tested by H3 then has the prior
-#' you give it rather than a heavy-tailed one induced by the other priors, and
-#' the correlation has an induced prior instead; see [plot.usdt_priors()]. The
-#' fit reports the same parameters and hypotheses either way: the indirect
-#' mean and standard deviation and the correlation are derived draw by draw.
+#' With `parameterization = "regression"`, the prior of the indirect mean
+#' moves to the intercept \eqn{\beta_0} of the latent regression, and the
+#' indirect mean follows as
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}. The
+#' intercept tested by H3 then has the prior you give it rather than a
+#' heavy-tailed one induced by the other priors, and the correlation (H2)
+#' keeps its own. The difference between the means (H1) has an induced,
+#' heavy-tailed prior instead, and because the data fix \eqn{\mu_I}, the
+#' intercept prior also informs the posterior of \eqn{\rho}; see
+#' [usdt_priors()] and [plot.usdt_priors()]. The fit samples the same
+#' parameters and reports the same hypotheses either way. When the direct
+#' sensitivity barely varies across subjects, this parameterization can leave
+#' a few divergent transitions where \eqn{\sigma_D} nearly vanishes: there the
+#' intercept prior pins \eqn{\rho} near zero, a region too narrow for the
+#' sampler to follow, and raising `adapt_delta` does not remove them reliably.
 #'
 #' With `unequal_variances = TRUE`, the noise distribution of each task is
 #' \eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so

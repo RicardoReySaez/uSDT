@@ -1,20 +1,19 @@
 test_that("hypotheses are read into a quantity, an operator and values", {
-  parse <- function(text, parameterization = "correlation") {
-    .bf_parse(text, parameterization)
-  }
+  parse <- .bf_parse
   h <- parse("intercept >= 0.1")
   expect_identical(c(h$quantity, h$op), c("intercept", ">"))
   expect_identical(h$value, 0.1)
   expect_identical(parse("diff in (0.1, -0.1)")$value, c(-0.1, 0.1))
 
-  # A comparison with zero of the slope or the correlation is tested on the
-  # one of the two with a prior of its own.
+  # A comparison of the slope with zero is tested on the correlation, which
+  # has its sign and a prior of its own.
   slope <- parse("slope < 0")
   expect_identical(c(slope$quantity, slope$summary), c("rho", "slope"))
   expect_identical(parse("slope in [-1, 1]")$quantity, "slope")
-  rho <- parse("rho = 0", "regression")
-  expect_identical(c(rho$quantity, rho$summary), c("slope", "rho"))
-  expect_identical(parse("slope = 0", "regression")$quantity, "slope")
+  expect_identical(parse("slope > 0.2")$quantity, "slope")
+  rho <- parse("rho = 0")
+  expect_identical(c(rho$quantity, rho$summary), c("rho", "rho"))
+  expect_false(rho$swapped)
 
   expect_error(parse("beta = 0"), "quantities")
   expect_error(parse("rho = 1"), "inside")
@@ -31,12 +30,12 @@ test_that("Bayes factors match a case with normal prior and posterior", {
   # The tested value lies one posterior SD from the mean. Far in a tail, the
   # logspline density changes with the draws and with the platform: at three
   # SDs its log BF10 is off by up to 0.2 (point) and 0.45 (directional).
-  point <- .bf_one(.bf_parse("diff = 0.2", "correlation"), draws, draws, prior, 0.95)$row
+  point <- .bf_one(.bf_parse("diff = 0.2"), draws, draws, prior, 0.95)$row
   expected <- stats::dnorm(0.2, 0, 1, log = TRUE) -
     stats::dnorm(0.2, 0.3, 0.1, log = TRUE)
   expect_equal(point$log_BF10, expected, tolerance = 0.05)
 
-  directional <- .bf_one(.bf_parse("diff > 0.2", "correlation"), draws, draws, prior,
+  directional <- .bf_one(.bf_parse("diff > 0.2"), draws, draws, prior,
                          0.95)$row
   expect_equal(directional$post.prob, stats::pnorm(1), tolerance = 0.02)
   odds <- stats::qlogis(stats::pnorm(1)) - stats::qlogis(stats::pnorm(-0.2))
@@ -57,7 +56,7 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
                 cdf = function(x) stats::pnorm(x, 0, 1), bounds = NULL,
                 induced = FALSE)
   results <- lapply(c("diff = 0", "diff > 0"), function(text) {
-    .bf_one(.bf_parse(text, "correlation"), draws, draws, prior, 0.95)
+    .bf_one(.bf_parse(text), draws, draws, prior, 0.95)
   })
   b <- structure(do.call(rbind, lapply(results, `[[`, "row")),
                  curves = lapply(results, `[[`, "curve"), level = 0.95,
@@ -82,7 +81,7 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
 test_that("every kind of hypothesis gives a panel title that parses", {
   for (text in c("diff = 0", "rho < -0.2", "slope > 0", "intercept in [-1, 1]",
                  "diff out [-0.1, 0.1]")) {
-    expect_no_error(parse(text = .bf_math(.bf_parse(text, "correlation"), "test")))
+    expect_no_error(parse(text = .bf_math(.bf_parse(text), "test")))
   }
 })
 
@@ -93,14 +92,17 @@ test_that("the priors of the tested quantities match simulated prior draws", {
                         sd_dprime = list(direct = "gamma(3, 6)",
                                          indirect = "student_t(4, 0, 0.5)"),
                         cor_dprime = "lkj(2)",
-                        intercept = "student_t(5, 0.2, 0.4)",
-                        slope = "skew_normal(0.3, 0.8, 2)",
-                        sd_residual = "gamma(4, 10)")
+                        intercept = "student_t(5, 0.2, 0.4)")
   quantities <- c("diff", "rho", "intercept", "slope")
   for (parameterization in c("correlation", "regression")) {
     exact <- .quantity_priors(priors, quantities, parameterization)
     Q <- .usdt_quantities(.bivariate_primitives(
       .prior_draws(priors, 1e5, parameterization)))
+    # The correlation has its own prior under both, and the intercept under
+    # the latent regression only.
+    own <- c("rho", if (parameterization == "regression") "intercept")
+    expect_identical(names(Filter(function(p) !p$induced, exact)), own,
+                     label = parameterization)
     for (q in quantities) {
       label <- paste(parameterization, q)
       at <- stats::quantile(Q[, q], c(0.1, 0.3, 0.5, 0.7, 0.9), names = FALSE)
@@ -108,8 +110,7 @@ test_that("the priors of the tested quantities match simulated prior draws", {
                    tolerance = 0.01, label = label)
       # The density is the derivative of the distribution function, which
       # checks the Jacobian of a transformed prior. It is read at the 70%
-      # quantile, away from the peak at zero that the slope prior has under
-      # the correlation parameterization.
+      # quantile, away from the peak at zero that the slope prior has.
       h <- 1e-3 * (at[4L] - at[2L])
       slope_of_cdf <- diff(exact[[q]]$cdf(at[4L] + c(-h, h))) / (2 * h)
       expect_equal(exp(exact[[q]]$log_density(at[4L])), slope_of_cdf,

@@ -1,7 +1,7 @@
 # brms-model.R
 # Write the Bayesian hierarchical SDT model as a brms model
 # Author: Ricardo Rey-Sáez
-# Last modified: 15-10-2026
+# Last modified: 18-10-2026
 
 # Internal functions
 
@@ -34,14 +34,12 @@
 # and under unequal variances a signal row is divided by the signal SD of its
 # task. A criterion fixed by the Meyen split is 0 under equal variances and
 # d (1 - s) / (2 (1 + s)) under unequal ones, the value that makes
-# HR + FAR = 1. The correlation parameterization gives the two sensitivities
-# correlated subject effects; the latent regression writes the indirect d' of
-# each subject as b0 + b1 * dD + e, with e an independent subject effect.
+# HR + FAR = 1. The two sensitivities are correlated subject effects under
+# both parameterizations, which differ only in their priors (.brms_prior()).
 .brms_formula <- function(design) {
   tasks <- c("D", "I")
-  regression <- design$parameterization == "regression"
   uv <- design$unequal_variances
-  d <- c(D = "dD", I = if (regression) "(b0 + b1 * dD + e)" else "dI")
+  d <- c(D = "dD", I = "dI")
   criterion <- vapply(seq_along(tasks), function(j) {
     k <- tasks[j]
     if (design$free_c[j] == 1L) return(paste0("c", k))
@@ -57,11 +55,7 @@
 
   free <- tasks[design$free_c == 1L]
   nlpars <- c(
-    if (regression) {
-      c("dD ~ 1 + (1 | subj)", "b0 ~ 1", "b1 ~ 1", "e ~ 0 + (1 | subj)")
-    } else {
-      c("dD ~ 1 + (1 | p | subj)", "dI ~ 1 + (1 | p | subj)")
-    },
+    "dD ~ 1 + (1 | p | subj)", "dI ~ 1 + (1 | p | subj)",
     sprintf("c%s ~ 1 + (1 | %ssubj_c)", free,
             if (length(free) == 2L) "q | " else ""),
     if (uv) c("sD ~ 1", "sI ~ 1"))
@@ -72,9 +66,12 @@
 
 # This function writes each prior a design uses as a brms prior on its own
 # parameter, so that the prior table of the fit lists one per parameter and
-# task. A signal SD is a population-level coefficient, bounded at zero.
+# task. A signal SD is a population-level coefficient, bounded at zero. The
+# intercept of the latent regression is not a parameter of the model, so its
+# prior is a statement of its own (.intercept_prior()).
 .brms_prior <- function(priors, design) {
   used <- .used_priors(priors, design)
+  intercept <- used$parameter == "intercept"
   target <- function(parameter, task) {
     k <- c(direct = "D", indirect = "I", both = "")[[task]]
     switch(parameter,
@@ -85,35 +82,44 @@
       sd_criterion = list(class = "sd", group = "subj_c",
                           nlpar = paste0("c", k)),
       cor_criterion = list(class = "cor", group = "subj_c"),
-      sd_signal = list(class = "b", nlpar = paste0("s", k), lb = 0),
-      intercept = list(class = "b", nlpar = "b0"),
-      slope = list(class = "b", nlpar = "b1"),
-      sd_residual = list(class = "sd", group = "subj", nlpar = "e"))
+      sd_signal = list(class = "b", nlpar = paste0("s", k), lb = 0))
   }
-  do.call(c, lapply(seq_len(nrow(used)), function(i) {
+  c(do.call(c, lapply(which(!intercept), function(i) {
     do.call(brms::set_prior, c(list(prior = used$prior[i]),
                                target(used$parameter[i], used$task[i])))
-  }))
+  })), if (any(intercept)) .intercept_prior(used[intercept, ]))
+}
+
+# This function writes the prior of the latent regression intercept,
+# b0 = mu_I - rho * sigma_I / sigma_D * mu_D, as a statement on the Stan
+# parameters of brms, which then samples mu_I with no prior of its own. Given
+# the other parameters, b0 is mu_I shifted, with unit Jacobian, so this is the
+# model that samples b0 with this prior and derives mu_I; sampling mu_I keeps
+# the geometry of the correlation parameterization, whereas sampling b0 has a
+# funnel when sigma_D is near 0. The subject effects of the two sensitivities
+# are the first group of brms, direct then indirect, so sd_1 holds their SDs
+# and the Cholesky factor L_1 their correlation at [2, 1].
+.intercept_prior <- function(row) {
+  args <- row$args[[1L]]
+  b0 <- "b_dI[1] - L_1[2, 1] * sd_1[2] / sd_1[1] * b_dD[1]"
+  given <- if (length(args)) paste0(" | ", paste(args, collapse = ", ")) else ""
+  brms::set_prior(sprintf("target += %s_lpdf(%s%s)", row$family, b0, given),
+                  check = FALSE)
 }
 
 # This function names, in a brms fit of the design, the population parameters
 # the model samples, by their uSDT names: the means and SDs of d' and their
-# correlation (under the latent regression, the direct mean and SD with the
-# intercept, slope and residual SD), the means, SDs and correlation of the
-# estimated criteria, and the signal SDs.
+# correlation, the means, SDs and correlation of the estimated criteria, and
+# the signal SDs. Both parameterizations sample the same parameters.
 .brms_names <- function(design) {
   tasks <- c("D", "I")
   free <- tasks[design$free_c == 1L]
   b <- function(nlpar) paste0("b_", nlpar, "_Intercept")
   sd <- function(group, nlpar) paste0("sd_", group, "__", nlpar, "_Intercept")
-  sensitivities <- if (design$parameterization == "regression") {
-    c("mu_d[1]" = b("dD"), "sigma_d[1]" = sd("subj", "dD"),
-      intercept = b("b0"), slope = b("b1"), sigma_e = sd("subj", "e"))
-  } else {
-    c("mu_d[1]" = b("dD"), "mu_d[2]" = b("dI"),
-      "sigma_d[1]" = sd("subj", "dD"), "sigma_d[2]" = sd("subj", "dI"),
-      rho_d = "cor_subj__dD_Intercept__dI_Intercept")
-  }
+  sensitivities <- c(
+    "mu_d[1]" = b("dD"), "mu_d[2]" = b("dI"),
+    "sigma_d[1]" = sd("subj", "dD"), "sigma_d[2]" = sd("subj", "dI"),
+    rho_d = "cor_subj__dD_Intercept__dI_Intercept")
   k <- seq_along(free)
   criteria <- c(
     stats::setNames(b(paste0("c", free)), sprintf("mu_c[%d]", k)),

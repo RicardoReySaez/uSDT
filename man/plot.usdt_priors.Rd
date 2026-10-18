@@ -49,16 +49,17 @@ from each population draw. Rates piled up at 0 or 1 mean that the priors
 allow extreme performance.
 
 Each hypothesis panel shows the prior of the quantity it tests. A quantity
-with a prior of its own is drawn exactly: the correlation (H2) under the
-correlation parameterization, the intercept (H3) under the latent
-regression. The others have priors that the model induces through the
-remaining priors. Each of these is drawn as the density that one prior
-gives it, averaged over 20,000 prior draws of the other parameters (a
-Rao-Blackwell estimate), the same priors that \code{\link[=usdt_bf]{usdt_bf()}} averages over
-100,000 draws. The difference (H1) and the intercept (H3) span four robust
-standard deviations either side of their median, since an induced intercept
-prior has heavy tails. Dotted lines mark the value of each hypothesis under
-the null.
+with a prior of its own is drawn exactly: the correlation (H2), and under
+the latent regression also the intercept (H3). The others have priors that
+the model induces through the remaining priors: the intercept under the
+correlation parameterization, the difference (H1) under the latent
+regression. Each of these is drawn as the density that one prior gives it,
+averaged over 20,000 prior draws of the other parameters (a Rao-Blackwell
+estimate), the same priors that \code{\link[=usdt_bf]{usdt_bf()}} averages over 100,000 draws.
+The difference (H1) and the intercept (H3) span four robust standard
+deviations either side of their median, since an induced prior of either
+has heavy tails. Dotted lines mark the value of each hypothesis under the
+null.
 }
 \examples{
 plot(usdt_priors())

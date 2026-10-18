@@ -348,12 +348,24 @@ intercept $\beta_0$ of the latent regression, the last row of
 `usdt_priors()`. The indirect mean follows from it as
 $\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D$, and the priors of
 the direct mean, the standard deviations and the correlation do not change.
-The prior check shows what changes:
+
+The indirect mean now divides by $\sigma_D$, which matters in these data,
+where the direct sensitivity barely varies across subjects. Where $\sigma_D$
+nearly vanishes, the intercept prior pins $\rho$ near zero, because any other
+correlation would need an intercept far from zero, and the sampler cannot
+always follow so narrow a region: with the default half-Student-$t$ prior,
+which allows $\sigma_D$ near zero, the fit can leave a few divergent
+transitions that a higher `adapt_delta` does not remove. A prior on
+$\sigma_D$ that vanishes at zero avoids them. We use `gamma(2, 4)`, of a scale
+similar to the default, and keep the default for $\sigma_I$. The prior check
+shows what changes:
 
 ```{r}
 #| label: prior-check-regression
 #| fig.height: 6
-plot(priors, data = data_usdt, parameterization = "regression")
+priors_reg <- usdt_priors(sd_dprime = list(direct   = "gamma(2, 4)",
+                                           indirect = "student_t(4, 0, 0.5)"))
+plot(priors_reg, data = data_usdt, parameterization = "regression")
 ```
 
 The intercept (H3) now has the prior you give it, by default `normal(0, 1)`,
@@ -369,28 +381,9 @@ the difference between the means.
 ```{r}
 #| label: fit-regression
 #| collapse: true
-fit_reg <- hsdt(data_usdt, estimation = "bayesian",
+fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
                 parameterization = "regression", seed = 2026)
 ```
-
-```{r}
-#| label: divergences-regression
-#| include: false
-nuts <- brms::nuts_params(fit_reg$fit)
-divergent <- nuts$Value[nuts$Parameter == "divergent__"] == 1
-sd_direct <- posterior::as_draws_df(fit_reg$fit)$sd_subj__dD_Intercept
-above <- floor(1000 * mean(sd_direct > max(sd_direct[divergent]))) / 10
-```
-
-The fit leaves `r sum(divergent)` divergent
-transition`r if (sum(divergent) > 1) "s"` among 20,000 draws, where
-$\sigma_D$ nearly vanishes ($\sigma_D \le `r fmt(max(sd_direct[divergent]), 4)`$,
-smaller than in `r above`% of the draws). There the intercept prior pins
-$\rho$ near zero, because any other correlation would need an intercept far
-from zero, and the sampler cannot always follow so narrow a region. Raising
-`adapt_delta` does not remove these divergences reliably. In our runs, fits
-with and without them gave the same summaries; to check this with your data,
-refit with another seed.
 
 The model samples the same parameters as before, so the fit reports the same
 tables and hypotheses, and its header names the parameterization:
@@ -407,18 +400,19 @@ tests_reg <- fit_reg$tests
 ```
 
 $\Delta d' = `r fmt(tests_reg$estimate[1])`$ (95% CrI `r cri(tests_reg[1, ])`)
-as before. The intercept, with a prior of its own, has the 95% credible
-interval `r cri(tests_reg[3, ])`, against `r cri(tests[3, ])` when its
-prior was induced by the others.
+as before. The intercept, with a prior of its own and $\sigma_D$ kept away
+from zero, has the 95% credible interval `r cri(tests_reg[3, ])`, against
+`r cri(tests[3, ])` when its prior was induced by the others.
 
 The intercept and the correlation are independent a priori, but not a
 posteriori. The data fix the indirect mean, the sum of $\beta_0$ and
 $\rho \, (\sigma_I / \sigma_D) \, \mu_D$, so a correlation that would need an
-intercept far from zero loses weight, all the more when $\sigma_D$ is small,
-as here. The 95% credible interval of $\rho$ is now `r cri(tests_reg[2, ])`,
-against `r cri(tests[2, ])` before, and a narrower intercept prior would
-narrow it further. The Bayes factors of the correlation therefore depend on
-the intercept prior as well:
+intercept far from zero loses weight, all the more when $\sigma_D$ is small.
+The 95% credible interval of $\rho$ is now `r cri(tests_reg[2, ])`, against
+`r cri(tests[2, ])` before, a change that comes from both the intercept prior
+and the prior on $\sigma_D$; a narrower intercept prior would narrow it
+further. The Bayes factors of the correlation therefore depend on the
+intercept prior as well:
 
 ```{r}
 #| label: bf-regression

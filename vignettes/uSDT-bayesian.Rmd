@@ -156,7 +156,7 @@ the model with brms:
 fit_bayes <- hsdt(data_usdt, estimation = "bayesian", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 58.6s.
+✔ Sampled 4 chains in 1m 20s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
@@ -481,11 +481,23 @@ intercept $\beta_0$ of the latent regression, the last row of
 `usdt_priors()`. The indirect mean follows from it as
 $\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D$, and the priors of
 the direct mean, the standard deviations and the correlation do not change.
-The prior check shows what changes:
+
+The indirect mean now divides by $\sigma_D$, which matters in these data,
+where the direct sensitivity barely varies across subjects. Where $\sigma_D$
+nearly vanishes, the intercept prior pins $\rho$ near zero, because any other
+correlation would need an intercept far from zero, and the sampler cannot
+always follow so narrow a region: with the default half-Student-$t$ prior,
+which allows $\sigma_D$ near zero, the fit can leave a few divergent
+transitions that a higher `adapt_delta` does not remove. A prior on
+$\sigma_D$ that vanishes at zero avoids them. We use `gamma(2, 4)`, of a scale
+similar to the default, and keep the default for $\sigma_I$. The prior check
+shows what changes:
 
 
 ``` r
-plot(priors, data = data_usdt, parameterization = "regression")
+priors_reg <- usdt_priors(sd_dprime = list(direct   = "gamma(2, 4)",
+                                           indirect = "student_t(4, 0, 0.5)"))
+plot(priors_reg, data = data_usdt, parameterization = "regression")
 ```
 
 <div class="figure" style="text-align: center">
@@ -505,30 +517,16 @@ the difference between the means.
 
 
 ``` r
-fit_reg <- hsdt(data_usdt, estimation = "bayesian",
+fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
                 parameterization = "regression", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 1m 2s.
-! 1 divergent transition.
+✔ Sampled 4 chains in 1m 38s.
+✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
-✔ Largest R-hat 1.001, below 1.01.
-✔ Smallest effective sample size 2325, above 400.
-Warning: the posterior may be unreliable: 1 divergent transitions.
-  To fix it, raise `control = list(adapt_delta = ...)` towards 1.
+✔ Largest R-hat 1.002, below 1.01.
+✔ Smallest effective sample size 2578, above 400.
 ```
-
-
-
-The fit leaves 1 divergent
-transition among 20,000 draws, where
-$\sigma_D$ nearly vanishes ($\sigma_D \le 0.0012$,
-smaller than in 99.9% of the draws). There the intercept prior pins
-$\rho$ near zero, because any other correlation would need an intercept far
-from zero, and the sampler cannot always follow so narrow a region. Raising
-`adapt_delta` does not remove these divergences reliably. In our runs, fits
-with and without them gave the same summaries; to check this with your data,
-refit with another seed.
 
 The model samples the same parameters as before, so the fit reports the same
 tables and hypotheses, and its header names the parameterization:
@@ -547,43 +545,43 @@ summary(fit_reg)
   Model:          latent regression of Indirect d' on Direct d'
   Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
   Estimation:     brms via cmdstanr, 4 chains x 5,000 draws (warmup 1,000)
-  Diagnostics:    max R-hat 1.001, min ESS 2,325, 1 divergent
+  Diagnostics:    max R-hat 1.002, min ESS 2,578, 0 divergent
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  criterion      Direct      -0.0357   0.0295  [ -0.094,  0.022]   1.000  10,548
-  d'             Direct       0.2343   0.0337  [  0.168,  0.301]   1.000  37,655
-  d'             Indirect     0.1282   0.0152  [  0.099,  0.158]   1.000  28,071
+  criterion      Direct      -0.0357   0.0294  [ -0.094,  0.021]   1.001   9,838
+  d'             Direct       0.2345   0.0343  [  0.167,  0.301]   1.000  34,365
+  d'             Indirect     0.1282   0.0154  [  0.098,  0.158]   1.001  25,396
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  sd(criterion)  Direct       0.2520   0.0252  [  0.205,  0.305]   1.000   8,244
-  sd(d')         Direct       0.1126   0.0575  [  0.015,  0.225]   1.001   5,694
-  sd(d')         Indirect     0.0871   0.0209  [  0.043,  0.126]   1.001   5,547
-  cor(d')        both         0.3138   0.4169  [ -0.636,  0.954]   1.001   2,325
+  sd(criterion)  Direct       0.2515   0.0254  [  0.205,  0.305]   1.000   8,970
+  sd(d')         Direct       0.1330   0.0529  [  0.034,  0.238]   1.001   6,784
+  sd(d')         Indirect     0.0866   0.0213  [  0.041,  0.126]   1.000   6,732
+  cor(d')        both         0.3342   0.4010  [ -0.560,  0.954]   1.002   2,578
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
 H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
   Parameter           Mean       SD  95% CrI            p-value
-  Δd' (I - D)     -0.1061   0.0360  [ -0.177, -0.036]     .004
+  Δd' (I - D)     -0.1062   0.0368  [ -0.178, -0.034]     .004
 
 H2: Correlation between sensitivities across tasks
   Parameter           Mean       SD  95% CrI            p-value
-  rho               0.3138   0.4169  [ -0.636,  0.954]     .441
+  rho               0.3342   0.4010  [ -0.560,  0.954]     .402
 
 H3: Latent regression of Indirect d' on Direct d'
   Parameter           Mean       SD  95% CrI            p-value
-  Intercept         0.0537   0.2232  [ -0.435,  0.453]     .487
-  Slope             0.3189   0.9686  [ -1.388,  2.388]     .441
+  Intercept         0.0653   0.1236  [ -0.204,  0.266]     .365
+  Slope             0.2695   0.5224  [ -0.568,  1.421]     .402
 
 ── Priors ──────────────────────────────────────────────────────────────────────
 
   Parameter    Task       Prior
   mean d'      Direct     normal(0, 1)
-  sd(d')       Direct     student_t(4, 0, 0.5)
+  sd(d')       Direct     gamma(2, 4)
   sd(d')       Indirect   student_t(4, 0, 0.5)
   cor(d')      both       lkj(1)
   mean c       Direct     normal(0, 0.5)
@@ -594,24 +592,24 @@ H3: Latent regression of Indirect d' on Direct d'
 
   Mean, SD and CrI are the posterior mean, posterior SD and central
   credible interval. The p-value is the two-sided posterior p-value.
-  The posterior may be unreliable: 1 divergent transitions.
 ```
 
 
 
-$\Delta d' = -0.11$ (95% CrI $[-0.18, -0.04]$)
-as before. The intercept, with a prior of its own, has the 95% credible
-interval $[-0.43, 0.45]$, against $[-0.78, 0.76]$ when its
-prior was induced by the others.
+$\Delta d' = -0.11$ (95% CrI $[-0.18, -0.03]$)
+as before. The intercept, with a prior of its own and $\sigma_D$ kept away
+from zero, has the 95% credible interval $[-0.20, 0.27]$, against
+$[-0.78, 0.76]$ when its prior was induced by the others.
 
 The intercept and the correlation are independent a priori, but not a
 posteriori. The data fix the indirect mean, the sum of $\beta_0$ and
 $\rho \, (\sigma_I / \sigma_D) \, \mu_D$, so a correlation that would need an
-intercept far from zero loses weight, all the more when $\sigma_D$ is small,
-as here. The 95% credible interval of $\rho$ is now $[-0.64, 0.95]$,
-against $[-0.74, 0.95]$ before, and a narrower intercept prior would
-narrow it further. The Bayes factors of the correlation therefore depend on
-the intercept prior as well:
+intercept far from zero loses weight, all the more when $\sigma_D$ is small.
+The 95% credible interval of $\rho$ is now $[-0.56, 0.95]$, against
+$[-0.74, 0.95]$ before, a change that comes from both the intercept prior
+and the prior on $\sigma_D$; a narrower intercept prior would narrow it
+further. The Bayes factors of the correlation therefore depend on the
+intercept prior as well:
 
 
 ``` r
@@ -624,10 +622,10 @@ usdt_bf(fit_reg, c("intercept = 0", "rho = 0"), plot = FALSE)
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : intercept != 0
   Hypothesis (H0)             : intercept = 0
-  Posterior mean              : 0.054
-  Posterior SD                : 0.223
-  95% CrI                     : [-0.435, 0.453]
-  log BF10                    : -1.783
+  Posterior mean              : 0.065
+  Posterior SD                : 0.124
+  95% CrI                     : [-0.204, 0.266]
+  log BF10                    : -1.752
   Evidence                    : moderate for H0
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -635,10 +633,10 @@ usdt_bf(fit_reg, c("intercept = 0", "rho = 0"), plot = FALSE)
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : rho != 0
   Hypothesis (H0)             : rho = 0
-  Posterior mean              : 0.314
-  Posterior SD                : 0.417
-  95% CrI                     : [-0.636, 0.954]
-  log BF10                    : -0.220
+  Posterior mean              : 0.334
+  Posterior SD                : 0.401
+  95% CrI                     : [-0.560, 0.954]
+  log BF10                    : -0.185
   Evidence                    : anecdotal for H0
 ────────────────────────────────────────────────────────────────────────────────
 ```

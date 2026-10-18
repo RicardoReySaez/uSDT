@@ -148,7 +148,10 @@ parameters and reports the same hypotheses either way. When the direct
 sensitivity barely varies across subjects, this parameterization can leave
 a few divergent transitions where \eqn{\sigma_D} nearly vanishes: there the
 intercept prior pins \eqn{\rho} near zero, a region too narrow for the
-sampler to follow, and raising \code{adapt_delta} does not remove them reliably.
+sampler to follow. Raising \code{adapt_delta} does not remove them reliably; a
+prior on the direct standard deviation that vanishes at zero, such as
+\code{usdt_priors(sd_dprime = list(direct = "gamma(2, 4)", indirect = ...))},
+does.
 
 With \code{unequal_variances = TRUE}, the noise distribution of each task is
 \eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so

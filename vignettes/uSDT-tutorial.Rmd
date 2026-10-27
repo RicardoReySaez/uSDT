@@ -241,6 +241,18 @@ The third test evaluates what happens at the boundary of awareness via a latent 
 
 In this experiment, the regression slope is positive ($\beta_1 = 0.36$, $p = .313$), and the estimated intercept is slightly above zero ($\beta_0 = 0.04$). However, its confidence interval easily covers zero ($[-0.18, 0.27]$, $p = .701$), showing no evidence of unconscious processing in the absence of awareness.
 
+### Equivalence and one-sided tests
+
+A non-significant test is not evidence of absence: the correlation and the intercept above are compatible with zero, but also with sizeable effects. [`usdt_equivalence()`](../reference/usdt_equivalence.html) asks the complementary question with frequentist equivalence, non-inferiority and minimal-effect tests, written as in `usdt_bf()`. There is no default hypothesis: the bounds are the smallest effects you would care about, so they must come from theory or previous studies. The bounds below only illustrate the syntax.
+
+```{r}
+#| label: equivalence
+usdt_equivalence(fit_uSDT, c("diff in [-0.2, 0.2]", "intercept < 0.2",
+                             "rho in [-0.3, 0.3]"))
+```
+
+Each test reports the interval that decides it: for an equivalence or one-sided test at $\alpha = .05$, the 90% interval. The two mean sensitivities are equivalent within $\pm 0.2$ $d'$ units ($p = .004$), so the difference found by H1 is reliable but small. The intercept test cannot rule out an unconscious effect of 0.2 at zero awareness ($p = .090$), and the correlation could be anywhere from negative to strongly positive ($p = .631$), so these data cannot show that the two measures are dissociated. The bounds of the correlation are given and reported on the correlation scale, while its tests run on the Fisher-$z$ scale.
+
 ## Reliability of individual differences
 
 Evaluating unconscious processing through individual differences is delicate because measurement error does not just add noise, it systematically biases theoretical conclusions when ignored. 

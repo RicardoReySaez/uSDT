@@ -1,7 +1,7 @@
 # hypotheses.R
 # Hypothesis tests for hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 27-10-2026
 
 # Public functions
 
@@ -387,4 +387,64 @@ latent_regression <- function(fit, direct = "d_D", indirect = "d_I",
 .pars_of <- function(x, direct, indirect) {
   r <- .resolve_fit(x)
   .usdt_pars(r$fit, direct, indirect, devfun = r$devfun)
+}
+
+# Hypothesis statements
+
+# This function reads one hypothesis string into its quantity, its operator
+# and its values. usdt_bf() and usdt_equivalence() share it, so both read the
+# same statements.
+.parse_hypothesis <- function(text) {
+  quantities <- c("diff", "rho", "slope", "intercept")
+  number <- "([-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
+  region <- regmatches(text, regexec(paste0(
+    "^\\s*([a-z]+)\\s+(in|out)\\s*[\\[(]\\s*", number, "\\s*,\\s*", number,
+    "\\s*[\\])]\\s*$"), text, perl = TRUE))[[1L]]
+  compare <- regmatches(text, regexec(paste0(
+    "^\\s*([a-z]+)\\s*(==|=|<=|>=|<|>)\\s*", number, "\\s*$"), text,
+    perl = TRUE))[[1L]]
+
+  if (length(region)) {
+    h <- list(quantity = region[2L], op = region[3L],
+              value = sort(as.numeric(region[4:5])))
+    if (h$value[1L] == h$value[2L]) {
+      .usdt_stop("the region of \"", text, "\" has no width.")
+    }
+  } else if (length(compare)) {
+    op <- switch(compare[3L], "==" = "=", "<=" = "<", ">=" = ">", compare[3L])
+    h <- list(quantity = compare[2L], op = op, value = as.numeric(compare[4L]))
+  } else {
+    .usdt_stop("cannot read the hypothesis \"", text, "\". Write it as, e.g., ",
+               "\"rho = 0\", \"intercept > 0\" or \"diff in [-0.1, 0.1]\".")
+  }
+  if (!h$quantity %in% quantities) {
+    .usdt_stop("the hypothesis \"", text, "\" tests `", h$quantity, "`; the ",
+               "quantities are ", paste0("`", quantities, "`", collapse = ", "),
+               ".")
+  }
+  if (h$quantity == "rho" && any(abs(h$value) > 1) ||
+      h$quantity == "rho" && h$op == "=" && abs(h$value) == 1) {
+    .usdt_stop("a correlation can only be tested inside (-1, 1).")
+  }
+  h$text <- text
+  h
+}
+
+# This function writes the two hypotheses that a statement compares, with the
+# printed name of its quantity. A point statement names H0; an inequality or
+# a region names H1.
+.hypothesis_statements <- function(name, h) {
+  if (h$op == "=") {
+    return(c(H1 = sprintf("%s != %s", name, format(h$value)),
+             H0 = sprintf("%s = %s", name, format(h$value))))
+  }
+  interval <- sprintf("[%s, %s]", format(h$value[1L]), format(h$value[2L]))
+  switch(h$op,
+    ">" = c(H1 = sprintf("%s > %s", name, format(h$value)),
+            H0 = sprintf("%s <= %s", name, format(h$value))),
+    "<" = c(H1 = sprintf("%s < %s", name, format(h$value)),
+            H0 = sprintf("%s >= %s", name, format(h$value))),
+    c(H1 = sprintf("%s %s %s", name, h$op, interval),
+      H0 = sprintf("%s %s %s", name, if (h$op == "in") "out" else "in",
+                   interval)))
 }

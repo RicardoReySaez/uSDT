@@ -58,6 +58,20 @@
 * The new article "Bayesian estimation with uSDT" walks through the Bayesian
   analysis of the tutorial data.
 
+## Equivalence and one-sided tests
+
+* `usdt_equivalence()` tests equivalence (TOST), non-inferiority and other
+  one-sided, minimal-effect and point hypotheses about the difference,
+  correlation, slope and intercept of a frequentist `hsdt()` fit or a custom
+  glmer model, written as in `usdt_bf()`. Every hypothesis must be stated:
+  the bounds are the smallest effects of interest, so there is no default.
+  Each test reports the interval that decides it, of level `1 - 2 * alpha`
+  for the one-sided and equivalence tests. The bounds, estimate and interval
+  of the correlation are on the correlation scale, and its tests run on the
+  Fisher-z scale. On a boundary fit the correlation, slope and intercept are
+  marked not estimable, and after `usdt_boot()` every test uses the bootstrap
+  replicates. Each hypothesis prints as a report.
+
 ## Data preparation
 
 * `usdt_aggregate()` counts binary trials into binomial `y`/`n` rows by any

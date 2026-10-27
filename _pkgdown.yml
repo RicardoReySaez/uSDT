@@ -1,7 +1,7 @@
 # _pkgdown.yml
 # This file configures the uSDT website built by pkgdown.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-10-2026
+# Last modified: 27-10-2026
 
 url: https://ricardoreysaez.github.io/uSDT/
 
@@ -106,9 +106,12 @@ reference:
     their latent correlation; latent_regression() estimates the intercept
     and slope. usdt_tests() collects all three hypotheses. usdt_boot()
     adds parametric bootstrap inference to a fitted uSDT model.
+    usdt_equivalence() tests equivalence, non-inferiority and
+    minimal-effect hypotheses about the same quantities.
   contents:
   - usdt_hypotheses
   - usdt_boot
+  - usdt_equivalence
 
 - title: Bayes factors
   desc: >

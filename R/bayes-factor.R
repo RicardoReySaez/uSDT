@@ -1,7 +1,7 @@
 # bayes-factor.R
 # Bayes factors for the three hypotheses of a Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-10-2026
+# Last modified: 27-10-2026
 
 # Public functions
 
@@ -273,40 +273,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 
 # Internal functions
 
-# This function reads one hypothesis string.
+# This function reads one hypothesis string for a Bayes factor.
 .bf_parse <- function(text) {
-  quantities <- c("diff", "rho", "slope", "intercept")
-  number <- "([-+]?[0-9]*\\.?[0-9]+(?:[eE][-+]?[0-9]+)?)"
-  region <- regmatches(text, regexec(paste0(
-    "^\\s*([a-z]+)\\s+(in|out)\\s*[\\[(]\\s*", number, "\\s*,\\s*", number,
-    "\\s*[\\])]\\s*$"), text, perl = TRUE))[[1L]]
-  compare <- regmatches(text, regexec(paste0(
-    "^\\s*([a-z]+)\\s*(==|=|<=|>=|<|>)\\s*", number, "\\s*$"), text,
-    perl = TRUE))[[1L]]
-
-  if (length(region)) {
-    h <- list(quantity = region[2L], op = region[3L],
-              value = sort(as.numeric(region[4:5])))
-    if (h$value[1L] == h$value[2L]) {
-      .usdt_stop("the region of \"", text, "\" has no width.")
-    }
-  } else if (length(compare)) {
-    op <- switch(compare[3L], "==" = "=", "<=" = "<", ">=" = ">", compare[3L])
-    h <- list(quantity = compare[2L], op = op, value = as.numeric(compare[4L]))
-  } else {
-    .usdt_stop("cannot read the hypothesis \"", text, "\". Write it as, e.g., ",
-               "\"rho = 0\", \"intercept > 0\" or \"diff in [-0.1, 0.1]\".")
-  }
-  if (!h$quantity %in% quantities) {
-    .usdt_stop("the hypothesis \"", text, "\" tests `", h$quantity, "`; the ",
-               "quantities are ", paste0("`", quantities, "`", collapse = ", "),
-               ".")
-  }
-  if (h$quantity == "rho" && any(abs(h$value) > 1) ||
-      h$quantity == "rho" && h$op == "=" && abs(h$value) == 1) {
-    .usdt_stop("a correlation can only be tested inside (-1, 1).")
-  }
-  h$text <- text
+  h <- .parse_hypothesis(text)
 
   # The slope has the sign of the correlation and an infinite prior density at
   # zero, so a comparison of the slope with zero is tested on the correlation,
@@ -526,9 +495,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
     short <- paste0(short, ", on ", h$quantity)
   }
 
+  statements <- .hypothesis_statements(name, h)
   if (h$op == "=") {
-    h1 <- sprintf("%s != %s", name, format(h$value))
-    h0 <- sprintf("%s = %s", name, format(h$value))
     log_bf10 <- prior$log_density(h$value) - post$log_density(h$value)
     prob <- NA_real_
   } else {
@@ -537,14 +505,6 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
       "<" = cdf(h$value),
       "in" = cdf(h$value[2L]) - cdf(h$value[1L]),
       out = 1 - (cdf(h$value[2L]) - cdf(h$value[1L])))
-    interval <- sprintf("[%s, %s]", format(h$value[1L]), format(h$value[2L]))
-    h1 <- switch(h$op, ">" = sprintf("%s > %s", name, format(h$value)),
-                 "<" = sprintf("%s < %s", name, format(h$value)),
-                 sprintf("%s %s %s", name, h$op, interval))
-    h0 <- switch(h$op, ">" = sprintf("%s <= %s", name, format(h$value)),
-                 "<" = sprintf("%s >= %s", name, format(h$value)),
-                 sprintf("%s %s %s", name, if (h$op == "in") "out" else "in",
-                         interval))
     # The posterior probability is the share of draws in H1: unlike the
     # logspline tail, which overstated it 3 SDs out, it is unbiased.
     prob <- region(stats::ecdf(draws))
@@ -556,7 +516,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
                                  "very strong", "extreme"),
                                right = FALSE, include.lowest = TRUE))
   row <- data.frame(
-    hypothesis = .bf_label(name, h), test = test, H1 = h1, H0 = h0,
+    hypothesis = .bf_label(name, h), test = test,
+    H1 = statements[["H1"]], H0 = statements[["H0"]],
     estimate = mean(summary), est.error = stats::sd(summary),
     conf.low = limits[1L], conf.high = limits[2L], post.prob = prob,
     log_BF10 = log_bf10, BF10 = exp(log_bf10), BF01 = exp(-log_bf10),

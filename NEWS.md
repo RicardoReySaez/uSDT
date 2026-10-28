@@ -103,6 +103,20 @@
   study has its own random number stream, so `ncores` runs them in parallel
   with the same results, and the simulation also accepts populations with
   unequal variances, analysed with the equal-variance model.
+* `usdt_plan()` chooses the design. A range marks what is free and a number
+  what is fixed, so it finds the subjects for given trials, the trials for
+  given subjects, or both together at the lowest `cost`; with a `budget` it
+  finds the most powerful design that costs no more, and with `precision`
+  the cheapest design whose expected interval is narrow enough. It searches
+  every number of trials with the closed form and checks the cheapest
+  designs with the draws of `usdt_power()`, and it marks designs at the limit
+  of a range. `usdt_power(plan, method = "simulation")` checks the chosen
+  designs.
+* `usdt_mdes()` finds the smallest effect a design detects with a given
+  power for each hypothesis, moving the tested quantity with the rest of the
+  population fixed as its parameterization says, or the narrowest
+  equivalence region it can establish; `vary` moves another population
+  value instead, such as the SD of the direct d'.
 
 ## Data preparation
 

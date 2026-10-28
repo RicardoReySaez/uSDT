@@ -226,6 +226,13 @@
     u1 = stats::runif(R), u2 = stats::runif(R)))
 }
 
+# This function keeps the first `n` draws, which searches use to compare many
+# designs quickly; the same draws start the full set, so both agree up to
+# Monte Carlo error.
+.moment_subset <- function(base, n = 5000L) {
+  lapply(base, `[`, seq_len(min(n, length(base$z1))))
+}
+
 # This function gives the two chi variables of the Bartlett decomposition for
 # N subjects. They depend on N only, so a grid of designs computes them once
 # for each number of subjects.

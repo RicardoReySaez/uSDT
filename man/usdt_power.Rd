@@ -31,7 +31,10 @@ usdt_power(
 }
 \arguments{
 \item{population}{A \code{usdt_population} object from \code{\link[=usdt_population]{usdt_population()}}. With
-several scenarios, the power of each.}
+several scenarios, the power of each. It can also be a \code{usdt_plan} from
+\code{\link[=usdt_plan]{usdt_plan()}}, whose designs, hypotheses and settings are then used, so
+that \code{usdt_power(plan, method = "simulation")} checks a plan; \code{subjects}
+and \code{trials} are then left out.}
 
 \item{subjects}{Number of subjects. Several values give one design each.}
 

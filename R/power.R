@@ -14,7 +14,10 @@
 #' [usdt_population()].
 #'
 #' @param population A `usdt_population` object from [usdt_population()]. With
-#'   several scenarios, the power of each.
+#'   several scenarios, the power of each. It can also be a `usdt_plan` from
+#'   [usdt_plan()], whose designs, hypotheses and settings are then used, so
+#'   that `usdt_power(plan, method = "simulation")` checks a plan; `subjects`
+#'   and `trials` are then left out.
 #' @param subjects Number of subjects. Several values give one design each.
 #' @param trials Number of trials per subject in each task, signal and noise
 #'   trials together: one value for both tasks, or one for each as
@@ -191,6 +194,16 @@ usdt_power <- function(population, subjects, trials,
                        seed        = NULL,
                        ncores      = 1L,
                        progress    = interactive()) {
+
+  # A plan supplies its designs, its hypotheses and its settings.
+  if (inherits(population, "usdt_plan")) {
+    if (!missing(subjects) || !missing(trials)) {
+      .usdt_stop("a plan gives the subjects and trials; leave them out.")
+    }
+    return(.power_plan(population, if (!missing(hypothesis)) hypothesis,
+                       match.arg(combine), match.arg(method), nsim, seed,
+                       ncores, progress))
+  }
 
   # The function checks the population, the design and the tests.
   if (!inherits(population, "usdt_population")) {
@@ -459,6 +472,28 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
 }
 
 # Internal functions
+
+# This function computes the power at the designs of a plan, for its
+# hypotheses (or those given), with its settings, one design at a time.
+.power_plan <- function(plan, hypothesis, combine, method, nsim, seed, ncores,
+                        progress) {
+  st <- plan$settings
+  d <- plan$design[!is.na(plan$design$subjects), , drop = FALSE]
+  if (!nrow(d)) .usdt_stop("no design of the plan reaches its target.")
+  d <- unique(d[c("scenario", "subjects", "trials_direct", "trials_indirect")])
+  hypothesis <- hypothesis %||% st$hypothesis %||%
+    c("diff = 0", "rho = 0", "intercept = 0")
+  parts <- lapply(seq_len(nrow(d)), function(i) {
+    usdt_power(.population_rows(st$population, d$scenario[i]),
+               subjects = d$subjects[i],
+               trials = c(direct = d$trials_direct[i],
+                          indirect = d$trials_indirect[i]),
+               hypothesis = hypothesis, alpha = st$alpha, signal = st$signal,
+               dichotomize = st$split, combine = combine, method = method,
+               nsim = nsim, seed = seed, ncores = ncores, progress = progress)
+  })
+  .bind_results(parts, "usdt_power")
+}
 
 # This function checks the numbers of subjects.
 .design_subjects <- function(subjects) {

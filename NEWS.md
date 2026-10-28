@@ -72,6 +72,17 @@
   marked not estimable, and after `usdt_boot()` every test uses the bootstrap
   replicates. Each hypothesis prints as a report.
 
+## Study planning
+
+* `usdt_population()` describes the population a planned study samples from:
+  the means, standard deviations and correlation of the two sensitivities and
+  the distribution of the criteria, with the argument names of
+  `usdt_priors()`. The intercept of the latent regression can replace the
+  indirect mean, as in `hsdt(parameterization = "regression")`, and the
+  values can come from a frequentist `hsdt()` fit of a pilot study. Several
+  values in an argument give one scenario each, and `update()` changes them.
+  It is the first piece of the power analysis.
+
 ## Data preparation
 
 * `usdt_aggregate()` counts binary trials into binomial `y`/`n` rows by any

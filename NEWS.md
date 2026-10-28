@@ -82,6 +82,18 @@
   values can come from a frequentist `hsdt()` fit of a pilot study. Several
   values in an argument give one scenario each, and `update()` changes them.
   It is the first piece of the power analysis.
+* `usdt_power()` gives the power of the tests of H1-H3 for a number of
+  subjects and of trials per task, or for a grid of them, from such a
+  population. Hypotheses are written as in `usdt_equivalence()`, so it covers
+  point nulls at any value, one-sided, equivalence (TOST) and minimal-effect
+  tests, and `combine = "all"` adds the power of rejecting all of them in the
+  same study. The power is approximated from the sampling distribution of the
+  subjects' sample mean and covariance of d', whose measurement error is the
+  one `usdt_reliability()` reports. It counts the studies that end on the
+  boundary, where the correlation and the latent regression are not
+  estimable, as failures to reject them, reports how often that happens, and
+  flags a population in H0, where the rejection rate is the type I error
+  rate.
 
 ## Data preparation
 

@@ -125,9 +125,12 @@ reference:
 - title: Plan a study
   desc: >
     Describe the population a planned study samples from, in either
-    parameterization of the model or from the estimates of a pilot study.
+    parameterization of the model or from the estimates of a pilot study,
+    and compute the power of the three hypotheses for a number of subjects
+    and of trials per task.
   contents:
   - usdt_population
+  - usdt_power
 
 - title: Visualize the fit and estimate reliability
   desc: Compare observed and fitted estimates and quantify measurement reliability.

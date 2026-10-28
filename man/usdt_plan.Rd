@@ -91,8 +91,10 @@ target) and the columns \code{scenario}, \code{hypothesis}, \code{subjects},
 \code{\link[=usdt_power]{usdt_power()}}), \code{estimable}, \code{width} (for a precision target), \code{cost}
 and \code{limit} (the free argument whose limit the design reaches, if any);
 \verb{$frontier}, the smallest number of subjects that reaches the target
-with each number of trials, from the closed form; and \verb{$settings}. It
-prints one report per design.
+with each number of trials, from the closed form; \verb{$checked}, the
+designs the search checked with the draws of the sample mean and
+covariance, with the number of subjects and the cost it gave each; and
+\verb{$settings}. It prints one report per design.
 }
 \description{
 Finds the design, the number of subjects and of trials per task, that
@@ -141,7 +143,7 @@ usdt_plan(pop, hypothesis = "diff = 0",
           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
 
 # Subjects and trials together, with the session time of each in seconds
-plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
+plan <- usdt_plan(pop, hypothesis = "diff = 0", power = 0.9,
                   subjects = c(20, 300),
                   trials = list(direct = c(32, 160), indirect = c(100, 300)),
                   cost = c(subject = 600, direct = 4, indirect = 1.5),
@@ -159,6 +161,13 @@ usdt_plan(pop, precision = c(intercept = 0.2),
           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
 
 \donttest{
+# The intercept, whose search checks more designs (several seconds)
+usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
+          subjects = c(20, 300),
+          trials = list(direct = c(32, 160), indirect = c(100, 300)),
+          cost = c(subject = 600, direct = 4, indirect = 1.5),
+          dichotomize = "indirect")
+
 # Check the chosen design by simulation
 usdt_power(plan, method = "simulation", nsim = 50, seed = 1)
 }

@@ -53,8 +53,10 @@
 #'   [usdt_power()]), `estimable`, `width` (for a precision target), `cost`
 #'   and `limit` (the free argument whose limit the design reaches, if any);
 #'   `$frontier`, the smallest number of subjects that reaches the target
-#'   with each number of trials, from the closed form; and `$settings`. It
-#'   prints one report per design.
+#'   with each number of trials, from the closed form; `$checked`, the
+#'   designs the search checked with the draws of the sample mean and
+#'   covariance, with the number of subjects and the cost it gave each; and
+#'   `$settings`. It prints one report per design.
 #'
 #' @details
 #' # How the design is found
@@ -98,7 +100,7 @@
 #'           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
 #'
 #' # Subjects and trials together, with the session time of each in seconds
-#' plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
+#' plan <- usdt_plan(pop, hypothesis = "diff = 0", power = 0.9,
 #'                   subjects = c(20, 300),
 #'                   trials = list(direct = c(32, 160), indirect = c(100, 300)),
 #'                   cost = c(subject = 600, direct = 4, indirect = 1.5),
@@ -116,6 +118,13 @@
 #'           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
 #'
 #' \donttest{
+#' # The intercept, whose search checks more designs (several seconds)
+#' usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
+#'           subjects = c(20, 300),
+#'           trials = list(direct = c(32, 160), indirect = c(100, 300)),
+#'           cost = c(subject = 600, direct = 4, indirect = 1.5),
+#'           dichotomize = "indirect")
+#'
 #' # Check the chosen design by simulation
 #' usdt_power(plan, method = "simulation", nsim = 50, seed = 1)
 #' }
@@ -182,6 +191,7 @@ usdt_plan <- function(population,
   base <- .moment_base()
   designs <- list()
   frontiers <- list()
+  checks <- list()
   for (s in seq_len(nrow(population))) {
     pop <- as.list(as.data.frame(population)[s, ])
     found <- .plan_scenario(pop, mode, tests, precision, power, budget,
@@ -192,14 +202,19 @@ usdt_plan <- function(population,
     if (nrow(found$frontier)) {
       frontiers[[s]] <- cbind(scenario = pop$scenario, found$frontier)
     }
+    if (nrow(found$checked)) {
+      checks[[s]] <- cbind(scenario = pop$scenario, found$checked)
+    }
   }
-  design <- do.call(rbind, designs)
-  frontier <- if (length(frontiers)) do.call(rbind, frontiers) else
-    data.frame()
-  rownames(design) <- NULL
-  if (nrow(frontier)) rownames(frontier) <- NULL
+  bind <- function(parts) {
+    out <- if (length(parts)) do.call(rbind, parts) else data.frame()
+    if (nrow(out)) rownames(out) <- NULL
+    out
+  }
+  design <- bind(designs)
+  frontier <- bind(frontiers)
 
-  structure(list(design = design, frontier = frontier,
+  structure(list(design = design, frontier = frontier, checked = bind(checks),
                  settings = list(population = population, tests = tests,
                                  hypothesis = if (!is.null(tests))
                                    vapply(tests, `[[`, "", "text"),
@@ -807,6 +822,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 
   designs <- list()
   frontier <- list()
+  checked <- list()
   for (j in targets) {
     # The closed form gives each design of the grid its smallest N.
     closed <- function(N) {
@@ -837,12 +853,19 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
         .plan_power(N0, cost0, moment, j, space, cost_fun, lo, hi, goal)
       }
     }
+    if (!is.null(attr(found, "checked"))) {
+      checked[[length(checked) + 1L]] <- cbind(
+        hypothesis = label(j), attr(found, "checked"))
+      attr(found, "checked") <- NULL
+    }
     designs[[length(designs) + 1L]] <- cbind(
       data.frame(hypothesis = label(j), stringsAsFactors = FALSE), found,
       limit = .plan_limit(found, space))
   }
   list(design = do.call(rbind, designs),
        frontier = if (length(frontier)) do.call(rbind, frontier) else
+         data.frame(),
+       checked = if (length(checked)) do.call(rbind, checked) else
          data.frame())
 }
 
@@ -927,6 +950,11 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   }
   checked <- .plan_search(cost0, score, space)
   if (!length(checked)) return(.plan_none())
+  seen <- data.frame(trials_direct = grid$direct[checked],
+                     trials_indirect = grid$indirect[checked],
+                     subjects = subjects[checked],
+                     cost = cost_fun(subjects[checked], grid$direct[checked],
+                                     grid$indirect[checked]))
 
   # All the draws settle the subjects of the five best designs, which differ
   # by less than the Monte Carlo error of the search, and the cheapest wins.
@@ -944,7 +972,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
                          width = NA_real_, cost = cst)
     }
   }
-  best %||% .plan_none()
+  structure(best %||% .plan_none(), checked = seen)
 }
 
 # This function picks the cheapest design whose expected interval is narrow
@@ -1073,17 +1101,31 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   current <- if (is.null(vary)) values[[h$quantity]] else pop[[vary]]
   power_current <- engine(base)(pop)
 
+  # The first span searched is a few times the distance the closed form puts
+  # between H0 and the power, so the curve shows the rise; it doubles, up to a
+  # limit, while the power is not reached.
+  v <- .error_variance(pop, cells, split)
+  truth <- cbind(gamma_D = pop$mu_D, gamma_I = pop$mu_I,
+                 s2_D = pop$sigma_D^2, s2_I = pop$sigma_I^2,
+                 s_DI = pop$rho * pop$sigma_D * pop$sigma_I)
+  se <- .moment_tests(truth, truth[, "s2_D"] + v[["direct"]],
+                      truth[, "s2_I"] + v[["indirect"]], truth[, "s_DI"],
+                      N)[[h$quantity]]$se
+  span <- 2.5 * (stats::qnorm(1 - alpha / 2) + stats::qnorm(power)) * se
+
   # The search runs from H0 outwards, or along the given range.
   if (!is.null(vary)) {
     varies <- vary
     from <- range[1L]
     to <- range[2L]
+    limit <- to
     f <- function(x) at(.scenario_with(pop, vary, x, parameterization))
   } else if (h$op == "in") {
     varies <- "margin"
     centre <- mean(h$value)
     from <- abs(values[[h$quantity]] - centre)
-    to <- from + if (h$quantity == "rho") 2 else 3
+    limit <- from + if (h$quantity == "rho") 2 else 5
+    to <- min(limit, from + span)
     f <- function(x) {
       bounds <- centre + c(-1, 1) * x
       if (h$quantity == "rho") bounds <- pmin(pmax(bounds, -0.999), 0.999)
@@ -1097,15 +1139,21 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
       out = if (values[[h$quantity]] < a) -1 else 1,
       if (values[[h$quantity]] < a) -1 else 1)
     from <- if (h$op == "out" && direction > 0) b else a
-    limit <- if (h$quantity == "rho") 0.99 else
-      if (h$quantity == "slope") 0.99 * pop$sigma_I / pop$sigma_D else NA
-    to <- if (is.na(limit)) from + direction * 3 else direction * limit
+    limit <- switch(h$quantity,
+      rho = direction * 0.99,
+      slope = direction * 0.99 * pop$sigma_I / pop$sigma_D,
+      from + direction * 5)
+    to <- from + direction * min(abs(limit - from), span)
     f <- function(x) at(.scenario_with(pop, h$quantity, x, parameterization))
   }
 
   # The curve of power over the values searched, and the first crossing.
-  grid <- seq(from, to, length.out = 25L)
-  curve <- vapply(grid, f, 0)
+  repeat {
+    grid <- seq(from, to, length.out = 25L)
+    curve <- vapply(grid, f, 0)
+    if (any(curve >= power) || to == limit) break
+    to <- from + min(abs(limit - from), 2 * abs(to - from)) * sign(limit - from)
+  }
   mdes <- NA_real_
   cross <- which(curve >= power)[1L]
   if (!is.na(cross)) {

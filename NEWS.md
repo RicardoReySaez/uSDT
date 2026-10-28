@@ -117,6 +117,13 @@
   population fixed as its parameterization says, or the narrowest
   equivalence region it can establish; `vary` moves another population
   value instead, such as the SD of the direct d'.
+* `plot()` draws each of them: a population as the ellipses of the true d'
+  with the latent regression and its intercept, and, given trials, the wider
+  ellipse of the d' they measure; power against subjects or trials, with the
+  Wilson intervals of a simulation; the power along the values searched for
+  the smallest effect; and a plan as the cost of the cheapest design over
+  the trials, with the designs the search checked and the one it chose, or as
+  the power or interval width along its free value.
 
 ## Data preparation
 

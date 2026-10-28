@@ -134,6 +134,7 @@ reference:
   - usdt_power
   - usdt_plan
   - usdt_mdes
+  - plot_power
 
 - title: Visualize the fit and estimate reliability
   desc: Compare observed and fitted estimates and quantify measurement reliability.

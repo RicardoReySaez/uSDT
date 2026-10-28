@@ -3,6 +3,8 @@
 \name{usdt_power}
 \alias{usdt_power}
 \alias{print.usdt_power}
+\alias{summary.usdt_power}
+\alias{print.summary.usdt_power}
 \title{Power of a planned uSDT study}
 \usage{
 usdt_power(
@@ -13,10 +15,19 @@ usdt_power(
   alpha = 0.05,
   signal = 0.5,
   dichotomize = c("none", "indirect", "direct", "both"),
-  combine = c("each", "all")
+  combine = c("each", "all"),
+  method = c("approximate", "simulation"),
+  nsim = 1000,
+  seed = NULL,
+  ncores = 1L,
+  progress = interactive()
 )
 
 \method{print}{usdt_power}(x, digits = 3L, ...)
+
+\method{summary}{usdt_power}(object, ...)
+
+\method{print}{summary.usdt_power}(x, digits = 3L, ...)
 }
 \arguments{
 \item{population}{A \code{usdt_population} object from \code{\link[=usdt_population]{usdt_population()}}. With
@@ -52,11 +63,31 @@ zero, so its criterion values in \code{population} are not used.}
 reports the probability that every one of them rejects H0 in the same
 study.}
 
+\item{method}{\code{"approximate"} (the default) computes power from the sampling
+distribution of the estimates, in seconds; \code{"simulation"} simulates whole
+studies and analyses each one with \code{\link[=hsdt]{hsdt()}}, which takes minutes. See
+Details.}
+
+\item{nsim}{Number of simulated studies for each scenario and design
+(default 1000). Simulation only.}
+
+\item{seed}{Random seed of the simulated studies. With the default \code{NULL},
+the seed is drawn from the current random number stream. Simulation only.}
+
+\item{ncores}{Number of CPU cores. Values above 1 fit the simulated studies
+in parallel on a temporary cluster, which works on Windows, macOS and
+Linux and stops when the run ends. Simulation only.}
+
+\item{progress}{Logical. Show the expected duration and a progress bar
+(default \code{TRUE} in interactive sessions). Simulation only.}
+
 \item{x}{A \code{usdt_power} object.}
 
 \item{digits}{Number of decimals printed.}
 
 \item{...}{Ignored.}
+
+\item{object}{A \code{usdt_power} object from a simulation.}
 }
 \value{
 An object of class \code{usdt_power}: a data frame with one row per
@@ -66,9 +97,17 @@ scenario, design and hypothesis, and the columns \code{scenario}, \code{subjects
 standard error), \code{power}, \code{estimable} (the share of studies in which the
 analysis can estimate it), \code{in_null} (whether the population lies in H0,
 so that \code{power} is the type I error rate), and \code{reliability_direct} and
-\code{reliability_indirect}. With \code{combine = "all"}, a row per scenario and
-design whose \code{hypothesis} is \code{"all"} gives the joint power. It prints one
-report for a single design and a table for several.
+\code{reliability_indirect}. A simulation adds \code{mc_se}, the Monte Carlo
+standard error of \code{power}, and \code{power.low} and \code{power.high}, its 95\%
+Wilson interval. With \code{combine = "all"}, a row per scenario and design
+whose \code{hypothesis} is \code{"all"} gives the joint power. It prints one report
+for a single design and a table for several.
+
+For a simulation, \code{summary()} reports the precision of each quantity
+across the simulated studies that estimate it: the mean estimate, its
+bias, the empirical standard error (the SD of the estimates), the mean
+standard error the fits report, the mean width of the intervals and their
+coverage of the population value.
 }
 \description{
 Computes the power of the tests of the three uSDT hypotheses, the
@@ -117,7 +156,7 @@ values. When the population value lies in H0, \code{power} is the type I error
 rate, and the report says so.
 }
 
-\section{Limits}{
+\section{Limits of the approximation}{
 The approximation assumes the equal-variance model that \code{\link[=hsdt]{hsdt()}} fits, so
 every \code{sd_signal} of \code{population} must be 1, and it assumes the estimated
 standard deviations of the criteria stay away from zero. It follows the
@@ -125,6 +164,28 @@ fitted model closely when the reliability of both tasks is moderate or
 high. When the direct task is unreliable, boundary fits are more frequent
 in the fitted model than here, and the power of H2 and H3 is somewhat
 optimistic.
+}
+
+\section{Simulation}{
+With \code{method = "simulation"}, each study draws its subjects from the
+population and their trials from their d' and criteria. A task split at
+the median draws one latent score per trial and is split with
+\code{\link[=meyen_split]{meyen_split()}}, as response times would be; any other task draws binomial
+counts. The study is then analysed by \code{\link[=hsdt]{hsdt()}} with the confidence level
+\code{1 - alpha}, and each hypothesis is decided as in the approximation. A fit
+that fails, or that cannot estimate the quantity, counts as a failure to
+reject. Each study has its own random number stream, derived from \code{seed},
+so a run gives the same studies whatever \code{ncores}, and every design uses
+the same streams, which makes the differences between designs less noisy
+than their Monte Carlo errors suggest. The simulation also accepts a
+population with unequal variances (\code{sd_signal} other than 1), whose studies
+are then analysed with the equal-variance model; \code{se} and the reliabilities
+are then \code{NA}.
+
+A simulation is slow, about a second per study with 100 subjects, so it is
+best kept for checking a design chosen with the approximation, with enough
+studies to bound the Monte Carlo error: 1000 studies give an error of at
+most 0.016.
 }
 
 \examples{
@@ -145,6 +206,19 @@ usdt_power(pop, subjects = c(40, 80, 160),
 # The same design under weaker correlations
 usdt_power(update(pop, cor_dprime = c(0.1, 0.2)), subjects = 80,
            trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+
+\donttest{
+# Check the design by simulating and analysing 50 studies (under a
+# minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
+sims <- usdt_power(pop, subjects = 80,
+                   trials = c(direct = 64, indirect = 200),
+                   dichotomize = "indirect", method = "simulation",
+                   nsim = 50, seed = 1)
+sims
+
+# Bias, empirical and model standard errors, interval width and coverage
+summary(sims)
+}
 
 }
 \seealso{

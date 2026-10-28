@@ -94,6 +94,15 @@
   estimable, as failures to reject them, reports how often that happens, and
   flags a population in H0, where the rejection rate is the type I error
   rate.
+* `usdt_power(method = "simulation")` checks a design by simulating whole
+  studies and analysing each one with `hsdt()`: a task split at the median
+  draws latent scores per trial and is split with `meyen_split()`, as
+  response times would be. It reports the simulated power with its Monte
+  Carlo error and Wilson interval, and `summary()` the bias, empirical and
+  model standard errors, interval width and coverage of each quantity. Each
+  study has its own random number stream, so `ncores` runs them in parallel
+  with the same results, and the simulation also accepts populations with
+  unequal variances, analysed with the equal-variance model.
 
 ## Data preparation
 

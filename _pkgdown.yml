@@ -73,6 +73,7 @@ articles:
   contents:
   - uSDT-tutorial
   - uSDT-bayesian
+  - uSDT-power
 
 reference:
 - title: Prepare the data

@@ -14,7 +14,10 @@ direct and indirect measures, allowing researchers to compare both
 sensitivities, estimate their latent association, and test indirect sensitivity
 when direct sensitivity is zero. The model can be fitted by maximum likelihood
 with `lme4` or in a Bayesian framework with `brms`, where Bayes factors weigh the
-evidence for and against each hypothesis.
+evidence for and against each hypothesis. It also plans studies: the power of
+the three hypotheses for a number of subjects and of trials per task, the
+cheapest design that reaches a given power, and the smallest effect a design
+detects.
 
 ## Documentation
 
@@ -38,6 +41,9 @@ Bayesian estimation, which is not on CRAN yet:
 above and remove "dev/" from its link. -->
 - [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html),
   the same analysis with priors, posterior summaries and Bayes factors.
+- [Planning a uSDT study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html),
+  power analysis and the choice of subjects and trials, with the tutorial data
+  as a pilot study.
 
 ## Installation
 

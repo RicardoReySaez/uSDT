@@ -37,7 +37,12 @@ Description: Fits hierarchical signal detection theory (SDT) models to paired
     Savage-Dickey density ratio for point hypotheses (Wagenmakers et al., 2010
     <doi:10.1016/j.cogpsych.2009.12.001>) and the change from prior to
     posterior odds for directional and interval ones. The tests and Bayes
-    factors also accept custom models fitted with 'lme4' or 'brms'.
+    factors also accept custom models fitted with 'lme4' or 'brms'. To plan
+    a study, the package computes the power of the three tests for a number
+    of subjects and of trials per task, from the sampling distribution of
+    the subjects' sample mean and covariance or by simulating and fitting
+    whole studies, finds the design that reaches a given power at the lowest
+    cost, and finds the smallest effect a design detects.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

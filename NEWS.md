@@ -124,6 +124,8 @@
   the smallest effect; and a plan as the cost of the cheapest design over
   the trials, with the designs the search checked and the one it chose, or as
   the power or interval width along its free value.
+* The new article "Planning a uSDT study" plans a study with the tutorial data
+  as a pilot, and compares the approximation with simulated studies.
 
 ## Data preparation
 

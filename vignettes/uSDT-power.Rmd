@@ -1,0 +1,439 @@
+---
+title: "Planning a uSDT study"
+description: >
+  How many subjects, and how many trials in each task? The power of the three
+  hypotheses, the cheapest design that reaches it, the smallest effect a
+  design detects and a check by simulation, with the contextual cuing data of
+  Vadillo, Malejka and Shanks (2025) as a pilot study.
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Planning a uSDT study}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(
+  collapse   = FALSE,
+  comment    = "",
+  fig.width  = 8,
+  fig.height = 5.2,
+  fig.align  = "center",
+  out.width  = "100%",
+  dpi        = 150
+)
+
+# The printed output rules the tables with box characters in a UTF-8 locale
+# and falls back to ASCII when there is none, so the vignette asks for UTF-8
+# to read the same wherever it is built. It only asks when the session is not
+# already there, and the last chunk puts the width and the locale back as they
+# were.
+old_options <- options(width = 80)
+old_ctype   <- Sys.getlocale("LC_CTYPE")
+
+if (!isTRUE(l10n_info()[["UTF-8"]])) {
+  for (loc in c("en_US.UTF-8", "C.UTF-8", "English_United States.utf8")) {
+    suppressWarnings(Sys.setlocale("LC_CTYPE", loc))
+    if (isTRUE(l10n_info()[["UTF-8"]])) break
+  }
+  # Windows accepts locale names it does not actually have, so trust
+  # l10n_info() rather than the return value, and undo the attempts when none
+  # of the names produced a UTF-8 session.
+  if (!isTRUE(l10n_info()[["UTF-8"]])) {
+    invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
+  }
+}
+```
+
+```{r}
+#| label: library
+library(uSDT)
+```
+
+## Three numbers to choose
+
+A study of unconscious processing has three sizes to choose: how many
+subjects, how many trials of the direct task and how many of the indirect
+task. They do not play the same role. The trials of a task decide how
+precisely each subject's sensitivity ($d'$) is measured, its *reliability*;
+the subjects decide how well the population is described. And the three
+hypotheses do not depend on them in the same way:
+
+- **H1**, the difference between mean sensitivities, gains from both subjects
+  and trials, like any comparison of means.
+- **H2**, the correlation between the two sensitivities across subjects, is
+  in practice a correlation between noisy measures: the measurement error of
+  each task attenuates it (Spearman, 1904), so trials matter through the
+  reliability of each task.
+- **H3**, the intercept of the latent regression, the test for unconscious
+  processing, extrapolates the indirect sensitivity to a direct sensitivity of
+  zero. Its precision depends on how well the slope is known, which needs a
+  reliable direct task.
+
+uSDT plans a study the way Franco-Martínez, Vadillo and Rey-Sáez (preprint)
+plan multisite studies: describe the population, compute the power of a
+design, choose the design within what is feasible and affordable, explore
+other assumptions, find the smallest effect the design detects, and check the
+design by simulation. Each step is one function.
+
+## The population
+
+Planning starts from the values the population is assumed to have. A pilot
+study is a natural source. The data of Vadillo, Malejka and Shanks (2025),
+which the package includes, serve as one here:
+
+```{r}
+#| label: pilot
+d <- usdt_data_tasks(
+  direct   = vadillo_awareness,
+  indirect = vadillo_cuing,
+  subject_col      = "subj",
+  condition_col    = "condition",
+  condition_levels = c(signal = "old", noise = "new"),
+  response_col     = list(direct = "judged.old", indirect = "rt"),
+  response_levels  = list(direct   = c(signal = 1, noise = 0),
+                          indirect = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(direct = FALSE, indirect = TRUE)
+)
+pilot <- hsdt(d)
+```
+
+[`usdt_population()`](../reference/usdt_population.html) takes the estimates
+of a fit with `from`, and any value given in the call replaces the estimate.
+The pilot's intercept, 0.044, is too small to be the effect a study is
+planned for. A study should be able to detect the smallest effect that would
+matter, say an intercept of 0.1. Giving the intercept writes the population
+in the latent regression parameterization, which keeps the direct mean, both
+standard deviations and the correlation, and moves the indirect mean so that
+the intercept is 0.1:
+
+```{r}
+#| label: population
+pop <- usdt_population(from = pilot, intercept = 0.1)
+pop
+```
+
+The arguments have the names of [`usdt_priors()`](../reference/usdt_priors.html)
+and take numbers: `dprime`, `sd_dprime`, `cor_dprime`, `criterion`,
+`sd_criterion` and `intercept`. A population can also be written from scratch,
+in either parameterization, as `usdt_population(dprime = c(direct = 0.2,
+indirect = 0.3), sd_dprime = 0.3, cor_dprime = 0.4)`.
+
+The plot shows the distribution of the true $d'$ across subjects, with the
+latent regression line and its intercept. Given the trials of each task, it
+adds, as a dashed ellipse, the distribution of the $d'$ those trials measure:
+
+```{r}
+#| label: population-plot
+#| fig.width: 6.5
+#| fig.height: 6.5
+#| out.width: "75%"
+plot(pop, trials = c(direct = 64, indirect = 384), dichotomize = "indirect")
+```
+
+The subjects of this population differ very little in their direct
+sensitivity (a standard deviation of 0.12), much less than 64 trials can tell
+apart. The measured direct $d'$ spreads almost three times as widely as the
+true one: the reliability of the direct task is 0.13. Most of what a study
+would see in the direct task is measurement error, and that is what limits H2
+and H3.
+
+## The power of a design
+
+[`usdt_power()`](../reference/usdt_power.html) gives the power of each
+hypothesis for a number of subjects and of trials per task. The hypotheses are
+written as in [`usdt_equivalence()`](../reference/usdt_equivalence.html), so
+they can be two-sided or one-sided, about any value, or equivalence and
+minimal-effect tests. Here, the pilot's own design, with one-sided tests in
+the direction of the population values:
+
+```{r}
+#| label: power
+usdt_power(pop, subjects = 104, trials = c(direct = 64, indirect = 384),
+           hypothesis = c("diff < 0", "rho = 0", "intercept > 0"),
+           dichotomize = "indirect")
+```
+
+The pilot's design would detect an intercept of 0.1 in one study out of three.
+The `Estimable` column explains part of it: in a third of the studies, the fit
+ends on the boundary, with the direct variance at zero or the correlation at
+1, and [`hsdt()`](../reference/hsdt.html) cannot test the correlation or the
+latent regression. Those studies count as failures to reject.
+
+Several numbers of subjects and of trials give a grid of designs, and `plot()`
+draws power against the subjects:
+
+```{r}
+#| label: power-curves
+curves <- usdt_power(pop, subjects = seq(50, 800, 25),
+                     trials = list(direct = c(64, 256), indirect = 384),
+                     hypothesis = c("rho = 0", "intercept > 0"),
+                     dichotomize = "indirect")
+plot(curves)
+```
+
+Four times as many direct trials do more for H2 and H3 than many more subjects:
+they raise the reliability of the direct task from 0.13 to 0.37.
+
+### How the power is computed
+
+By default the power is approximate and takes a second. The measurement error
+of each subject's $d'$ has the variance that
+[`usdt_reliability()`](../reference/usdt_reliability.html) reports, which
+falls with the number of trials. The measured $d'$ of $N$ subjects then have a
+known covariance, and their sample mean and covariance a known distribution.
+`usdt_power()` draws them 20,000 times, estimates the population as the fitted
+model would, runs each test with the standard errors it would compute, and
+counts the rejections. A draw whose estimated covariance is not valid is a fit
+on the boundary and does not reject. The probability that the direct variance
+ends on the boundary is close to $\Phi(-R_D \sqrt{N / 2})$, with $R_D$ the
+reliability of the direct task: about 0.18 with 104 subjects and $R_D = 0.13$.
+
+With `method = "simulation"`, `usdt_power()` instead simulates whole studies,
+splits the indirect responses at each subject's median as
+[`meyen_split()`](../reference/meyen_split.html) does, fits each one with
+`hsdt()` and tests it. That takes minutes, so it is kept for checking a
+design, below.
+
+## Choosing subjects and trials
+
+[`usdt_plan()`](../reference/usdt_plan.html) chooses the design. A range lets
+it choose a value and a single number fixes it. With subjects and trials free,
+many designs reach the same power, trading subjects for trials, and what each
+costs decides among them. Here the cost is the time of the study in seconds:
+600 per subject for instructions and breaks, 5 per trial of the recognition
+test and 2 per trial of visual search.
+
+```{r}
+#| label: plan
+plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.8,
+                  subjects = c(50, 1000),
+                  trials = list(direct = c(32, 512), indirect = c(192, 768)),
+                  cost = c(subject = 600, direct = 5, indirect = 2),
+                  dichotomize = "indirect")
+plan
+```
+
+The cheapest design is a small study with long tasks, and both trial counts
+end at the limit of their ranges: with a direct task this unreliable, more
+trials are cheaper than more subjects. A recognition test of 500 trials,
+however, may not be feasible, since testing the displays so many times could
+change what is remembered. With at most 128 direct trials:
+
+```{r}
+#| label: plan-limited
+plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.8,
+                  subjects = c(50, 2000),
+                  trials = list(direct = c(32, 128), indirect = c(192, 768)),
+                  cost = c(subject = 600, direct = 5, indirect = 2),
+                  dichotomize = "indirect")
+plan
+plot(plan)
+```
+
+The plot shows the cost of the cheapest design for each number of direct
+trials. The grey line is the closed form that the search starts from; the
+green points are the designs the search checked with the draws of
+`usdt_power()`; the circle is the chosen one. With an unreliable direct task
+the closed form is optimistic, so the search does not trust it and checks a
+lattice of designs and the neighbours of the best.
+
+A fixed number of trials makes the plan choose only the subjects, with no
+cost needed, and `precision` plans for the width of an interval instead of
+power, as in `usdt_plan(pop, precision = c(intercept = 0.2), trials = ...)`.
+
+## Other assumptions
+
+The plan rests on the population. Several values in an argument of
+`usdt_population()` give one scenario each, and
+[`update()`](../reference/usdt_population.html) changes them. With the direct
+task at 128 trials and the indirect task at 384, a larger intercept or a
+weaker correlation than assumed needs another number of subjects:
+
+```{r}
+#| label: scenarios
+scenarios <- update(pop, intercept = c(0.1, 0.15), cor_dprime = c(0.3, 0.49))
+usdt_plan(scenarios, hypothesis = "intercept > 0", power = 0.8,
+          subjects = c(50, 3000), trials = c(direct = 128, indirect = 384),
+          dichotomize = "indirect")
+```
+
+An intercept of 0.15 needs about half the subjects that 0.1 needs. A weaker
+correlation needs fewer subjects, not more: with a flatter slope, the
+intercept depends less on how far the regression is extrapolated to a direct
+sensitivity of zero.
+
+## The smallest effect the design detects
+
+[`usdt_mdes()`](../reference/usdt_mdes.html) finds, for each hypothesis, the
+smallest effect a design detects with the given power. It moves the tested
+quantity away from H0 with the rest of the population fixed, as its
+parameterization says. With the chosen design:
+
+```{r}
+#| label: mdes
+mdes <- usdt_mdes(pop, subjects = plan$design$subjects,
+                  trials = c(direct = plan$design$trials_direct,
+                             indirect = plan$design$trials_indirect),
+                  hypothesis = c("diff < 0", "rho = 0", "intercept > 0"),
+                  dichotomize = "indirect")
+mdes
+plot(mdes)
+```
+
+The power of H2 does not keep rising with the correlation: near 1, the
+estimated correlation often reaches the boundary, where the test cannot be
+run. For an equivalence test, `usdt_mdes()` gives instead the narrowest
+equivalence region the design can establish.
+
+## Checking the design by simulation
+
+A design chosen with the approximation should be checked by simulating it.
+`usdt_power()` takes the plan and simulates its designs, analysing each study
+with `hsdt()`. One thousand studies of 600 subjects take a few minutes on four
+cores:
+
+```{r}
+#| label: check
+#| eval: false
+check <- usdt_power(plan, method = "simulation", nsim = 1000, ncores = 4,
+                    seed = 2026)
+check
+summary(check)
+```
+
+The report gives the simulated power with its Monte Carlo error and 95%
+interval, and how many studies failed to converge. `summary()` reports the
+precision of each quantity across the simulated studies: the mean estimate
+and its bias, the empirical standard error (the standard deviation of the
+estimates) against the mean standard error the fits report, and the width and
+coverage of the intervals. Each study has its own random number stream, so
+the results do not depend on the number of cores.
+
+## How close is the approximation?
+
+The figure compares, for eight designs of two populations, the power of the
+three point nulls from the closed form, from the approximation of
+`usdt_power()` and from 1000 simulated studies analysed with `hsdt()`.
+Population A is a plausible case of unconscious processing, with reliabilities
+from 0.4 to 0.85; the Vadillo population has a direct reliability of 0.13 with
+64 trials.
+
+```{r}
+#| label: validation
+#| echo: false
+#| fig.height: 6.2
+validation <- utils::read.csv(system.file("extdata", "power-validation.csv",
+                                          package = "uSDT"))
+validation$design <- sprintf("%s subjects, %s + %s trials",
+                             validation$subjects, validation$trials_direct,
+                             validation$trials_indirect)
+validation$design <- factor(validation$design,
+                            levels = rev(unique(validation$design)))
+validation$population <- factor(validation$population,
+                                levels = c("A", "Vadillo"))
+validation$hypothesis <- factor(
+  validation$hypothesis, levels = c("diff = 0", "rho = 0", "intercept = 0"),
+  labels = c("H1: difference = 0", "H2: correlation = 0",
+             "H3: intercept = 0"))
+long <- rbind(
+  data.frame(validation[c("population", "design", "hypothesis")],
+             engine = "Closed form", power = validation$closed),
+  data.frame(validation[c("population", "design", "hypothesis")],
+             engine = "Approximation of usdt_power()",
+             power = validation$approximate),
+  data.frame(validation[c("population", "design", "hypothesis")],
+             engine = "Simulation with hsdt()",
+             power = validation$simulation))
+long$engine <- factor(long$engine, levels = c("Simulation with hsdt()",
+                                              "Approximation of usdt_power()",
+                                              "Closed form"))
+
+ggplot2::ggplot(long, ggplot2::aes(x = power, y = design)) +
+  ggplot2::geom_errorbar(
+    data = validation,
+    ggplot2::aes(xmin = simulation_low, xmax = simulation_high, y = design),
+    inherit.aes = FALSE, orientation = "y", width = 0.45, colour = "#292D30",
+    linewidth = 0.5) +
+  ggplot2::geom_point(ggplot2::aes(shape = engine, colour = engine,
+                                   fill = engine), size = 2.6, stroke = 0.9) +
+  ggplot2::scale_shape_manual(values = c(21, 24, 23), name = NULL) +
+  ggplot2::scale_colour_manual(values = c("#292D30", "#116B60", "#B6543A"),
+                               name = NULL) +
+  ggplot2::scale_fill_manual(values = c("#292D30", "#3FA88E", "white"),
+                             name = NULL) +
+  ggplot2::scale_x_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1),
+                              labels = c("0", "0.5", "1")) +
+  ggplot2::facet_grid(population ~ hypothesis, scales = "free_y",
+                      space = "free_y") +
+  ggplot2::labs(
+    x = "Power", y = NULL,
+    caption = paste0(
+      "1000 simulated studies per design; the bars are 95% Wilson intervals ",
+      "of the simulated power.\nStudies whose fit ends on the boundary count ",
+      "as failures to reject the correlation and the intercept.")) +
+  ggplot2::theme_classic(base_size = 12) +
+  ggplot2::theme(
+    legend.position = "top",
+    panel.spacing.x = grid::unit(14, "pt"),
+    strip.background = ggplot2::element_rect(fill = "#F5F7F6", colour = NA),
+    strip.text = ggplot2::element_text(colour = "#252A2D", face = "bold"),
+    panel.grid.major.x = ggplot2::element_line(colour = "#E4E5E1",
+                                               linewidth = 0.4),
+    axis.text = ggplot2::element_text(colour = "#3E4347"),
+    plot.caption = ggplot2::element_text(colour = "#687076", size = 9.5,
+                                         hjust = 0))
+```
+
+For H1 all three agree. For H2 and H3 they agree while both tasks are
+reasonably reliable, and the closed form drifts away as the direct task
+becomes unreliable, because it ignores the fits on the boundary. For H2 it is
+optimistic: the studies that would reject the correlation are precisely those
+whose estimated covariance is too large for the estimated variances, and they
+end on the boundary, where the test cannot be run. For H3 in the Vadillo
+population it is pessimistic instead: the studies that stay off the boundary
+are those with a larger estimated direct variance, and with it a larger
+estimated intercept. The approximation of `usdt_power()` sees those boundary
+fits and follows the simulation much more closely, though it is still
+somewhat optimistic for the Vadillo population, where the fitted model reaches
+the boundary more often than the approximation does. That is why
+`usdt_plan()` searches with the approximation rather than the closed form,
+and why a chosen design is worth simulating.
+
+## Summary
+
+| Question | Function |
+|---|---|
+| What population do I assume? | `usdt_population()`, from values or from a pilot fit |
+| What power does my design have? | `usdt_power()` |
+| How many subjects, trials, or both? | `usdt_plan()`, with `cost`, `budget` or `precision` |
+| What if my assumptions are wrong? | several values in `usdt_population()` or `update()` |
+| What is the smallest effect I can detect? | `usdt_mdes()` |
+| Does the chosen design hold up? | `usdt_power(plan, method = "simulation")` and `summary()` |
+
+## References
+
+Franco-Martínez, A., Vadillo, M. A., & Rey-Sáez, R. (preprint). How many
+sites, participants, and trials? A tutorial on multilevel power analysis for
+multisite studies with repeated measures.
+
+Spearman, C. (1904). The proof and measurement of association between two
+things. *The American Journal of Psychology, 15*(1), 72–101.
+<https://doi.org/10.2307/1412159>
+
+Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the reliability
+multiverse of contextual cuing. *Journal of Experimental Psychology: Learning,
+Memory, and Cognition*, 51(6), 910-927. <https://doi.org/10.1037/xlm0001410>
+
+Zimmer, F., Henninger, M., & Debelak, R. (2024). Sample size planning for
+complex study designs: A tutorial for the mlpwr package. *Behavior Research
+Methods*, 56, 5246–5263. <https://doi.org/10.3758/s13428-023-02269-0>
+
+```{r}
+#| label: cleanup
+#| include: false
+options(old_options)
+invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
+```

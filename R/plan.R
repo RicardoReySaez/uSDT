@@ -69,8 +69,8 @@
 #' fits on the boundary, and the number of subjects of each is raised or
 #' lowered until those draws reach the power; the search stops when the next
 #' design costs more in the closed form than the best design checked so far.
-#' A design whose subjects or trials reach the limit of their range is marked:
-#' the range may be too narrow.
+#' A design whose subjects or trials reach the limit of their range, or come
+#' within 2% of it, is marked: the range may be too narrow.
 #'
 #' The design chosen this way rests on the approximation. Simulate it with
 #' `usdt_power(plan, method = "simulation")` before relying on it, as the
@@ -1024,18 +1024,23 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
              estimable = NA_real_, width = NA_real_, cost = NA_real_)
 }
 
-# This function names the free argument whose limit a design reaches.
+# This function names the free argument whose limit a design reaches, or
+# nearly reaches: within 2% of its range, since the search settles the last
+# steps with Monte Carlo error.
 .plan_limit <- function(found, space) {
   if (is.na(found$subjects)) return(NA_character_)
+  near <- function(value, values) {
+    r <- range(values)
+    value <= r[1L] + 0.02 * diff(r) || value >= r[2L] - 0.02 * diff(r)
+  }
   at <- character(0)
-  if (space$free[["subjects"]] && found$subjects %in% space$subjects) {
+  if (space$free[["subjects"]] && near(found$subjects, space$subjects)) {
     at <- c(at, "`subjects`")
   }
   for (k in c("direct", "indirect")) {
     r <- space$trials[[k]]
     if (length(r) == 2L && (space$free[[k]] || (k == "indirect" && space$linked)) &&
-        found[[paste0("trials_", k)]] %in% c(min(space$grid[[k]]),
-                                             max(space$grid[[k]]))) {
+        near(found[[paste0("trials_", k)]], space$grid[[k]])) {
       at <- c(at, if (space$linked) "`trials`" else paste0("`trials$", k, "`"))
     }
   }

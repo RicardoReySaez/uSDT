@@ -113,8 +113,8 @@ checked with the draws of the sample mean and covariance, which see the
 fits on the boundary, and the number of subjects of each is raised or
 lowered until those draws reach the power; the search stops when the next
 design costs more in the closed form than the best design checked so far.
-A design whose subjects or trials reach the limit of their range is marked:
-the range may be too narrow.
+A design whose subjects or trials reach the limit of their range, or come
+within 2\% of it, is marked: the range may be too narrow.
 
 The design chosen this way rests on the approximation. Simulate it with
 \code{usdt_power(plan, method = "simulation")} before relying on it, as the

@@ -186,7 +186,7 @@ print.usdt_priors <- function(x, ...) {
 # under unequal variances.
 .used_priors <- function(priors, design) {
   free <- c("awareness", "influence")[design$free_c == 1L]
-  regression <- design$parameterization == "regression"
+  regression <- design$latent == "regression"
   sensitivities <- priors$parameter %in% c("sd_dprime", "cor_dprime") |
     (priors$parameter == "dprime" &
        (!regression | priors$task == "awareness")) |
@@ -349,9 +349,9 @@ print.usdt_priors <- function(x, ...) {
 # from its priors, one draw per row: their means, SDs and correlation. Under
 # the latent regression the influence mean follows from the intercept as
 # mu_I = b0 + rho * sigma_I / sigma_A * mu_A.
-.prior_draws <- function(priors, n, parameterization) {
+.prior_draws <- function(priors, n, latent) {
   draw <- function(parameter, task) .prior_sample(priors, parameter, task, n)
-  if (parameterization == "regression") {
+  if (latent == "regression") {
     mu_A <- draw("dprime", "awareness")
     sigma_A <- draw("sd_dprime", "awareness")
     sigma_I <- draw("sd_dprime", "influence")
@@ -373,7 +373,7 @@ print.usdt_priors <- function(x, ...) {
 # by the Meyen split takes the value that makes HR + FAR = 1.
 .prior_predictive <- function(priors, n, design) {
   draw <- function(row) .prior_fun(row)$r(n)
-  B <- .prior_draws(priors, n, design$parameterization)
+  B <- .prior_draws(priors, n, design$latent)
   z <- matrix(stats::rnorm(2L * n), n)
   d <- cbind(B[, "mu_A"] + B[, "sigma_A"] * z[, 1L],
              B[, "mu_I"] + B[, "sigma_I"] *
@@ -413,7 +413,7 @@ print.usdt_priors <- function(x, ...) {
 # parameter theta with a prior of its own, given the other parameters, so its
 # prior averages the transformed prior of theta over n prior draws of them (a
 # Rao-Blackwell estimate), whatever the families of the priors.
-.quantity_priors <- function(priors, quantities, parameterization,
+.quantity_priors <- function(priors, quantities, latent,
                              n = .prior_samples) {
   prior <- function(parameter, task = "both") {
     .prior_fun(.prior_rows(priors, parameter, task))
@@ -425,7 +425,7 @@ print.usdt_priors <- function(x, ...) {
     .transformed_prior(theta, identity, function(x) 0, bounds,
                        induced = FALSE)
   }
-  regression <- parameterization == "regression"
+  regression <- latent == "regression"
 
   # slope = rho r with r = sigma_I / sigma_A. The difference and the intercept
   # shift the influence mean or, under the latent regression, the intercept:
@@ -501,10 +501,10 @@ print.usdt_priors <- function(x, ...) {
 #'   criteria are fixed.
 #' @param unequal_variances Logical. Simulate the signal standard deviation
 #'   from its prior instead of fixing it to 1.
-#' @param parameterization How the model describes the two sensitivities, as
-#'   in [hsdt()]: by their means, standard deviations and correlation
-#'   (`"correlation"`, the default) or by the latent regression of the
-#'   influence on the awareness one (`"regression"`).
+#' @param latent How the model writes the relation between the two latent
+#'   sensitivities, as in [hsdt()]: by their means, standard deviations and
+#'   correlation (`"correlation"`, the default) or by the latent regression of
+#'   the influence on the awareness one (`"regression"`).
 #' @param caption Logical. Show the caption that explains the plot under it
 #'   (default `TRUE`).
 #' @param ... Ignored.
@@ -542,12 +542,11 @@ print.usdt_priors <- function(x, ...) {
 #'                                influence = "normal(0, 0.5)")))
 #'
 #' # The latent regression, with a prior on its intercept
-#' plot(usdt_priors(intercept = "normal(0, 0.3)"),
-#'      parameterization = "regression")
+#' plot(usdt_priors(intercept = "normal(0, 0.3)"), latent = "regression")
 #'
 #' @export
 plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
-                             parameterization = c("correlation", "regression"),
+                             latent = c("correlation", "regression"),
                              caption = TRUE, ...) {
   .check_caption(caption)
   if (!is.null(data) && !inherits(data, "usdt_data")) {
@@ -558,33 +557,33 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
       is.na(unequal_variances)) {
     .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
   }
-  parameterization <- .check_parameterization(parameterization)
+  latent <- .check_latent(latent)
   if (length(list(...))) {
     .usdt_stop("`...` is not used by the prior predictive plot.")
   }
   .plot_priors(.prior_check_data(x, data, unequal_variances,
-                                 parameterization)) +
+                                 latent)) +
     .hide_caption(caption)
 }
 
 # This function reads the parameterization of the two sensitivities.
-.check_parameterization <- function(x) {
+.check_latent <- function(x) {
   tryCatch(match.arg(x, c("correlation", "regression")), error = function(e)
-    .usdt_stop("`parameterization` must be `\"correlation\"` or ",
+    .usdt_stop("`latent` must be `\"correlation\"` or ",
                "`\"regression\"`."))
 }
 
 # This function collects the curves drawn by the prior predictive check. With
 # data, the criteria fixed by the median split are those hsdt() fixes.
 .prior_check_data <- function(priors, data, unequal_variances,
-                              parameterization) {
+                              latent) {
   labels <- if (is.null(data))
     c(awareness = "Awareness", influence = "Influence") else data$meta$labels
   design <- if (is.null(data)) {
     list(free_c = c(1L, 1L), unequal_variances = unequal_variances,
-         parameterization = parameterization)
+         latent = latent)
   } else {
-    .bayes_design(data, "auto", unequal_variances, parameterization)
+    .bayes_design(data, "auto", unequal_variances, latent)
   }
   simulated <- .prior_predictive(priors, .prior_samples, design)
 
@@ -613,7 +612,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
   # averages over prior draws, so these smooth curves take fewer points and
   # draws than a Bayes factor, which reads one point precisely.
   priors_of <- .quantity_priors(priors, c("diff", "rho", "intercept"),
-                                parameterization, n = .curve_samples)
+                                latent, n = .curve_samples)
   Q <- .usdt_quantities(.bivariate_primitives(simulated$draws))
   span <- function(x) {
     spread <- stats::IQR(x) / (2 * stats::qnorm(0.75))
@@ -635,7 +634,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
   list(curves = curves, labels = labels,
        fixed = unname(labels[c("awareness", "influence")][design$free_c == 0L]),
        unequal_variances = unequal_variances,
-       parameterization = parameterization,
+       latent = latent,
        nulls = data.frame(panel = factor(panels[-1L], levels = panels), x = 0))
 }
 
@@ -720,7 +719,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
       caption = paste0(
         "Prior densities from 100,000 draws of the priors; no responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, " ",
-        if (values$parameterization == "regression") {
+        if (values$latent == "regression") {
           paste0("H2 and H3 are the exact priors of the correlation and the ",
                  "intercept. H1 is induced by the other priors")
         } else {

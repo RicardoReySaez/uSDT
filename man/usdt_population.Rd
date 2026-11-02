@@ -65,7 +65,7 @@ An object of class \code{usdt_population}: a data frame with one row per
 scenario and the columns \code{scenario}, \code{mu_A}, \code{mu_I}, \code{sigma_A},
 \code{sigma_I}, \code{rho}, the tested quantities \code{diff}, \code{intercept} and \code{slope},
 and \code{criterion_A}, \code{criterion_I}, \code{sd_criterion_A}, \code{sd_criterion_I},
-\code{cor_criterion}, \code{sd_signal_A} and \code{sd_signal_I}. Its \code{parameterization}
+\code{cor_criterion}, \code{sd_signal_A} and \code{sd_signal_I}. Its \code{latent}
 attribute is \code{"correlation"} or \code{"regression"}.
 }
 \description{
@@ -89,7 +89,7 @@ The correlation parameterization gives the bivariate normal distribution of
 regression parameterization gives the intercept \eqn{\beta_0} instead of
 \eqn{\mu_I}, which then follows as
 \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}, as in
-\code{hsdt(parameterization = "regression")}. Both describe the same
+\code{hsdt(latent = "regression")}. Both describe the same
 distribution, and the printed population reports the tested quantities of
 either: the difference \eqn{\mu_I - \mu_A} (H1), the correlation (H2) and
 the intercept and slope of the latent regression (H3).

@@ -31,7 +31,7 @@
   defaults to the `brms.backend` option. brms, posterior, logspline, callr and
   cli are now imported, so the Bayesian estimation needs no optional package
   apart from `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
-* `hsdt(parameterization = "regression")` moves the prior of the influence
+* `hsdt(latent = "regression")` moves the prior of the influence
   mean sensitivity to the intercept of the latent regression of the influence
   on the awareness one, so that both the intercept tested by H3 and the
   correlation tested by H2 have the priors you give them. The difference
@@ -93,7 +93,7 @@
   the means, standard deviations and correlation of the two sensitivities and
   the distribution of the criteria, with the argument names of
   `usdt_priors()`. The intercept of the latent regression can replace the
-  influence mean, as in `hsdt(parameterization = "regression")`, and the
+  influence mean, as in `hsdt(latent = "regression")`, and the
   values can come from a frequentist `hsdt()` fit of a pilot study. Several
   values in an argument give one scenario each, and `update()` changes them.
   It is the first piece of the power analysis.

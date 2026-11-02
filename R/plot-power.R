@@ -488,7 +488,7 @@ plot.usdt_plan <- function(x, caption = TRUE, ...) {
               criterion_A = "mean c A", criterion_I = "mean c I",
               sd_criterion_A = "sd(c) A", sd_criterion_I = "sd(c) I",
               cor_criterion = "cor(c)")
-  if (!identical(attr(x, "parameterization"), "regression")) {
+  if (!identical(attr(x, "latent"), "regression")) {
     inputs <- inputs[names(inputs) != "intercept"]
   }
   varies <- names(inputs)[vapply(names(inputs), function(k) {

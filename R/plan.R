@@ -422,7 +422,7 @@ usdt_mdes <- function(population, subjects, trials,
       for (N in subjects) {
         for (h in tests) {
           res <- .mdes_one(pop, h, N, cells, split, alpha, power, base,
-                           attr(population, "parameterization"), vary, range)
+                           attr(population, "latent"), vary, range)
           trials_t <- unlist(design$trials[t, ])
           rows[[length(rows) + 1L]] <- data.frame(
             scenario = pop$scenario, subjects = N,
@@ -1056,8 +1056,8 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 
 # This function moves one population value of a scenario and derives the
 # others again, keeping fixed what the parameterization keeps fixed.
-.scenario_with <- function(pop, what, value, parameterization) {
-  regression <- identical(parameterization, "regression")
+.scenario_with <- function(pop, what, value, latent) {
+  regression <- identical(latent, "regression")
   slope <- function() pop$rho * pop$sigma_I / pop$sigma_A
   switch(what,
     diff = pop$mu_I <- pop$mu_A + value,
@@ -1094,7 +1094,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # The power along the way is that of the moment engine, with the error
 # variance of each moved population.
 .mdes_one <- function(pop, h, N, cells, split, alpha, power, base,
-                      parameterization, vary, range) {
+                      latent, vary, range) {
   # The search runs on the first 5000 draws, and the power of the population
   # itself on all of them, as in usdt_power().
   engine <- function(draws) {
@@ -1130,7 +1130,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     from <- range[1L]
     to <- range[2L]
     limit <- to
-    f <- function(x) at(.scenario_with(pop, vary, x, parameterization))
+    f <- function(x) at(.scenario_with(pop, vary, x, latent))
   } else if (h$op == "in") {
     varies <- "margin"
     centre <- mean(h$value)
@@ -1155,7 +1155,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
       slope = direction * 0.99 * pop$sigma_I / pop$sigma_A,
       from + direction * 5)
     to <- from + direction * min(abs(limit - from), span)
-    f <- function(x) at(.scenario_with(pop, h$quantity, x, parameterization))
+    f <- function(x) at(.scenario_with(pop, h$quantity, x, latent))
   }
 
   # The curve of power over the values searched, and the first crossing.
@@ -1206,7 +1206,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   out <- as.data.frame(population)[keep, , drop = FALSE]
   rownames(out) <- NULL
   structure(out, class = c("usdt_population", "data.frame"),
-            parameterization = attr(population, "parameterization"),
+            latent = attr(population, "latent"),
             labels = attr(population, "labels"))
 }
 

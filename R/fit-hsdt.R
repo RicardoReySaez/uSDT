@@ -31,12 +31,13 @@
 #' @param unequal_variances Logical. Estimate the standard deviation of the
 #'   signal distribution of each task instead of fixing it to that of the noise
 #'   distribution. Bayesian estimation only.
-#' @param parameterization Where the Bayesian model places the prior on the
-#'   location of the influence sensitivity: on its mean (`"correlation"`, the
-#'   default), or on the intercept of the latent regression of the influence on
-#'   the awareness sensitivity (`"regression"`). Both keep the priors on the
-#'   awareness mean, the standard deviations and the correlation. Bayesian
-#'   estimation only.
+#' @param latent How the Bayesian model writes the relation between the two
+#'   latent sensitivities, which decides where it places the prior on the
+#'   location of the influence sensitivity: on its mean, by their latent
+#'   correlation (`"correlation"`, the default), or on the intercept of the
+#'   latent regression of the influence on the awareness sensitivity
+#'   (`"regression"`). Both keep the priors on the awareness mean, the
+#'   standard deviations and the correlation. Bayesian estimation only.
 #' @param backend Stan interface brms uses for Bayesian estimation: `"rstan"`
 #'   (available from CRAN) or `"cmdstanr"` (installed from the Stan R-universe
 #'   together with CmdStan). As in brms, the default is the `brms.backend`
@@ -100,7 +101,7 @@
 #' credible interval, so with the default `level = 0.95` a p-value below .05
 #' means that the 95% credible interval excludes zero.
 #'
-#' With `parameterization = "regression"`, the prior of the influence mean
+#' With `latent = "regression"`, the prior of the influence mean
 #' moves to the intercept \eqn{\beta_0} of the latent regression, and the
 #' influence mean follows as
 #' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The
@@ -179,7 +180,7 @@ hsdt <- function(data,
                  optimizer    = "bobyqa",
                  priors       = usdt_priors(),
                  unequal_variances = FALSE,
-                 parameterization = c("correlation", "regression"),
+                 latent       = c("correlation", "regression"),
                  backend      = getOption("brms.backend", "rstan"),
                  ...) {
 
@@ -210,17 +211,17 @@ hsdt <- function(data,
         is.na(unequal_variances)) {
       .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
     }
-    parameterization <- .check_parameterization(parameterization)
+    latent <- .check_latent(latent)
     if (!is.character(backend) || length(backend) != 1L ||
         !backend %in% c("rstan", "cmdstanr")) {
       .usdt_stop("`backend` must be `\"rstan\"` or `\"cmdstanr\"`.")
     }
     return(.hsdt_bayes(data, fix_criteria, level, priors, unequal_variances,
-                       parameterization, backend, dots, match.call()))
+                       latent, backend, dots, match.call()))
   }
   if (!missing(priors) || !missing(unequal_variances) ||
-      !missing(parameterization) || !missing(backend)) {
-    .usdt_stop("`priors`, `unequal_variances`, `parameterization` and ",
+      !missing(latent) || !missing(backend)) {
+    .usdt_stop("`priors`, `unequal_variances`, `latent` and ",
                "`backend` apply only to `estimation = \"bayesian\"`.")
   }
   if (!is.character(optimizer) || length(optimizer) != 1L ||

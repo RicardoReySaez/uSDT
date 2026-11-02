@@ -1,4 +1,4 @@
-designs <- expand.grid(parameterization = c("correlation", "regression"),
+designs <- expand.grid(latent = c("correlation", "regression"),
                        unequal_variances = c(FALSE, TRUE),
                        influence_free = c(TRUE, FALSE),
                        stringsAsFactors = FALSE)
@@ -6,7 +6,7 @@ design_of <- function(i) {
   free_c <- c(1L, as.integer(designs$influence_free[i]))
   list(criteria = c("c_A", "c_I")[free_c == 1L], free_c = free_c,
        unequal_variances = designs$unequal_variances[i],
-       parameterization = designs$parameterization[i])
+       latent = designs$latent[i])
 }
 
 test_that("the brms formula gives every row its SDT predictor", {
@@ -47,7 +47,7 @@ test_that("each prior a design uses becomes one brms prior of its own", {
 
   for (i in seq_len(nrow(designs))) {
     design <- design_of(i)
-    regression <- design$parameterization == "regression"
+    regression <- design$latent == "regression"
     model <- .brms_model(d, design, priors)
     table <- brms::validate_prior(model$prior, model$formula,
                                   data = model$data,

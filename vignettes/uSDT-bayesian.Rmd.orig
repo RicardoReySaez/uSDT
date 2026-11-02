@@ -344,7 +344,7 @@ The intercept of H3 has no prior of its own above: the model places its
 priors on the means, standard deviations and correlation of the two
 sensitivities, and the intercept prior they induce has very heavy tails. Its
 Bayes factor depends on all of them. With
-`parameterization = "regression"`, the prior of the influence mean moves to the
+`latent = "regression"`, the prior of the influence mean moves to the
 intercept $\beta_0$ of the latent regression, the last row of
 `usdt_priors()`. The influence mean follows from it as
 $\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A$, and the priors of
@@ -366,7 +366,7 @@ shows what changes:
 #| fig.height: 6
 priors_reg <- usdt_priors(sd_dprime = list(awareness = "gamma(2, 4)",
                                            influence = "student_t(4, 0, 0.5)"))
-plot(priors_reg, data = data_usdt, parameterization = "regression")
+plot(priors_reg, data = data_usdt, latent = "regression")
 ```
 
 The intercept (H3) now has the prior you give it, by default `normal(0, 1)`,
@@ -383,7 +383,7 @@ the difference between the means.
 #| label: fit-regression
 #| collapse: true
 fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
-                parameterization = "regression", seed = 2026)
+                latent = "regression", seed = 2026)
 ```
 
 The model samples the same parameters as before, so the fit reports the same

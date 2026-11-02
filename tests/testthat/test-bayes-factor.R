@@ -129,17 +129,17 @@ test_that("the priors of the tested quantities match simulated prior draws", {
                         cor_dprime = "lkj(2)",
                         intercept = "student_t(5, 0.2, 0.4)")
   quantities <- c("diff", "rho", "intercept", "slope")
-  for (parameterization in c("correlation", "regression")) {
-    exact <- .quantity_priors(priors, quantities, parameterization)
+  for (latent in c("correlation", "regression")) {
+    exact <- .quantity_priors(priors, quantities, latent)
     Q <- .usdt_quantities(.bivariate_primitives(
-      .prior_draws(priors, 1e5, parameterization)))
+      .prior_draws(priors, 1e5, latent)))
     # The correlation has its own prior under both, and the intercept under
     # the latent regression only.
-    own <- c("rho", if (parameterization == "regression") "intercept")
+    own <- c("rho", if (latent == "regression") "intercept")
     expect_identical(names(Filter(function(p) !p$induced, exact)), own,
-                     label = parameterization)
+                     label = latent)
     for (q in quantities) {
-      label <- paste(parameterization, q)
+      label <- paste(latent, q)
       at <- stats::quantile(Q[, q], c(0.1, 0.3, 0.5, 0.7, 0.9), names = FALSE)
       expect_equal(exact[[q]]$cdf(at), c(0.1, 0.3, 0.5, 0.7, 0.9),
                    tolerance = 0.01, label = label)

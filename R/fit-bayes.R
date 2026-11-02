@@ -7,12 +7,12 @@
 
 # This function fits the Bayesian model with brms and builds its hsdt object.
 .hsdt_bayes <- function(data, fix_criteria, level, priors, unequal_variances,
-                        parameterization, backend, dots, call) {
+                        latent, backend, dots, call) {
   settings <- c(.bayes_settings(dots), backend = backend)
   .check_backend(backend)
 
   design <- .bayes_design(data, fix_criteria, unequal_variances,
-                          parameterization)
+                          latent)
   model <- .brms_model(data, design, priors)
   if (settings$refresh > 0) .bayes_header(settings)
   fit <- .brms_sample(.brms_compiled(model, backend), model, settings)
@@ -165,7 +165,7 @@
 # the data, so a criterion fixed by the Meyen split is judged on the deviation
 # scale.
 .bayes_design <- function(data, fix_criteria, unequal_variances,
-                          parameterization) {
+                          latent) {
   free_c <- if (fix_criteria == "none") c(1L, 1L) else {
     check <- .criterion_check(data$agg, "deviation")
     as.integer(!vapply(c("awareness", "influence"), function(k) {
@@ -174,7 +174,7 @@
   }
   list(criteria = c("c_A", "c_I")[free_c == 1L], free_c = free_c,
        unequal_variances = unequal_variances,
-       parameterization = parameterization)
+       latent = latent)
 }
 
 # Compiled models stay in the session, so later fits skip the cache.

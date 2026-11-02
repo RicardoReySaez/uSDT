@@ -14,7 +14,7 @@ hsdt(
   optimizer = "bobyqa",
   priors = usdt_priors(),
   unequal_variances = FALSE,
-  parameterization = c("correlation", "regression"),
+  latent = c("correlation", "regression"),
   backend = getOption("brms.backend", "rstan"),
   ...
 )
@@ -49,12 +49,13 @@ estimation only.}
 signal distribution of each task instead of fixing it to that of the noise
 distribution. Bayesian estimation only.}
 
-\item{parameterization}{Where the Bayesian model places the prior on the
-location of the influence sensitivity: on its mean (\code{"correlation"}, the
-default), or on the intercept of the latent regression of the influence on
-the awareness sensitivity (\code{"regression"}). Both keep the priors on the
-awareness mean, the standard deviations and the correlation. Bayesian
-estimation only.}
+\item{latent}{How the Bayesian model writes the relation between the two
+latent sensitivities, which decides where it places the prior on the
+location of the influence sensitivity: on its mean, by their latent
+correlation (\code{"correlation"}, the default), or on the intercept of the
+latent regression of the influence on the awareness sensitivity
+(\code{"regression"}). Both keep the priors on the awareness mean, the
+standard deviations and the correlation. Bayesian estimation only.}
 
 \item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
 (available from CRAN) or \code{"cmdstanr"} (installed from the Stan R-universe
@@ -135,7 +136,7 @@ The p-value falls below \code{1 - level} exactly when zero lies outside the
 credible interval, so with the default \code{level = 0.95} a p-value below .05
 means that the 95\% credible interval excludes zero.
 
-With \code{parameterization = "regression"}, the prior of the influence mean
+With \code{latent = "regression"}, the prior of the influence mean
 moves to the intercept \eqn{\beta_0} of the latent regression, and the
 influence mean follows as
 \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The

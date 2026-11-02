@@ -8,7 +8,7 @@
   x,
   data = NULL,
   unequal_variances = FALSE,
-  parameterization = c("correlation", "regression"),
+  latent = c("correlation", "regression"),
   caption = TRUE,
   ...
 )
@@ -24,10 +24,10 @@ criteria are fixed.}
 \item{unequal_variances}{Logical. Simulate the signal standard deviation
 from its prior instead of fixing it to 1.}
 
-\item{parameterization}{How the model describes the two sensitivities, as
-in \code{\link[=hsdt]{hsdt()}}: by their means, standard deviations and correlation
-(\code{"correlation"}, the default) or by the latent regression of the
-influence on the awareness one (\code{"regression"}).}
+\item{latent}{How the model writes the relation between the two latent
+sensitivities, as in \code{\link[=hsdt]{hsdt()}}: by their means, standard deviations and
+correlation (\code{"correlation"}, the default) or by the latent regression of
+the influence on the awareness one (\code{"regression"}).}
 
 \item{caption}{Logical. Show the caption that explains the plot under it
 (default \code{TRUE}).}
@@ -73,8 +73,7 @@ plot(usdt_priors(dprime = list(awareness = "normal(0, 1)",
                                influence = "normal(0, 0.5)")))
 
 # The latent regression, with a prior on its intercept
-plot(usdt_priors(intercept = "normal(0, 0.3)"),
-     parameterization = "regression")
+plot(usdt_priors(intercept = "normal(0, 0.3)"), latent = "regression")
 
 }
 \seealso{

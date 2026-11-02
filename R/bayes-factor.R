@@ -202,7 +202,7 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
   level <- level %||% if (.is_bayes(fit)) fit$level else 0.95
   .check_confidence_level(level)
 
-  parameterization <- if (.is_bayes(fit)) fit$design$parameterization else
+  latent <- if (.is_bayes(fit)) fit$design$latent else
     "correlation"
   tests <- lapply(hypothesis, .bf_parse)
   quantities <- unique(vapply(tests, `[[`, "", "quantity"))
@@ -211,7 +211,7 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
     .brms_priors(brms::prior_summary(fit), posterior::variables(fit), awareness,
                  influence)
   }
-  priors <- .quantity_priors(priors, quantities, parameterization)
+  priors <- .quantity_priors(priors, quantities, latent)
   results <- lapply(tests, function(h) {
     .bf_one(h, draws[, h$quantity], draws[, h$summary], priors[[h$quantity]],
             level)

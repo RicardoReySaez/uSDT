@@ -50,7 +50,7 @@
 #' regression parameterization gives the intercept \eqn{\beta_0} instead of
 #' \eqn{\mu_I}, which then follows as
 #' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}, as in
-#' `hsdt(parameterization = "regression")`. Both describe the same
+#' `hsdt(latent = "regression")`. Both describe the same
 #' distribution, and the printed population reports the tested quantities of
 #' either: the difference \eqn{\mu_I - \mu_A} (H1), the correlation (H2) and
 #' the intercept and slope of the latent regression (H3).
@@ -90,7 +90,7 @@
 #'   scenario and the columns `scenario`, `mu_A`, `mu_I`, `sigma_A`,
 #'   `sigma_I`, `rho`, the tested quantities `diff`, `intercept` and `slope`,
 #'   and `criterion_A`, `criterion_I`, `sd_criterion_A`, `sd_criterion_I`,
-#'   `cor_criterion`, `sd_signal_A` and `sd_signal_I`. Its `parameterization`
+#'   `cor_criterion`, `sd_signal_A` and `sd_signal_I`. Its `latent`
 #'   attribute is `"correlation"` or `"regression"`.
 #'
 #' @seealso [usdt_priors()], [hsdt()]
@@ -173,7 +173,7 @@ usdt_population <- function(dprime        = NULL,
 #' @rdname usdt_population
 #' @export
 print.usdt_population <- function(x, ...) {
-  regression <- identical(attr(x, "parameterization"), "regression")
+  regression <- identical(attr(x, "latent"), "regression")
   labels <- attr(x, "labels")
   chars <- .usdt_chars()
   n <- nrow(x)
@@ -289,7 +289,7 @@ update.usdt_population <- function(object, ...) {
   out <- NextMethod()
   if (is.data.frame(out)) {
     class(out) <- setdiff(class(out), "usdt_population")
-    attr(out, "parameterization") <- attr(out, "labels") <-
+    attr(out, "latent") <- attr(out, "labels") <-
       attr(out, "values") <- NULL
   }
   out
@@ -438,7 +438,7 @@ update.usdt_population <- function(object, ...) {
   if (!regression) values$intercept <- NULL
   if (regression) values$dprime <- list(awareness = values$dprime)
   structure(out, class = c("usdt_population", "data.frame"),
-            parameterization = if (regression) "regression" else "correlation",
+            latent = if (regression) "regression" else "correlation",
             labels = labels, values = values)
 }
 

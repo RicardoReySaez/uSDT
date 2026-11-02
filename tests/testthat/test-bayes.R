@@ -62,7 +62,7 @@ test_that("the latent regression reports the same quantities", {
   d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
   # So short a run can leave the correlation with a small effective sample.
   m <- suppressWarnings(hsdt(
-    d, estimation = "bayesian", parameterization = "regression", chains = 2,
+    d, estimation = "bayesian", latent = "regression", chains = 2,
     iter = 1500, warmup = 500, refresh = 0, seed = 1,
     backend = test_backend()))
   f <- hsdt(d)

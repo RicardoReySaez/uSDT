@@ -378,7 +378,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
               m$n_rows, .fmt_int(m$n_trials)))
   cat(sprintf("  Family:         binomial (probit), %s variances\n",
               if (uv) "unequal" else "equal"))
-  if (design$parameterization == "regression") {
+  if (design$latent == "regression") {
     cat(sprintf("  Model:          latent regression of %s d' on %s d'\n",
                 lab[["influence"]], lab[["awareness"]]))
   }

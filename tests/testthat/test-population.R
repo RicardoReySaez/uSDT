@@ -15,7 +15,7 @@ base_population <- function() {
 test_that("the correlation parameterization derives the tested quantities", {
   pop <- base_population()
   expect_s3_class(pop, "usdt_population")
-  expect_identical(attr(pop, "parameterization"), "correlation")
+  expect_identical(attr(pop, "latent"), "correlation")
   expect_equal(nrow(pop), 1L)
 
   q <- .usdt_quantities(c(gamma_A = 0.15, gamma_I = 0.30, s2_A = 0.35^2,
@@ -35,7 +35,7 @@ test_that("the latent regression gives the intercept and derives the influence m
   pop <- usdt_population(dprime = 0.15, intercept = 0.25,
                          sd_dprime = c(awareness = 0.35, influence = 0.30),
                          cor_dprime = 0.3)
-  expect_identical(attr(pop, "parameterization"), "regression")
+  expect_identical(attr(pop, "latent"), "regression")
   expect_equal(pop$mu_I, 0.25 + 0.3 * 0.30 / 0.35 * 0.15)
   expect_equal(pop$intercept, 0.25)
   expect_equal(pop$diff, pop$mu_I - 0.15)
@@ -110,7 +110,7 @@ test_that("update() changes values, one task at a time if needed", {
 
   # An intercept switches to the latent regression, which keeps it fixed.
   reg <- update(pop, intercept = 0)
-  expect_identical(attr(reg, "parameterization"), "regression")
+  expect_identical(attr(reg, "latent"), "regression")
   expect_equal(reg$mu_A, 0.15)
   expect_equal(update(reg, cor_dprime = 0.6)$intercept, 0)
 
@@ -171,7 +171,7 @@ test_that("from = takes the estimates of a frequentist fit", {
   # The call replaces single values, and an intercept the influence mean.
   expect_equal(usdt_population(from = m, cor_dprime = 0.2)$rho, 0.2)
   reg <- usdt_population(from = m, intercept = 0)
-  expect_identical(attr(reg, "parameterization"), "regression")
+  expect_identical(attr(reg, "latent"), "regression")
   expect_equal(reg$mu_A, pop$mu_A)
   expect_equal(reg$intercept, 0)
 })

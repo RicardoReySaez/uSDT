@@ -50,6 +50,7 @@ LazyDataCompression: xz
 Depends:
     R (>= 4.1)
 Imports:
+    grid,
     parallel,
     stats,
     utils,

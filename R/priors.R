@@ -713,7 +713,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
     ) +
     ggplot2::labs(
       x = NULL, y = NULL,
-      caption = .wrap_caption(
+      caption = paste0(
         "Prior densities from 100,000 draws of the priors; no responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, "\n",
         if (values$parameterization == "regression") {

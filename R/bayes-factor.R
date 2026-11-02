@@ -689,18 +689,15 @@ plot.usdt_bf <- function(x, ...) {
     ) +
     ggplot2::labs(
       x = NULL, y = NULL,
-      caption = .wrap_caption(
+      caption = paste0(
         "Posterior (solid) and prior (dashed) densities of each tested ",
         "quantity. For a point hypothesis the Bayes factor is the ratio of ",
         "the two marked heights at the dotted line (Savage-Dickey); for a ",
         "directional or interval hypothesis the shaded area is the posterior ",
-        "probability of H1.", .bf_caption(curves),
-        width = max(88L, 50L * columns)
+        "probability of H1.", .bf_caption(curves)
       )
     ) +
     .panel_theme() +
-    # The caption spans every column, and wider keys keep the dashed prior
-    # recognisable in the legend.
-    ggplot2::theme(legend.key.width = grid::unit(30, "pt"),
-                   plot.caption.position = "plot")
+    # Wider keys keep the dashed prior recognisable in the legend.
+    ggplot2::theme(legend.key.width = grid::unit(30, "pt"))
 }

@@ -148,6 +148,14 @@
   grouping columns, so custom lme4 and brms models with covariates fit on
   counts instead of trials, with the same estimates and much faster.
 
+## Visualization
+
+* The caption under every plot wraps when the plot is drawn, to the width of
+  the plot, so it fills the figure at any size instead of breaking after a
+  fixed number of characters. When a square panel leaves the plot narrower
+  than the figure, the caption takes the narrowest width that keeps it in the
+  lines it reserved, centred under the plot.
+
 # uSDT 0.1.0
 
 First release.

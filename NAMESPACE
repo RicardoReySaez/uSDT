@@ -2,6 +2,9 @@
 
 S3method("[",usdt_population)
 S3method("[",usdt_power)
+S3method(ggplot2::element_grob,usdt_caption)
+S3method(grid::heightDetails,usdt_caption)
+S3method(grid::makeContent,usdt_caption)
 S3method(plot,hsdt)
 S3method(plot,usdt_bf)
 S3method(plot,usdt_mdes)

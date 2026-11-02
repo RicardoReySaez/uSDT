@@ -141,7 +141,7 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
       ggplot2::aes(x = .data[["x"]], y = .data[["y"]]),
       colour = "#687076", linetype = "dashed", linewidth = 0.6)
   }
-  caption <- .wrap_caption(
+  caption <- paste0(
     "Ellipses hold 50% and 90% of the subjects' true d'. The line is the ",
     "latent regression of influence on awareness d' (H3), and the open circle ",
     "its intercept at an awareness d' of zero; the filled point is the mean. ",
@@ -202,7 +202,7 @@ plot.usdt_power <- function(x, ...) {
                            length(unique(d$scenario)) > 1L)
 
   colours <- .hypothesis_colours(levels(d$label))
-  caption <- .wrap_caption(
+  caption <- paste0(
     if (simulated) paste0("Simulated power from ", .fmt_int(attr(x, "nsim")),
                           " studies per design, with 95% Wilson intervals. ")
     else "Approximate power, as in usdt_power(). ",
@@ -298,7 +298,7 @@ plot.usdt_mdes <- function(x, ...) {
                                 expand = ggplot2::expansion(mult = 0.02)) +
     ggplot2::labs(
       x = "Value searched", y = "Power",
-      caption = .wrap_caption(
+      caption = paste0(
         "Approximate power along the values searched, from H0 outwards. The ",
         "dashed horizontal line is the power to reach (", format(target),
         "), the dashed vertical line the smallest value that reaches it, and ",
@@ -355,7 +355,7 @@ plot.usdt_plan <- function(x, ...) {
         ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), scales = "free_y") +
         ggplot2::labs(
           x = axis_title(trials_free), y = "Cost",
-          caption = .wrap_caption(
+          caption = paste0(
             "The grey line is the cost of the cheapest design with each ",
             "number of trials in the closed form; the green points, that of ",
             "the designs the search checked with the draws of usdt_power(); ",
@@ -384,7 +384,7 @@ plot.usdt_plan <- function(x, ...) {
       ggplot2::scale_y_continuous(expand = c(0, 0)) +
       ggplot2::labs(
         x = axis_title("awareness"), y = axis_title("influence"),
-        caption = .wrap_caption(
+        caption = paste0(
           "Cost of the cheapest design with each number of trials in the ",
           "closed form, relative to the cheapest of the panel; the steps ",
           "come from whole numbers of subjects. Dark points are the designs ",
@@ -420,7 +420,7 @@ plot.usdt_plan <- function(x, ...) {
       x = if (axis == "subjects") "Subjects" else
         axis_title(sub("trials_", "", axis)),
       y = if (st$mode == "precision") "Expected interval width" else "Power",
-      caption = .wrap_caption(
+      caption = paste0(
         if (st$mode == "precision")
           "Expected width of the interval of usdt_tests() at the population values"
         else paste0("Approximate power, as in usdt_power(); the dashed line ",

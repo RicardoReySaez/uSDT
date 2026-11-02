@@ -143,26 +143,124 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
          roc = .plot_roc(x, subject_id, band, population_reference))
 }
 
-# This function breaks a caption into lines that fit inside the plot.
-.wrap_caption <- function(..., width = 88L) {
-
-  # ggplot2 lays a caption out at its natural width and never wraps it, so a
-  # long one simply runs past the edge of the device and its tail is lost. The
-  # width is counted in characters rather than inches because the caption is
-  # drawn at a fixed point size: at the 9.5pt these plots use, this many
-  # characters stay inside the panels at the figure sizes they are drawn at.
-  # A caption that is still too wide for a very narrow figure will overflow,
-  # which is why the value is conservative.
-  paragraphs <- unlist(strsplit(paste0(...), "\n", fixed = TRUE))
-  paragraphs <- paragraphs[nzchar(trimws(paragraphs))]
-
-  # Each paragraph wraps on its own so the author's own breaks survive.
-  wrapped <- vapply(
-    paragraphs,
-    function(p) paste(strwrap(p, width = width), collapse = "\n"),
-    character(1L)
+# This function gives the caption and the plot margins of a theme. ggplot2
+# never wraps a caption, and one wrapped beforehand at a fixed number of
+# characters fills only part of a wide figure, so the caption element wraps
+# when it is drawn, to the width of the plot. Its left and right margins,
+# those of the plot, are kept from the edges of the figure. `margin` holds the
+# top, right, bottom and left plot margins in pt.
+.caption_theme <- function(margin) {
+  caption <- structure(
+    list(family = NULL, face = NULL, colour = "#687076", size = 9.5,
+         hjust = 0, vjust = 1, angle = NULL, lineheight = NULL,
+         margin = ggplot2::margin(t = 10, r = margin[2L], l = margin[4L]),
+         debug = NULL, inherit.blank = FALSE),
+    class = c("usdt_caption", "element_text", "element")
   )
-  paste(wrapped, collapse = "\n")
+  ggplot2::theme(plot.caption = caption, plot.caption.position = "plot",
+                 plot.margin = do.call(ggplot2::margin, as.list(margin)))
+}
+
+# The caption element draws its text as a grob that keeps its measured words
+# and line breaks in an environment, which the copy of the grob that sizes the
+# caption row shares with the copy that is drawn. Paragraphs are separated by
+# "\n".
+#' @exportS3Method ggplot2::element_grob
+element_grob.usdt_caption <- function(element, label = "", ...) {
+  if (is.null(label) || !any(nzchar(trimws(label)))) return(ggplot2::zeroGrob())
+  gp <- list(fontfamily = element$family, fontface = element$face,
+             fontsize = element$size, col = element$colour,
+             lineheight = element$lineheight)
+  grid::gTree(text = paste(label, collapse = "\n"), hjust = element$hjust,
+              margin = element$margin, state = new.env(parent = emptyenv()),
+              gp = do.call(grid::gpar, gp[!vapply(gp, is.null, TRUE)]),
+              cl = "usdt_caption")
+}
+
+# grid sizes the caption row in the viewport that holds the whole plot, before
+# it knows how wide the plot will be: a square panel makes the plot narrower
+# than the figure, and how much narrower depends on the height of the caption
+# itself. So the caption reserves the lines it needs across the figure, which
+# is never too few.
+#' @exportS3Method grid::heightDetails
+heightDetails.usdt_caption <- function(x) {
+  m <- grid::convertWidth(x$margin, "in", valueOnly = TRUE)
+  s <- x$state
+  s$words <- .caption_words(x$text)
+  s$left <- .device_x(0) + m[4L]
+  s$width <- .device_x(1) - m[2L] - s$left
+  s$lines <- .caption_lines(s$words, s$width)
+  height <- grid::grobHeight(grid::textGrob(paste(s$lines, collapse = "\n")))
+  grid::unit(grid::convertHeight(height, "in", valueOnly = TRUE) + m[1L] + m[3L],
+             "in")
+}
+
+# The caption is drawn as wide as the plot when its text fits there in the
+# lines it reserved, which it always does when the plot fills the figure;
+# otherwise it takes the narrowest width at which it does fit, centred under
+# the plot.
+#' @exportS3Method grid::makeContent
+makeContent.usdt_caption <- function(x) {
+  s <- x$state
+  if (is.null(s$lines)) heightDetails.usdt_caption(x)
+  plot <- c(.device_x(0), .device_x(1))
+  fits <- function(w) length(.caption_lines(s$words, w)) <= length(s$lines)
+  low <- min(diff(plot), s$width)
+  width <- low
+  if (!fits(low)) {
+    high <- s$width
+    while (high - low > 0.01) {
+      mid <- (low + high) / 2
+      if (fits(mid)) high <- mid else low <- mid
+    }
+    width <- high
+  }
+  left <- if (width <= diff(plot)) plot[1L] else mean(plot) - width / 2
+  left <- min(max(left, s$left), s$left + s$width - width)
+  top <- grid::convertHeight(x$margin[1L], "in", valueOnly = TRUE)
+  grid::setChildren(x, grid::gList(grid::textGrob(
+    paste(.caption_lines(s$words, width), collapse = "\n"),
+    x = grid::unit(left - plot[1L] + x$hjust * width, "in"),
+    y = grid::unit(1, "npc") - grid::unit(top, "in"),
+    hjust = x$hjust, vjust = 1)))
+}
+
+# This function gives the position on the device, in inches, of a point at a
+# fraction `npc` of the width of the current viewport.
+.device_x <- function(npc) {
+  grid::deviceLoc(grid::unit(npc, "npc"), grid::unit(0, "npc"),
+                  valueOnly = TRUE)$x
+}
+
+# This function measures, in the current font, the words of each paragraph of
+# a caption and the space between them, in inches.
+.caption_words <- function(text) {
+  paragraphs <- trimws(strsplit(text, "\n", fixed = TRUE)[[1L]])
+  inches <- function(s) grid::convertWidth(grid::stringWidth(s), "in",
+                                           valueOnly = TRUE)
+  words <- lapply(paragraphs[nzchar(paragraphs)], function(p) {
+    words <- strsplit(p, " +")[[1L]]
+    list(words = words, sizes = inches(words))
+  })
+  list(paragraphs = words, space = inches(" "))
+}
+
+# This function breaks the measured paragraphs into lines no wider than
+# `width` inches.
+.caption_lines <- function(words, width) {
+  space <- words$space
+  unlist(lapply(words$paragraphs, function(p) {
+    end <- cumsum(p$sizes + space) - space
+    rest <- p$words
+    out <- character()
+    while (length(rest)) {
+      n <- max(1L, sum(end <= width))
+      out <- c(out, paste(rest[seq_len(n)], collapse = " "))
+      rest <- rest[-seq_len(n)]
+      end <- end[-seq_len(n)] - end[n] - space
+    }
+    out
+  }))
 }
 
 # This function evaluates the latent line and its band over a grid of x.
@@ -472,7 +570,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
             switch(values$method, perc = "percentile", norm = "normal",
                    basic = "basic")))
   bayes <- .is_bayes(object)
-  caption <- .wrap_caption(
+  caption <- paste0(
     "Segments show shrinkage from observed to ",
     if (bayes) "posterior mean" else "conditional model", " estimates. ",
     "The latent line is implied by the fitted random-effects distribution, ",
@@ -518,13 +616,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
       strip.background = ggplot2::element_blank(),
       strip.text = ggplot2::element_text(colour = "#292D30", size = 14.5),
-      panel.spacing = grid::unit(24, "pt"),
-      plot.caption = ggplot2::element_text(
-        colour = "#687076", size = 9.5, hjust = 0,
-        margin = ggplot2::margin(t = 10)
-      ),
-      plot.margin = ggplot2::margin(18, 22, 18, 18)
-    )
+      panel.spacing = grid::unit(24, "pt")
+    ) +
+    .caption_theme(c(18, 22, 18, 18))
 }
 
 # This function pairs the observed sensitivities of every complete subject.
@@ -865,7 +959,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     ggplot2::labs(
       x = expression(Sensitivity ~ (italic(d) * minute)),
       y = NULL,
-      caption = .wrap_caption(
+      caption = paste0(
         "Subjects are ordered by observed d' within each task. ",
         if (.is_bayes(object))
           "Model estimates are posterior means with central credible intervals. ",
@@ -903,13 +997,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       legend.title = ggplot2::element_text(face = "bold", size = 10.5),
       legend.text = ggplot2::element_text(size = 10),
       legend.key.width = grid::unit(18, "pt"),
-      plot.caption = ggplot2::element_text(
-        colour = "#687076", size = 9.5, hjust = 0,
-        margin = ggplot2::margin(t = 10)
-      ),
-      text = ggplot2::element_text(family = "sans"),
-      plot.margin = ggplot2::margin(14, 20, 14, 16)
-    )
+      text = ggplot2::element_text(family = "sans")
+    ) +
+    .caption_theme(c(14, 20, 14, 16))
 }
 
 # This function collects the parameters that define both ROC curves.
@@ -1209,10 +1299,6 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                    if (variance == "equal") "Equal" else "Unequal"))
   }
 
-  # The square panel makes this the narrowest plot in the package, so its
-  # caption wraps sooner than the others.
-  caption <- .wrap_caption(caption, width = 58L)
-
   plot +
     ggplot2::geom_abline(
       intercept = 0, slope = 1, colour = "#8A9196",
@@ -1263,13 +1349,9 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       legend.position = "top",
       legend.text = ggplot2::element_text(size = 10),
       legend.key.width = grid::unit(22, "pt"),
-      plot.caption = ggplot2::element_text(
-        colour = "#687076", size = 9.5, hjust = 0,
-        margin = ggplot2::margin(t = 10)
-      ),
-      text = ggplot2::element_text(family = "sans"),
-      plot.margin = ggplot2::margin(14, 20, 14, 16)
-    )
+      text = ggplot2::element_text(family = "sans")
+    ) +
+    .caption_theme(c(14, 20, 14, 16))
 }
 
 # This function creates the points that form each contour.

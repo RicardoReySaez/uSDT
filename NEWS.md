@@ -21,16 +21,16 @@
   the aggregated hit and false-alarm counts, and returns the `brmsfit` in
   `$fit`. The priors go on the means, standard deviations and correlation of
   the two sensitivities and on the criteria, one brms prior per parameter and
-  task. The model compiles once per set of priors into a per-user cache,
-  through rstan or cmdstanr. Equal variances are the default; unequal
-  variances are optional. By default four chains keep 5000 draws each, and up
-  to four run at once, leaving two cores free. Each chain runs in a background
-  session, so sampling shows a single progress bar and none of Stan's
-  messages, followed by a summary of divergent transitions, tree depth, R-hat
-  and effective sample size. As in brms, the backend defaults to the
-  `brms.backend` option. brms, posterior, logspline, callr and cli are now
-  imported, so the Bayesian estimation needs no optional package apart from
-  `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
+  task. The model compiles once per set of priors and version of the backend
+  into a per-user cache, through rstan or cmdstanr. Equal variances are the
+  default; unequal variances are optional. By default four chains keep 5000
+  draws each, and up to four run at once, leaving two cores free. Each chain
+  runs in a background session, so sampling shows a single progress bar and
+  none of Stan's messages, followed by a summary of divergent transitions,
+  tree depth, R-hat and effective sample size. As in brms, the backend
+  defaults to the `brms.backend` option. brms, posterior, logspline, callr and
+  cli are now imported, so the Bayesian estimation needs no optional package
+  apart from `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
 * `hsdt(parameterization = "regression")` moves the prior of the influence
   mean sensitivity to the intercept of the latent regression of the influence
   on the awareness one, so that both the intercept tested by H3 and the

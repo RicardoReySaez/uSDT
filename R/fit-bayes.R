@@ -182,16 +182,19 @@
 
 # This function returns a brms fit without draws that holds the compiled model:
 # from the session, from the cache directory, or compiled once. The key hashes
-# the Stan code brms writes, which holds the priors and the brms version, and
-# the backend. Each compiled model has its own folder, which for cmdstanr also
-# holds the executable; using a model refreshes its folder, and only the most
-# recently used ones are kept. The option `uSDT.cache_dir` moves the cache,
-# for instance to a temporary folder.
+# the Stan code brms writes, which holds the priors and the brms version, with
+# the version of the backend, because the stored fit keeps the backend's model
+# object with the methods of the version that compiled it (a cmdstanr model
+# from before 0.99.0 cannot sample under 0.99.0). Each compiled model has its
+# own folder, which for cmdstanr also holds the executable; using a model
+# refreshes its folder, and only the most recently used ones are kept. The
+# option `uSDT.cache_dir` moves the cache, for instance to a temporary folder.
 .brms_compiled <- function(model, backend) {
   family <- stats::binomial("probit")
   code <- brms::stancode(model$formula, data = model$data, family = family,
                          prior = model$prior, backend = backend)
-  key <- paste0("brms-", backend, "-", rlang::hash(code))
+  key <- paste0("brms-", backend, "-",
+                rlang::hash(list(code, utils::packageVersion(backend))))
   if (!is.null(.brms_models[[key]])) return(.brms_models[[key]])
 
   cache <- getOption("uSDT.cache_dir", tools::R_user_dir("uSDT", "cache"))

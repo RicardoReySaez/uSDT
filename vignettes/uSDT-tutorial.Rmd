@@ -291,6 +291,8 @@ The contrast between the two panels illustrates the core problem:
 - **Observed estimates (left panel):** Regressing raw influence $d'$ on raw awareness $d'$ ignores measurement error. Unreliability severely flattens the slope ($b_1 = 0.043$) and artificially pushes the intercept upward ($b_0 = 0.118, p < .001$). An applied researcher relying on standard regression would mistakenly conclude that there is compelling evidence for unconscious processing at $d'_{\text{Awareness}} = 0$.
 - **Model-estimated sensitivities (right panel):** The hierarchical model corrects for trial-level noise. Grey segments show shrinkage from raw $d'$ to model-implied $d'$ values (green points). Accounting for unreliability steepens the latent slope ($b_1 = 0.356$) and pulls the intercept down to near zero ($b_0 = 0.044, p = .701$, marked at the vertical dotted line).
 
+For a narrow page, `plot(fit_uSDT, nrow = 2)` stacks the observed panel above the model one.
+
 ### Shrinkage
 
 To inspect how the model pulls individual estimates toward the group distribution, set `type = "shrinkage"`, where grey circles show raw $d'$, while green points show the model-implied $d'$ estimates.
@@ -321,7 +323,7 @@ To view task performance within standard Signal Detection Theory space, set `typ
 ```{r}
 #| label: plot-roc
 #| fig.width: 5.8
-#| fig.height: 6.4
+#| fig.height: 6
 plot(fit_uSDT, type = "roc")
 ```
 

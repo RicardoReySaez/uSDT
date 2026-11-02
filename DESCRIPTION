@@ -77,4 +77,4 @@ Config/Needs/website: pkgdown
 URL: https://github.com/RicardoReySaez/uSDT,
     https://ricardoreysaez.github.io/uSDT/
 BugReports: https://github.com/RicardoReySaez/uSDT/issues
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

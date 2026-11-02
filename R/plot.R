@@ -1,7 +1,7 @@
 # plot.R
 # Visualize results from fitted hierarchical SDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 03-10-2026
+# Last modified: 02-11-2026
 
 #' Diagnostic and analytical plots for hierarchical SDT models
 #'
@@ -27,6 +27,11 @@
 #' @param observed_se Variance formulation for empirical intervals in
 #'   `"caterpillar"` plots: `"gg"` (Gourevitch & Galanter, 1967, default) or
 #'   `"miller"` (Miller, 1996).
+#' @param nrow Number of rows of the two panels when `type = "regression"`:
+#'   `1` (default) places them side by side as squares, `2` stacks the
+#'   observed panel above the model one, each as wide as the figure.
+#' @param caption Logical. Show the caption that explains the plot under it
+#'   (default `TRUE`). The shrinkage plot has none.
 #' @param ... Additional arguments passed to underlying plotting methods.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -34,10 +39,11 @@
 #' @details
 #' # Regression plot (`type = "regression"`)
 #'
-#' Compares observed and latent associations across two panels sharing axes.
-#' The left panel shows observed \eqn{d'} values and an ordinary least-squares
+#' Compares observed and latent associations across two panels sharing axes,
+#' side by side or, with `nrow = 2`, one above the other.
+#' The first panel shows observed \eqn{d'} values and an ordinary least-squares
 #' line. When awareness task reliability is low, trial-level sampling noise
-#' attenuates this observed slope toward zero. The right panel plots the latent
+#' attenuates this observed slope toward zero. The second panel plots the latent
 #' regression line (\eqn{d'_I} on \eqn{d'_A}) from H3, correcting for
 #' measurement error. The value of each line at \eqn{d'_A = 0} marks the
 #' intercept testing for unconscious processing, and both panels display it the
@@ -96,8 +102,9 @@
 #'
 #' fit <- hsdt(d)
 #'
-#' # 1. Observed vs. latent regression (H3)
+#' # 1. Observed vs. latent regression (H3), side by side or stacked
 #' plot(fit, type = "regression")
+#' plot(fit, type = "regression", nrow = 2)
 #'
 #' # 2. Bivariate shrinkage toward the group mean
 #' plot(fit, type = "shrinkage")
@@ -113,10 +120,12 @@
 plot.hsdt <- function(x, type = c("regression", "shrinkage",
                                   "caterpillar", "roc"),
                       subject_id = NULL, band = TRUE,
-                      population_reference = TRUE, observed_se = NULL, ...) {
+                      population_reference = TRUE, observed_se = NULL,
+                      nrow = NULL, caption = TRUE, ...) {
 
   # The function checks the requested plot.
   type <- match.arg(type)
+  .check_caption(caption)
   if (!is.logical(band) || length(band) != 1L || is.na(band)) {
     .usdt_stop("`band` must be `TRUE` or `FALSE`.")
   }
@@ -135,12 +144,33 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   }
   observed_se <- if (is.null(observed_se)) "gg" else
     match.arg(observed_se, c("gg", "miller"))
+  if (type != "regression" && !is.null(nrow)) {
+    .usdt_stop("`nrow` is only used by `type = \"regression\"`.")
+  }
+  if (is.null(nrow)) nrow <- 1L
+  if (!is.numeric(nrow) || length(nrow) != 1L || !nrow %in% 1:2) {
+    .usdt_stop("`nrow` must be 1 (panels side by side) or 2 (stacked).")
+  }
 
   switch(type,
-         regression = .plot_regression(x, band),
+         regression = .plot_regression(x, band, nrow),
          shrinkage = .plot_shrinkage(x),
          caterpillar = .plot_caterpillar(x, observed_se),
-         roc = .plot_roc(x, subject_id, band, population_reference))
+         roc = .plot_roc(x, subject_id, band, population_reference)) +
+    .hide_caption(caption)
+}
+
+# This function checks the `caption` argument of the plot methods.
+.check_caption <- function(caption) {
+  if (!is.logical(caption) || length(caption) != 1L || is.na(caption)) {
+    .usdt_stop("`caption` must be `TRUE` or `FALSE`.")
+  }
+}
+
+# This function removes the caption of a plot when `caption` is FALSE; added
+# to a plot, its NULL otherwise changes nothing.
+.hide_caption <- function(caption) {
+  if (!caption) ggplot2::labs(caption = NULL)
 }
 
 # This function gives the caption and the plot margins of a theme. ggplot2
@@ -432,7 +462,7 @@ makeContent.usdt_caption <- function(x) {
 }
 
 # This function separates the observed regression from the model representation.
-.plot_regression <- function(object, band) {
+.plot_regression <- function(object, band, nrow = 1L) {
 
   values <- .regression_data(object, band)
   labels <- object$data$meta$labels
@@ -444,7 +474,8 @@ makeContent.usdt_caption <- function(x) {
     all(is.finite(c(naive_origin$conf.low, naive_origin$conf.high)))
 
   background <- "#FFFFFF"
-  observed_colour <- "#A8AEB3"
+  observed <- .observed_style()
+  observed_colour <- observed$colour
   latent_colour <- "#116B60"
   naive_colour <- "#B6543A"
   # Common axes make the raw and partially pooled subject positions comparable.
@@ -457,6 +488,25 @@ makeContent.usdt_caption <- function(x) {
       xintercept = 0, colour = "#555B60",
       linetype = "dotted", linewidth = 0.5
     )
+
+  # The model panel shows where partial pooling moves every observed subject.
+  # The segments and the dotted lines pass under the points, whose discs are
+  # cleared first; the bands come after, so they tint the points as they tint
+  # the background.
+  plot <- plot +
+    ggplot2::geom_segment(
+      data = values$model_points,
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]],
+                   xend = .data[["model_awareness"]],
+                   yend = .data[["model_influence"]]),
+      inherit.aes = FALSE, colour = observed_colour, alpha = 0.34,
+      linewidth = 0.42
+    ) +
+    .knockout(values$panel_points, "observed_awareness", "observed_influence",
+              size = 2.4, stroke = 0.7) +
+    .knockout(values$model_points, "model_awareness", "model_influence",
+              size = 2.65, stroke = 0.75)
 
   # Each panel receives the interval appropriate to the line it contains.
   if (band && naive && all(is.finite(values$naive_line$conf.low))) {
@@ -476,32 +526,21 @@ makeContent.usdt_caption <- function(x) {
     )
   }
 
-  # The right panel shows where partial pooling moves every observed subject.
   plot <- plot +
-    ggplot2::geom_segment(
-      data = values$model_points,
-      ggplot2::aes(x = .data[["observed_awareness"]],
-                   y = .data[["observed_influence"]],
-                   xend = .data[["model_awareness"]],
-                   yend = .data[["model_influence"]]),
-      inherit.aes = FALSE, colour = observed_colour, alpha = 0.34,
-      linewidth = 0.42
-    ) +
     ggplot2::geom_point(
       data = values$observed_points,
       ggplot2::aes(x = .data[["observed_awareness"]],
                    y = .data[["observed_influence"]]),
-      inherit.aes = FALSE,
-      shape = 21, size = 2.4, stroke = 0.7,
-      colour = observed_colour, fill = background, alpha = 0.8
+      inherit.aes = FALSE, shape = 21, size = 2.4, stroke = 0.7,
+      colour = observed_colour, fill = observed$fill, alpha = observed$alpha
     ) +
     ggplot2::geom_point(
       data = values$model_points,
       ggplot2::aes(x = .data[["observed_awareness"]],
                    y = .data[["observed_influence"]]),
-      inherit.aes = FALSE,
-      shape = 21, size = 2.25, stroke = 0.65,
-      colour = observed_colour, fill = background, alpha = 0.42
+      inherit.aes = FALSE, shape = 21, size = 2.4, stroke = 0.7,
+      colour = observed_colour, fill = observed$fill,
+      alpha = observed$alpha / 2
     ) +
     ggplot2::geom_point(
       data = values$model_points,
@@ -574,7 +613,7 @@ makeContent.usdt_caption <- function(x) {
     "Segments show shrinkage from observed to ",
     if (bayes) "posterior mean" else "conditional model", " estimates. ",
     "The latent line is implied by the fitted random-effects distribution, ",
-    "not fitted to the green points.\n",
+    "not fitted to the green points. ",
     "An open circle marks the intercept of each panel at zero. ", band_note,
     " P-values test the intercept and slope against zero",
     if (bayes) " (two-sided posterior p-values in the latent panel)" else "",
@@ -595,7 +634,7 @@ makeContent.usdt_caption <- function(x) {
       inherit.aes = FALSE, hjust = 1.08, vjust = 1.2,
       lineheight = 1.05, size = 3.35, colour = "#3E4347", parse = TRUE
     ) +
-    ggplot2::facet_wrap(~panel, nrow = 1L) +
+    ggplot2::facet_wrap(~panel, nrow = nrow) +
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.06)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.06)) +
     ggplot2::labs(
@@ -603,22 +642,11 @@ makeContent.usdt_caption <- function(x) {
       y = bquote(.(labels[["influence"]]) ~ sensitivity ~ (italic(d) * minute)),
       caption = caption
     ) +
-    ggplot2::theme_classic(base_size = 14) +
-    ggplot2::theme(
-      aspect.ratio = 1,
-      panel.background = ggplot2::element_rect(fill = background, colour = NA),
-      plot.background = ggplot2::element_rect(fill = background, colour = NA),
-      axis.line = ggplot2::element_line(colour = "#292D30", linewidth = 0.72),
-      axis.ticks = ggplot2::element_line(colour = "#292D30", linewidth = 0.55),
-      axis.text = ggplot2::element_text(colour = "#3E4347", size = 10.5),
-      axis.title = ggplot2::element_text(colour = "#292D30", size = 14.5),
-      axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-      axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
-      strip.background = ggplot2::element_blank(),
-      strip.text = ggplot2::element_text(colour = "#292D30", size = 14.5),
-      panel.spacing = grid::unit(24, "pt")
-    ) +
-    .caption_theme(c(18, 22, 18, 18))
+    .usdt_theme() +
+    # Side by side, the panels are squares; stacked, they take the width of
+    # the figure, so a wide figure stretches the lines.
+    ggplot2::theme(aspect.ratio = if (nrow == 1L) 1,
+                   panel.spacing = grid::unit(24, "pt"))
 }
 
 # This function pairs the observed sensitivities of every complete subject.
@@ -669,6 +697,24 @@ makeContent.usdt_caption <- function(x) {
   values
 }
 
+# This function gives the look of the observed subjects in the regression and
+# shrinkage plots: grey circles with a light, translucent fill, so that
+# overlapping subjects darken where they gather.
+.observed_style <- function() {
+  list(colour = "#8F969B", fill = "#C4CACE", alpha = 0.55)
+}
+
+# This function draws white discs where points will go, so that the lines
+# drawn before them stop at their edge while translucent points still blend
+# with one another.
+.knockout <- function(data, x, y, size, stroke) {
+  ggplot2::geom_point(
+    data = data, ggplot2::aes(x = .data[[x]], y = .data[[y]]),
+    inherit.aes = FALSE, shape = 21, size = size, stroke = stroke,
+    colour = "white", fill = "white"
+  )
+}
+
 # This function draws the shrinkage comparison.
 .plot_shrinkage <- function(object) {
 
@@ -686,33 +732,23 @@ makeContent.usdt_caption <- function(x) {
   )
 
   # Warm grey and muted teal separate raw values from model estimates.
-  background <- "#FFFFFF"
-  observed_colour <- "#A8AEB3"
+  observed <- .observed_style()
+  observed_colour <- observed$colour
   model_colour <- "#116B60"
   model_fill <- "#3FA88E"
 
-  plot <- ggplot2::ggplot(values)
-  if (nrow(observed_ellipse)) {
-    plot <- plot + ggplot2::geom_polygon(
-      data = observed_ellipse,
+  # Every line passes under the points, whose discs are cleared first; the
+  # ellipse fills come after, so they tint the points as they tint the
+  # background.
+  ellipse <- function(data, ...) {
+    if (nrow(data)) ggplot2::geom_polygon(
+      data = data,
       ggplot2::aes(x = .data[["x"]], y = .data[["y"]],
                    group = .data[["coverage"]]),
-      inherit.aes = FALSE,
-      fill = observed_colour, alpha = 0.06, colour = NA
+      inherit.aes = FALSE, ...
     )
   }
-  if (nrow(model_ellipse)) {
-    plot <- plot + ggplot2::geom_polygon(
-      data = model_ellipse,
-      ggplot2::aes(x = .data[["x"]], y = .data[["y"]],
-                   group = .data[["coverage"]]),
-      inherit.aes = FALSE,
-      fill = model_fill, colour = model_colour,
-      alpha = 0.17, linewidth = 0.4
-    )
-  }
-
-  plot +
+  ggplot2::ggplot(values) +
     ggplot2::geom_hline(
       yintercept = 0, colour = "#555B60",
       linetype = "dotted", linewidth = 0.5
@@ -721,6 +757,8 @@ makeContent.usdt_caption <- function(x) {
       xintercept = 0, colour = "#555B60",
       linetype = "dotted", linewidth = 0.5
     ) +
+    ellipse(model_ellipse, fill = NA, colour = model_colour, alpha = 0.17,
+            linewidth = 0.4) +
     ggplot2::geom_segment(
       ggplot2::aes(x = .data[["observed_awareness"]],
                    y = .data[["observed_influence"]],
@@ -728,11 +766,18 @@ makeContent.usdt_caption <- function(x) {
                    yend = .data[["model_influence"]]),
       colour = observed_colour, alpha = 0.48, linewidth = 0.45
     ) +
+    .knockout(values, "observed_awareness", "observed_influence",
+              size = 2.55, stroke = 0.75) +
+    .knockout(values, "model_awareness", "model_influence",
+              size = 2.8, stroke = 0.75) +
+    ellipse(observed_ellipse, fill = observed_colour, alpha = 0.06,
+            colour = NA) +
+    ellipse(model_ellipse, fill = model_fill, alpha = 0.17, colour = NA) +
     ggplot2::geom_point(
       ggplot2::aes(x = .data[["observed_awareness"]],
                    y = .data[["observed_influence"]]),
       shape = 21, size = 2.55, stroke = 0.75,
-      colour = observed_colour, fill = background, alpha = 0.75
+      colour = observed_colour, fill = observed$fill, alpha = observed$alpha
     ) +
     ggplot2::geom_point(
       ggplot2::aes(x = .data[["model_awareness"]],
@@ -751,20 +796,8 @@ makeContent.usdt_caption <- function(x) {
       x = bquote(.(labels[["awareness"]]) ~ sensitivity ~ (italic(d) * minute)),
       y = bquote(.(labels[["influence"]]) ~ sensitivity ~ (italic(d) * minute))
     ) +
-    ggplot2::theme_classic(base_size = 14) +
-    ggplot2::theme(
-      aspect.ratio = 1,
-      panel.background = ggplot2::element_rect(fill = background, colour = NA),
-      plot.background = ggplot2::element_rect(fill = background, colour = NA),
-      axis.line = ggplot2::element_line(colour = "#292D30", linewidth = 0.72),
-      axis.ticks = ggplot2::element_line(colour = "#292D30", linewidth = 0.55),
-      axis.text = ggplot2::element_text(colour = "#3E4347", size = 10.5),
-      axis.title = ggplot2::element_text(colour = "#292D30", size = 14.5),
-      axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-      axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
-      legend.position = "none",
-      plot.margin = ggplot2::margin(18, 22, 18, 18)
-    )
+    .usdt_theme() +
+    ggplot2::theme(aspect.ratio = 1, legend.position = "none")
 }
 
 # This function collects both intervals for each subject and task.
@@ -969,10 +1002,10 @@ makeContent.usdt_caption <- function(x) {
     .panel_theme()
 }
 
-# This function gives the theme of the faceted plots, whose y axis carries no
-# scale of its own: subject ranks in the caterpillar plot and densities in the
-# prior predictive check.
-.panel_theme <- function() {
+# This function gives the theme every uSDT plot starts from: classic axes in
+# dark grey, panel titles in plain text on the left over a thin grey line, the
+# legend on top and the caption under the plot.
+.usdt_theme <- function() {
   ggplot2::theme_classic(base_size = 13) +
     ggplot2::theme(
       panel.background = ggplot2::element_rect(fill = "white", colour = NA),
@@ -980,26 +1013,53 @@ makeContent.usdt_caption <- function(x) {
       panel.spacing.x = grid::unit(18, "pt"),
       panel.spacing.y = grid::unit(14, "pt"),
       axis.line = ggplot2::element_line(colour = "#292D30", linewidth = 0.65),
-      axis.line.y = ggplot2::element_blank(),
       axis.ticks = ggplot2::element_line(colour = "#292D30", linewidth = 0.5),
-      axis.ticks.y = ggplot2::element_blank(),
       axis.text = ggplot2::element_text(colour = "#3E4347", size = 10),
-      axis.text.y = ggplot2::element_blank(),
       axis.title = ggplot2::element_text(colour = "#292D30", size = 13.5),
       axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10)),
-      strip.placement = "inside",
-      strip.background = ggplot2::element_rect(fill = "#F5F7F6", colour = NA),
+      axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 10)),
+      strip.background = .strip_rule(),
       strip.text = ggplot2::element_text(
-        colour = "#252A2D", face = "bold", size = 11,
-        margin = ggplot2::margin(7, 8, 7, 8)
+        colour = "#252A2D", size = 12.5, hjust = 0,
+        margin = ggplot2::margin(2, 0, 6, 0)
       ),
+      plot.title = ggplot2::element_text(colour = "#252A2D", size = 13.5),
       legend.position = "top",
-      legend.title = ggplot2::element_text(face = "bold", size = 10.5),
+      legend.title = ggplot2::element_text(size = 10.5),
       legend.text = ggplot2::element_text(size = 10),
-      legend.key.width = grid::unit(18, "pt"),
-      text = ggplot2::element_text(family = "sans")
+      legend.key.width = grid::unit(18, "pt")
     ) +
     .caption_theme(c(14, 20, 14, 16))
+}
+
+# This function gives the background of the panel titles: instead of a box, a
+# thin grey line along its bottom edge, as wide as the panel, that separates
+# the title from the panel under it.
+.strip_rule <- function() {
+  structure(
+    list(fill = NA, colour = "#B9C0C5", linewidth = 0.45, linetype = 1,
+         linejoin = "mitre", inherit.blank = FALSE),
+    class = c("usdt_rule", "element_rect", "element")
+  )
+}
+
+#' @exportS3Method ggplot2::element_grob
+element_grob.usdt_rule <- function(element, ...) {
+  grid::segmentsGrob(0, 0, 1, 0, gp = grid::gpar(
+    col = element$colour, lwd = element$linewidth * ggplot2::.pt,
+    lineend = "butt"))
+}
+
+# This function gives the theme of the faceted plots whose y axis carries no
+# scale of its own: subject ranks in the caterpillar plot and densities in the
+# prior predictive check and the Bayes factor plot.
+.panel_theme <- function() {
+  .usdt_theme() +
+    ggplot2::theme(
+      axis.line.y = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank()
+    )
 }
 
 # This function collects the parameters that define both ROC curves.
@@ -1280,24 +1340,22 @@ makeContent.usdt_caption <- function(x) {
     )
   }
 
-  title <- if (is.null(values$subject)) "Population ROC curves" else
-    paste0("ROC curves for subject ", values$subject)
-  interval <- unique(curves$interval)
+  # Only a subject's plot has a title; the caption names the population.
+  title <- if (!is.null(values$subject)) paste("Subject", values$subject)
   variance <- if (isTRUE(object$design$unequal_variances)) "unequal" else "equal"
-  caption <- if (!band) {
-    sprintf("Curves assume %s-variance SDT; points mark the fitted criteria.",
-            variance)
-  } else if (is.null(values$subject)) {
-    paste0(sprintf("%.0f%% %s bands; points mark the fitted criteria.",
-                   100 * object$level, interval[1L]),
-           sprintf("\nCurves assume %s-variance SDT.", variance))
-  } else {
-    paste0(sprintf("%.0f%% %s bands; points mark the fitted criteria.",
-                   100 * object$level, interval[1L]),
-           if (population_reference) "\nDashed lines show the population curves." else "",
-           sprintf(" %s-variance SDT.",
-                   if (variance == "equal") "Equal" else "Unequal"))
-  }
+  caption <- paste0(
+    if (is.null(values$subject)) "Population ROC curves" else "ROC curves",
+    " under ", variance, "-variance SDT",
+    if (band) sprintf(", with %.0f%% %s bands", 100 * object$level,
+                      curves$interval[1L]),
+    "; points mark the fitted criteria.",
+    if (!is.null(reference)) " Dashed lines show the population curves."
+  )
+
+  # The legend sits inside the square, in the corner the curves keep away
+  # from: under the diagonal unless the sensitivities lean negative.
+  dprime <- range(curves$dprime)
+  corner <- if (sum(dprime) >= 0) c(1, 0) else c(0, 1)
 
   plot +
     ggplot2::geom_abline(
@@ -1327,31 +1385,68 @@ makeContent.usdt_caption <- function(x) {
       expand = ggplot2::expansion(mult = 0.01)
     ) +
     ggplot2::coord_equal() +
-    # A fixed aspect ratio makes the panel square and therefore narrower than
-    # the device. The legend is laid out at its own natural width, so two
-    # entries side by side overflow that panel and spill past the background
-    # of the plot. Stacking them keeps the legend as wide as its widest single
-    # label, which fits whatever width the square panel ends up with.
-    ggplot2::guides(colour = ggplot2::guide_legend(ncol = 1L)) +
+    ggplot2::annotation_custom(.roc_legend(curves, colours, corner)) +
     ggplot2::labs(
       title = title, x = "False-alarm rate", y = "Hit rate", caption = caption
     ) +
-    ggplot2::theme_classic(base_size = 13) +
-    ggplot2::theme(
-      aspect.ratio = 1,
-      panel.background = ggplot2::element_rect(fill = "white", colour = NA),
-      plot.background = ggplot2::element_rect(fill = "white", colour = NA),
-      axis.line = ggplot2::element_line(colour = "#292D30", linewidth = 0.65),
-      axis.ticks = ggplot2::element_line(colour = "#292D30", linewidth = 0.5),
-      axis.text = ggplot2::element_text(colour = "#3E4347", size = 10),
-      axis.title = ggplot2::element_text(colour = "#292D30", size = 13),
-      plot.title = ggplot2::element_text(colour = "#252A2D", face = "bold", size = 14),
-      legend.position = "top",
-      legend.text = ggplot2::element_text(size = 10),
-      legend.key.width = grid::unit(22, "pt"),
-      text = ggplot2::element_text(family = "sans")
-    ) +
-    .caption_theme(c(14, 20, 14, 16))
+    .usdt_theme() +
+    ggplot2::theme(aspect.ratio = 1, legend.position = "none")
+}
+
+# This function draws the legend of the ROC plot as a small table, so that the
+# d' and the AUC of the tasks line up in columns under their headers: each row
+# has the key of a task (its line and open circle), its name and its values.
+# The table sits in `corner` of the panel: c(1, 0) is the bottom right.
+.roc_legend <- function(curves, colours, corner) {
+  rows <- unique(curves[c("curve", "task", "dprime", "auc")])
+  text <- function(label, right = FALSE, colour = "#252A2D") {
+    grid::textGrob(label, x = as.numeric(right), hjust = as.numeric(right),
+                   gp = grid::gpar(fontsize = 10, col = colour))
+  }
+  key <- function(colour) {
+    stroke <- 1.05 * ggplot2::.stroke / 2
+    grid::gTree(children = grid::gList(
+      grid::segmentsGrob(0, 0.5, 1, 0.5, gp = grid::gpar(
+        col = colour, lwd = 1.05 * ggplot2::.pt, lineend = "round")),
+      grid::pointsGrob(0.5, 0.5, pch = 21, gp = grid::gpar(
+        col = colour, fill = "white", lwd = stroke,
+        fontsize = 3.2 * ggplot2::.pt + stroke))))
+  }
+  space <- function(left = 0, right = 0) grid::unit(c(2, left, 2, right), "pt")
+
+  # The values align on the right under headers in the grey of the captions.
+  # A frame grows one column at a time, so the header row starts with empty
+  # cells over the keys and the names.
+  frame <- grid::frameGrob()
+  frame <- grid::packGrob(frame, grid::nullGrob(), row = 1L, col = 1L)
+  frame <- grid::packGrob(frame, grid::nullGrob(), row = 1L, col = 2L)
+  frame <- grid::packGrob(frame, text(quote(italic(d) * minute), TRUE,
+                                      "#687076"),
+                          row = 1L, col = 3L, border = space(12))
+  frame <- grid::packGrob(frame, text("AUC", TRUE, "#687076"),
+                          row = 1L, col = 4L, border = space(12))
+  for (i in seq_len(nrow(rows))) {
+    r <- i + 1L
+    frame <- grid::packGrob(frame, key(colours[[as.character(rows$curve[i])]]),
+                            row = r, col = 1L, width = grid::unit(22, "pt"),
+                            height = grid::unit(14, "pt"), border = space(0, 6))
+    frame <- grid::packGrob(frame, text(rows$task[i]), row = r, col = 2L,
+                            border = space())
+    frame <- grid::packGrob(frame, text(sprintf("%.2f", rows$dprime[i]), TRUE),
+                            row = r, col = 3L, border = space(12))
+    frame <- grid::packGrob(frame, text(sprintf("%.2f", rows$auc[i]), TRUE),
+                            row = r, col = 4L, border = space(12))
+  }
+
+  # annotation_custom() gives the outer tree the viewport of the panel, so the
+  # table takes its corner in a viewport of its own inside it.
+  inset <- grid::unit((1 - 2 * corner) * 6, "pt")
+  table <- grid::gTree(children = grid::gList(frame), vp = grid::viewport(
+    x = grid::unit(corner[1L], "npc") + inset[1L],
+    y = grid::unit(corner[2L], "npc") + inset[2L],
+    width = grid::grobWidth(frame), height = grid::grobHeight(frame),
+    just = corner))
+  grid::gTree(children = grid::gList(table))
 }
 
 # This function creates the points that form each contour.

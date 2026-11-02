@@ -72,8 +72,7 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
 
   # Panel titles are plotmath, so each one must parse.
   panel <- levels(plot(b[2, ])$data$panel)
-  expect_identical(panel,
-                   "bold(Delta*d*\"'\" > \"0\" ~~ \"(directional)\")")
+  expect_identical(panel, "\"Hypothesis:\" ~ Delta*d*\"'\" > \"0\"")
   expect_no_error(parse(text = panel))
   expect_error(plot(b[, 1:3]), "lost")
 })
@@ -81,7 +80,7 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
 test_that("every kind of hypothesis gives a panel title that parses", {
   for (text in c("diff = 0", "rho < -0.2", "slope > 0", "intercept in [-1, 1]",
                  "diff out [-0.1, 0.1]")) {
-    expect_no_error(parse(text = .bf_math(.bf_parse(text), "test")))
+    expect_no_error(parse(text = .bf_math(.bf_parse(text))))
   }
 })
 

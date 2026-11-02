@@ -274,6 +274,26 @@ test_that("the regression plot separates observed and model relationships", {
   }, logical(1L))))
   expect_no_error(lapply(values$annotations$label, function(x) parse(text = x)))
   expect_no_error(ggplot2::ggplot_build(figure))
+
+  # The panels sit side by side by default, and nrow = 2 stacks them.
+  expect_identical(figure$facet$params$nrow, 1L)
+  stacked <- plot(m, type = "regression", nrow = 2)
+  expect_equal(stacked$facet$params$nrow, 2)
+  expect_no_error(ggplot2::ggplot_build(stacked))
+  expect_error(plot(m, type = "regression", nrow = 3), "must be 1")
+  expect_error(plot(m, type = "shrinkage", nrow = 2), "only used by")
+
+  # The panel titles stand over a thin line instead of a box.
+  strip <- ggplot2::calc_element("strip.background.x",
+                                 ggplot2::theme_get() + figure$theme)
+  expect_s3_class(strip, "usdt_rule")
+  expect_s3_class(ggplot2::element_grob(strip), "segments")
+
+  # The caption is one paragraph, and caption = FALSE leaves it out.
+  expect_false(grepl("\n", figure$labels$caption, fixed = TRUE))
+  expect_null(plot(m, type = "regression", caption = FALSE)$labels$caption)
+  expect_null(plot(m, type = "roc", caption = FALSE)$labels$caption)
+  expect_error(plot(m, caption = NA), "`caption` must be")
 })
 
 test_that("ROC plots transform the fitted sensitivities and criteria", {

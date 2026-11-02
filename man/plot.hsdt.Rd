@@ -11,6 +11,8 @@
   band = TRUE,
   population_reference = TRUE,
   observed_se = NULL,
+  nrow = NULL,
+  caption = TRUE,
   ...
 )
 }
@@ -41,6 +43,13 @@ add population-average curves as dashed reference lines.}
 \code{"caterpillar"} plots: \code{"gg"} (Gourevitch & Galanter, 1967, default) or
 \code{"miller"} (Miller, 1996).}
 
+\item{nrow}{Number of rows of the two panels when \code{type = "regression"}:
+\code{1} (default) places them side by side as squares, \code{2} stacks the
+observed panel above the model one, each as wide as the figure.}
+
+\item{caption}{Logical. Show the caption that explains the plot under it
+(default \code{TRUE}). The shrinkage plot has none.}
+
 \item{...}{Additional arguments passed to underlying plotting methods.}
 }
 \value{
@@ -52,10 +61,11 @@ including observed versus latent regression (H3), shrinkage patterns,
 participant-level caterpillar intervals, and model-implied ROC curves.
 }
 \section{Regression plot (\code{type = "regression"})}{
-Compares observed and latent associations across two panels sharing axes.
-The left panel shows observed \eqn{d'} values and an ordinary least-squares
+Compares observed and latent associations across two panels sharing axes,
+side by side or, with \code{nrow = 2}, one above the other.
+The first panel shows observed \eqn{d'} values and an ordinary least-squares
 line. When awareness task reliability is low, trial-level sampling noise
-attenuates this observed slope toward zero. The right panel plots the latent
+attenuates this observed slope toward zero. The second panel plots the latent
 regression line (\eqn{d'_I} on \eqn{d'_A}) from H3, correcting for
 measurement error. The value of each line at \eqn{d'_A = 0} marks the
 intercept testing for unconscious processing, and both panels display it the
@@ -113,8 +123,9 @@ d <- usdt_data_tasks(
 
 fit <- hsdt(d)
 
-# 1. Observed vs. latent regression (H3)
+# 1. Observed vs. latent regression (H3), side by side or stacked
 plot(fit, type = "regression")
+plot(fit, type = "regression", nrow = 2)
 
 # 2. Bivariate shrinkage toward the group mean
 plot(fit, type = "shrinkage")

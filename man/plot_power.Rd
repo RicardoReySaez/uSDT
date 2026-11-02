@@ -13,14 +13,15 @@
   trials = NULL,
   signal = 0.5,
   dichotomize = c("none", "influence", "awareness", "both"),
+  caption = TRUE,
   ...
 )
 
-\method{plot}{usdt_power}(x, ...)
+\method{plot}{usdt_power}(x, caption = TRUE, ...)
 
-\method{plot}{usdt_mdes}(x, ...)
+\method{plot}{usdt_mdes}(x, caption = TRUE, ...)
 
-\method{plot}{usdt_plan}(x, ...)
+\method{plot}{usdt_plan}(x, caption = TRUE, ...)
 }
 \arguments{
 \item{x}{A \code{usdt_population}, \code{usdt_power}, \code{usdt_mdes} or \code{usdt_plan}
@@ -32,6 +33,9 @@ task, as in \code{\link[=usdt_power]{usdt_power()}}, to add the distribution of 
 
 \item{signal, dichotomize}{For a population with \code{trials}, as in
 \code{\link[=usdt_power]{usdt_power()}}.}
+
+\item{caption}{Logical. Show the caption that explains the plot under it
+(default \code{TRUE}).}
 
 \item{...}{Ignored.}
 }

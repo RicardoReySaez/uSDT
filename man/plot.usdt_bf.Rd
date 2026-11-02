@@ -4,10 +4,13 @@
 \alias{plot.usdt_bf}
 \title{Plot the prior and posterior of tested quantities}
 \usage{
-\method{plot}{usdt_bf}(x, ...)
+\method{plot}{usdt_bf}(x, caption = TRUE, ...)
 }
 \arguments{
 \item{x}{A \code{usdt_bf} object from \code{\link[=usdt_bf]{usdt_bf()}}.}
+
+\item{caption}{Logical. Show the caption that explains the plot under it
+(default \code{TRUE}).}
 
 \item{...}{Ignored.}
 }

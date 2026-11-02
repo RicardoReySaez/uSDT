@@ -1,7 +1,7 @@
 # plot-power.R
 # Plots of planned populations, power, smallest effects and plans
 # Author: Ricardo Rey-Sáez
-# Last modified: 28-10-2026
+# Last modified: 02-11-2026
 
 # Public functions
 
@@ -35,6 +35,8 @@
 #'   \eqn{d'}.
 #' @param signal,dichotomize For a population with `trials`, as in
 #'   [usdt_power()].
+#' @param caption Logical. Show the caption that explains the plot under it
+#'   (default `TRUE`).
 #' @param ... Ignored.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -68,7 +70,9 @@ NULL
 #' @export
 plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
                                  dichotomize = c("none", "influence",
-                                                 "awareness", "both"), ...) {
+                                                 "awareness", "both"),
+                                 caption = TRUE, ...) {
+  .check_caption(caption)
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   if (nrow(x) > 12L) {
     .usdt_stop("the population has ", nrow(x), " scenarios; plot at most 12, ",
@@ -141,7 +145,7 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
       ggplot2::aes(x = .data[["x"]], y = .data[["y"]]),
       colour = "#687076", linetype = "dashed", linewidth = 0.6)
   }
-  caption <- paste0(
+  note <- paste0(
     "Ellipses hold 50% and 90% of the subjects' true d'. The line is the ",
     "latent regression of influence on awareness d' (H3), and the open circle ",
     "its intercept at an awareness d' of zero; the filled point is the mean. ",
@@ -164,20 +168,15 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
     ggplot2::labs(
       x = bquote(.(labels[["awareness"]]) ~ italic(d) * minute),
       y = bquote(.(labels[["influence"]]) ~ italic(d) * minute),
-      caption = caption) +
-    .power_theme() +
-    ggplot2::theme(aspect.ratio = 1,
-                   strip.background = if (nrow(x) == 1L)
-                     ggplot2::element_blank() else
-                       ggplot2::element_rect(fill = "#F5F7F6", colour = NA),
-                   strip.text = if (nrow(x) == 1L) ggplot2::element_blank() else
-                     ggplot2::element_text(colour = "#252A2D", face = "bold",
-                                           size = 11))
+      caption = note) +
+    .usdt_theme() + ggplot2::theme(aspect.ratio = 1) + .single_panel(scenarios) +
+    .hide_caption(caption)
 }
 
 #' @rdname plot_power
 #' @export
-plot.usdt_power <- function(x, ...) {
+plot.usdt_power <- function(x, caption = TRUE, ...) {
+  .check_caption(caption)
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   labels <- attr(x, "labels")
   d <- as.data.frame(x)
@@ -202,7 +201,7 @@ plot.usdt_power <- function(x, ...) {
                            length(unique(d$scenario)) > 1L)
 
   colours <- .hypothesis_colours(levels(d$label))
-  caption <- paste0(
+  note <- paste0(
     if (simulated) paste0("Simulated power from ", .fmt_int(attr(x, "nsim")),
                           " studies per design, with 95% Wilson intervals. ")
     else "Approximate power, as in usdt_power(). ",
@@ -231,8 +230,8 @@ plot.usdt_power <- function(x, ...) {
                                   expand = ggplot2::expansion(mult = 0.02)) +
       ggplot2::scale_y_discrete(limits = rev(levels(d$label))) +
       ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]])) +
-      ggplot2::labs(x = "Power", y = NULL, caption = caption) +
-      .power_theme() + .single_panel(d$panel))
+      ggplot2::labs(x = "Power", y = NULL, caption = note) +
+      .usdt_theme() + .single_panel(d$panel) + .hide_caption(caption))
   }
 
   plot <- ggplot2::ggplot(d, ggplot2::aes(x = .data[[axis]],
@@ -253,13 +252,14 @@ plot.usdt_power <- function(x, ...) {
     ggplot2::scale_y_continuous(limits = c(0, 1),
                                 expand = ggplot2::expansion(mult = 0.02)) +
     ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]])) +
-    ggplot2::labs(x = axis_title, y = "Power", caption = caption) +
-    .power_theme() + .single_panel(d$panel)
+    ggplot2::labs(x = axis_title, y = "Power", caption = note) +
+    .usdt_theme() + .single_panel(d$panel) + .hide_caption(caption)
 }
 
 #' @rdname plot_power
 #' @export
-plot.usdt_mdes <- function(x, ...) {
+plot.usdt_mdes <- function(x, caption = TRUE, ...) {
+  .check_caption(caption)
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   labels <- attr(x, "labels")
   d <- as.data.frame(x)
@@ -304,12 +304,13 @@ plot.usdt_mdes <- function(x, ...) {
         "), the dashed vertical line the smallest value that reaches it, and ",
         "the open circle the population value. For an equivalence test the ",
         "value is the half-width of the region.")) +
-    .power_theme()
+    .usdt_theme() + .hide_caption(caption)
 }
 
 #' @rdname plot_power
 #' @export
-plot.usdt_plan <- function(x, ...) {
+plot.usdt_plan <- function(x, caption = TRUE, ...) {
+  .check_caption(caption)
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   st <- x$settings
   if (st$mode == "budget") {
@@ -361,7 +362,7 @@ plot.usdt_plan <- function(x, ...) {
             "the designs the search checked with the draws of usdt_power(); ",
             "the circle, the chosen design. The closed form is optimistic ",
             "where boundary fits are frequent.")) +
-        .power_theme())
+        .usdt_theme() + .hide_caption(caption))
     }
 
     # Each panel shows its cost relative to its cheapest design, so plans
@@ -391,10 +392,11 @@ plot.usdt_plan <- function(x, ...) {
           "the search checked with the draws of usdt_power(), and the circle ",
           "the chosen one, which can lie away from the closed-form minimum ",
           "where boundary fits are frequent.")) +
-      .power_theme() +
+      .usdt_theme() +
       ggplot2::theme(legend.position = "right",
                      legend.key.height = grid::unit(28, "pt"),
-                     legend.key.width = grid::unit(12, "pt")))
+                     legend.key.width = grid::unit(12, "pt")) +
+      .hide_caption(caption))
   }
 
   # With one value free, the power (or width) along it, from usdt_power().
@@ -426,22 +428,10 @@ plot.usdt_plan <- function(x, ...) {
         else paste0("Approximate power, as in usdt_power(); the dashed line ",
                     "is the power to reach"),
         ". The point is the chosen design.")) +
-    .power_theme()
+    .usdt_theme() + .hide_caption(caption)
 }
 
 # Internal functions
-
-# This function gives the theme of the power plots: that of the faceted plots,
-# with the y axis back, since power and cost have a scale.
-.power_theme <- function() {
-  .panel_theme() +
-    ggplot2::theme(
-      axis.line.y = ggplot2::element_line(colour = "#292D30", linewidth = 0.65),
-      axis.ticks.y = ggplot2::element_line(colour = "#292D30", linewidth = 0.5),
-      axis.text.y = ggplot2::element_text(colour = "#3E4347", size = 10),
-      axis.title.y = ggplot2::element_text(colour = "#292D30", size = 13.5,
-                                           margin = ggplot2::margin(r = 10)))
-}
 
 # This function keeps values inside the limits of a scale, as scales::squish()
 # does, without importing scales.

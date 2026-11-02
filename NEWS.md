@@ -150,6 +150,23 @@
 
 ## Visualization
 
+* Every plot shares one style: panel titles are plain text on the left over a
+  thin grey line instead of the grey box, in the caterpillar, Bayes factor,
+  prior and power plots too. The Bayes
+  factor plot titles each panel "Hypothesis:" and its hypothesis, and writes
+  log BF with a subscript 10. The observed subjects of the regression and
+  shrinkage plots are grey circles with a light, translucent fill, so the
+  overlaps show where they gather, and the shrinkage segments pass under the
+  points.
+* Every plot method takes `caption = FALSE` to leave out the caption, which
+  is now a single paragraph.
+* `plot(type = "regression")` takes `nrow = 2` to stack the observed panel
+  above the model one, each as wide as the figure; `nrow = 1`, the default,
+  keeps them side by side as squares.
+* The ROC plot draws its legend inside the square, in the corner the curves
+  keep away from, as a small table whose d' and AUC line up in columns, so
+  the square takes the height of the figure. Only the plot of one subject has
+  a title; the caption names the population curves.
 * The caption under every plot wraps when the plot is drawn, to the width of
   the plot, so it fills the figure at any size instead of breaking after a
   fixed number of characters. When a square panel leaves the plot narrower

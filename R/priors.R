@@ -505,6 +505,8 @@ print.usdt_priors <- function(x, ...) {
 #'   in [hsdt()]: by their means, standard deviations and correlation
 #'   (`"correlation"`, the default) or by the latent regression of the
 #'   influence on the awareness one (`"regression"`).
+#' @param caption Logical. Show the caption that explains the plot under it
+#'   (default `TRUE`).
 #' @param ... Ignored.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -546,7 +548,8 @@ print.usdt_priors <- function(x, ...) {
 #' @export
 plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
                              parameterization = c("correlation", "regression"),
-                             ...) {
+                             caption = TRUE, ...) {
+  .check_caption(caption)
   if (!is.null(data) && !inherits(data, "usdt_data")) {
     .usdt_stop("`data` must come from usdt_data_long() or usdt_data_tasks(), ",
                "not a plain ", class(data)[1L], ".")
@@ -560,7 +563,8 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
     .usdt_stop("`...` is not used by the prior predictive plot.")
   }
   .plot_priors(.prior_check_data(x, data, unequal_variances,
-                                 parameterization))
+                                 parameterization)) +
+    .hide_caption(caption)
 }
 
 # This function reads the parameterization of the two sensitivities.
@@ -715,7 +719,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
       x = NULL, y = NULL,
       caption = paste0(
         "Prior densities from 100,000 draws of the priors; no responses are ",
-        "used. Rates belong to one new subject per draw. ", criteria, "\n",
+        "used. Rates belong to one new subject per draw. ", criteria, " ",
         if (values$parameterization == "regression") {
           paste0("H2 and H3 are the exact priors of the correlation and the ",
                  "intercept. H1 is induced by the other priors")

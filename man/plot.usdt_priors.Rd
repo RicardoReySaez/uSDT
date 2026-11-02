@@ -9,6 +9,7 @@
   data = NULL,
   unequal_variances = FALSE,
   parameterization = c("correlation", "regression"),
+  caption = TRUE,
   ...
 )
 }
@@ -27,6 +28,9 @@ from its prior instead of fixing it to 1.}
 in \code{\link[=hsdt]{hsdt()}}: by their means, standard deviations and correlation
 (\code{"correlation"}, the default) or by the latent regression of the
 influence on the awareness one (\code{"regression"}).}
+
+\item{caption}{Logical. Show the caption that explains the plot under it
+(default \code{TRUE}).}
 
 \item{...}{Ignored.}
 }

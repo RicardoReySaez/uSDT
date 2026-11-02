@@ -1,7 +1,7 @@
 # bayes-factor.R
 # Bayes factors for the three hypotheses of a Bayesian hierarchical SDT model
 # Author: Ricardo Rey-Sáez
-# Last modified: 27-10-2026
+# Last modified: 02-11-2026
 
 # Public functions
 
@@ -466,8 +466,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 }
 
 # This function writes the panel title as a plotmath expression, so the Greek
-# letters and the set symbols are drawn on every graphics device.
-.bf_math <- function(h, short) {
+# letters and the set symbols are drawn on every graphics device. The caption
+# says when a panel shows another quantity than the one its title names.
+.bf_math <- function(h) {
   symbol <- switch(h$summary, diff = "Delta*d*\"'\"", h$summary)
   statement <- switch(h$op,
     "=" = sprintf("%s == \"%s\"", symbol, format(h$value)),
@@ -475,7 +476,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
     sprintf("%s %s \"[%s, %s]\"", symbol,
             if (h$op == "in") "%in%" else "%notin%",
             format(h$value[1L]), format(h$value[2L])))
-  sprintf("bold(%s ~~ \"(%s)\")", statement, short)
+  sprintf("\"Hypothesis:\" ~ %s", statement)
 }
 
 # This function evaluates one hypothesis on the draws of the tested quantity,
@@ -486,15 +487,10 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   limits <- stats::quantile(summary, c(a, 1 - a), names = FALSE)
   name <- .bf_name(h$summary)
 
-  # The printed card names the test in full, the panel strip in short.
+  # The printed card names the test; the panel strip, only the hypothesis.
   test <- switch(h$op, "=" = "Savage-Dickey density ratio test",
                  "<" = , ">" = "Directional test", "Interval test")
-  short <- switch(h$op, "=" = "Savage-Dickey", "<" = , ">" = "directional",
-                  "interval")
-  if (h$swapped) {
-    test <- sprintf("%s, on %s %s 0", test, h$quantity, h$op)
-    short <- paste0(short, ", on ", h$quantity)
-  }
+  if (h$swapped) test <- sprintf("%s, on %s %s 0", test, h$quantity, h$op)
 
   statements <- .hypothesis_statements(name, h)
   if (h$op == "=") {
@@ -534,7 +530,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   if (!is.null(prior$bounds)) {
     grid <- grid[grid > prior$bounds[1L] & grid < prior$bounds[2L]]
   }
-  curve <- list(hypothesis = .bf_math(h, short), quantity = h$summary,
+  curve <- list(hypothesis = .bf_math(h), quantity = h$summary,
                 tested = h$quantity, swapped = h$swapped,
                 induced = prior$induced, op = h$op, value = h$value, grid = grid,
                 prior = exp(prior$log_density(grid)),
@@ -562,6 +558,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 #' or to draw some of its rows, e.g. `plot(b[3, ])`.
 #'
 #' @param x A `usdt_bf` object from [usdt_bf()].
+#' @param caption Logical. Show the caption that explains the plot under it
+#'   (default `TRUE`).
 #' @param ... Ignored.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -569,7 +567,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 #' @seealso [usdt_bf()]
 #'
 #' @export
-plot.usdt_bf <- function(x, ...) {
+plot.usdt_bf <- function(x, caption = TRUE, ...) {
+  .check_caption(caption)
   if (length(list(...))) {
     .usdt_stop("`...` is not used by the Bayes factor plot.")
   }
@@ -626,12 +625,15 @@ plot.usdt_bf <- function(x, ...) {
                distribution = factor(c("Posterior", "Prior"),
                                      levels = c("Posterior", "Prior")))
   }))
+  # Each line of the label is a layer of its own, so that all of them align
+  # on the right: the first is plotmath, for the subscript of BF10.
   labels <- do.call(rbind, lapply(seq_along(curves), function(i) {
     cv <- curves[[i]]
-    data.frame(panel = panel(i, 1L), x = Inf, y = Inf, label = paste0(
-      sprintf("log BF10 = %.2f\n%s, favours %s", cv$log_bf10, cv$evidence,
-              cv$favours),
-      if (!is.na(cv$prob)) sprintf("\nP(H1 | data) = %.3f", cv$prob) else ""))
+    data.frame(panel = panel(i, 1L), x = Inf, y = Inf,
+               bf = sprintf("log~BF[10] == \"%.2f\"", cv$log_bf10),
+               evidence = sprintf("%s, favours %s", cv$evidence, cv$favours),
+               prob = if (is.na(cv$prob)) NA_character_ else
+                 sprintf("P(H1 | data) = %.3f", cv$prob))
   }))
 
   # The posterior is a light purple and the prior the grey of what does not
@@ -667,14 +669,21 @@ plot.usdt_bf <- function(x, ...) {
     ) +
       ggplot2::scale_fill_manual(values = colours, name = NULL)
   }
-  plot +
+  # A line's vjust counts heights of its own text; these offsets space the
+  # three lines evenly below the taller plotmath one.
+  label_line <- function(column, vjust, rows = TRUE) {
     ggplot2::geom_text(
-      data = labels,
+      data = labels[rows, , drop = FALSE],
       ggplot2::aes(x = .data[["x"]], y = .data[["y"]],
-                   label = .data[["label"]]),
-      inherit.aes = FALSE, hjust = 1.05, vjust = 1.2, lineheight = 1.05,
-      size = 3.35, colour = "#3E4347"
-    ) +
+                   label = .data[[column]]),
+      inherit.aes = FALSE, hjust = 1.05, vjust = vjust, size = 3.35,
+      colour = "#3E4347", parse = column == "bf"
+    )
+  }
+  plot +
+    label_line("bf", 1.2) +
+    label_line("evidence", 3) +
+    label_line("prob", 4.55, !is.na(labels$prob)) +
     ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), scales = "free",
                         ncol = columns, labeller = ggplot2::label_parsed) +
     ggplot2::scale_colour_manual(values = colours, name = NULL) +
@@ -699,5 +708,6 @@ plot.usdt_bf <- function(x, ...) {
     ) +
     .panel_theme() +
     # Wider keys keep the dashed prior recognisable in the legend.
-    ggplot2::theme(legend.key.width = grid::unit(30, "pt"))
+    ggplot2::theme(legend.key.width = grid::unit(30, "pt")) +
+    .hide_caption(caption)
 }

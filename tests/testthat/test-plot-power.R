@@ -55,8 +55,13 @@ test_that("a power plot puts subjects or trials on the axis", {
   expect_identical(rlang::as_label(one$mapping$x), "power")
   expect_true("All at once" %in% as.character(one$data$label))
   expect_no_error(ggplot2::ggplot_build(one))
-  expect_error(plot(usdt_power(pop, subjects = 80, trials = 100), 1),
+  expect_error(plot(usdt_power(pop, subjects = 80, trials = 100), size = 1),
                "not used")
+  # Both endings of the method leave the caption out on request.
+  expect_null(plot(usdt_power(pop, subjects = 80, trials = 100),
+                   caption = FALSE)$labels$caption)
+  expect_null(plot(usdt_power(pop, subjects = c(40, 80), trials = 100),
+                   caption = FALSE)$labels$caption)
 })
 
 test_that("a simulated power plot adds its intervals", {

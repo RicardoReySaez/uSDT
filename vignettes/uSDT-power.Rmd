@@ -372,14 +372,14 @@ ggplot2::ggplot(long, ggplot2::aes(x = power, y = design)) +
     x = "Power", y = NULL,
     caption = paste0(
       "1000 simulated studies per design; the bars are 95% Wilson intervals ",
-      "of the simulated power.\nStudies whose fit ends on the boundary count ",
+      "of the simulated power. Studies whose fit ends on the boundary count ",
       "as failures to reject the correlation and the intercept.")) +
   ggplot2::theme_classic(base_size = 12) +
   ggplot2::theme(
     legend.position = "top",
     panel.spacing.x = grid::unit(14, "pt"),
-    strip.background = ggplot2::element_rect(fill = "#F5F7F6", colour = NA),
-    strip.text = ggplot2::element_text(colour = "#252A2D", face = "bold"),
+    strip.background = ggplot2::element_blank(),
+    strip.text = ggplot2::element_text(colour = "#252A2D"),
     panel.grid.major.x = ggplot2::element_line(colour = "#E4E5E1",
                                                linewidth = 0.4),
     axis.text = ggplot2::element_text(colour = "#3E4347"),

@@ -669,6 +669,25 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
     ) +
       ggplot2::scale_fill_manual(values = colours, name = NULL)
   }
+  # The curves are named in each panel by labels placed when the panel is
+  # drawn, clear of the lines, points and text that are already there.
+  levels <- levels(densities$panel)
+  obstacles <- lapply(levels, function(level) {
+    marks <- points[points$panel == level, , drop = FALSE]
+    list(nulls = values$x[values$panel == level],
+         marks = data.frame(x = marks$x, y = marks$density),
+         bf = unlist(labels[match(level, labels$panel),
+                            c("bf", "evidence", "prob")]))
+  })
+  plot <- plot + ggplot2::layer(
+    geom = GeomBfLabels, stat = "identity", position = "identity",
+    data = densities,
+    mapping = ggplot2::aes(x = .data[["x"]], y = .data[["density"]],
+                           label = .data[["distribution"]]),
+    inherit.aes = FALSE, show.legend = FALSE,
+    params = list(obstacles = obstacles)
+  )
+
   # A line's vjust counts heights of its own text; these offsets space the
   # three lines evenly below the taller plotmath one.
   label_line <- function(column, vjust, rows = TRUE) {
@@ -707,7 +726,186 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
       )
     ) +
     .panel_theme() +
-    # Wider keys keep the dashed prior recognisable in the legend.
-    ggplot2::theme(legend.key.width = grid::unit(30, "pt")) +
+    ggplot2::theme(legend.position = "none") +
     .hide_caption(caption)
+}
+
+# The labels of the curves of the Bayes factor plot. Where they fit depends
+# on the size of the panels, which is only known when they are drawn, so the
+# geom hands every panel the curves and obstacles of all of them, in npc, and
+# the grob places the labels then. `obstacles` holds, per panel, the tested
+# values, the marked heights and the lines of the Bayes factor label.
+GeomBfLabels <- ggplot2::ggproto("GeomBfLabels", ggplot2::Geom,
+  required_aes = c("x", "y", "label"),
+  extra_params = c("na.rm", "obstacles"),
+  draw_key = ggplot2::draw_key_blank,
+  draw_layer = function(self, data, params, layout, coord) {
+    panels <- lapply(split(data, data$PANEL), function(d) {
+      if (!nrow(d)) return(NULL)
+      i <- as.integer(d$PANEL[1L])
+      p <- params$obstacles[[i]]
+      npc <- function(x, y) {
+        coord$transform(data.frame(x = x, y = y), layout$panel_params[[i]])
+      }
+      d <- coord$transform(d, layout$panel_params[[i]])
+      list(curves = split(d[c("x", "y")], as.character(d$label)),
+           nulls = npc(p$nulls, 0 * p$nulls)$x,
+           marks = npc(p$marks$x, p$marks$y), bf = p$bf)
+    })
+    lapply(seq_along(panels), function(i) {
+      if (is.null(panels[[i]])) return(ggplot2::zeroGrob())
+      grid::gTree(panels = panels, index = i, cl = "usdt_curve_labels")
+    })
+  }
+)
+
+# When a panel is drawn, its grob works out where the labels of every panel
+# would go, since all panels share one size. When they all fit, each curve is
+# named over or beside it in its colour; when one does not, every panel names
+# both curves stacked in a free corner instead, so the panels agree.
+#' @exportS3Method grid::makeContent
+makeContent.usdt_curve_labels <- function(x) {
+  W <- grid::convertWidth(grid::unit(1, "npc"), "in", valueOnly = TRUE)
+  H <- grid::convertHeight(grid::unit(1, "npc"), "in", valueOnly = TRUE)
+  names <- c(Posterior = "Posterior", Prior = "Prior")
+  size <- lapply(names, .text_size, size = 3.5)
+  spaces <- lapply(x$panels, function(p) if (!is.null(p)) .label_space(p, W, H))
+  places <- Map(function(p, free) {
+    if (is.null(p)) list() else .curve_label_places(p, size, free)
+  }, x$panels, spaces)
+  own <- places[[x$index]]
+  if (any(vapply(places, is.null, TRUE))) {
+    own <- .stacked_label_places(size, spaces[[x$index]])
+  }
+  if (!length(own)) return(grid::setChildren(x, grid::gList()))
+  colours <- c(Posterior = "#7B5CC4", Prior = "#8F969B")
+  grid::setChildren(x, do.call(grid::gList, lapply(names, function(n) {
+    grid::textGrob(n, x = grid::unit(own[[n]][1L], "in"),
+                   y = grid::unit(own[[n]][2L], "in"), hjust = 0, vjust = 0,
+                   gp = grid::gpar(fontsize = 3.5 * ggplot2::.pt,
+                                   col = colours[[n]]))
+  })))
+}
+
+# This function gives the width and height, in inches, of a label drawn at a
+# ggplot2 text size.
+.text_size <- function(label, size) {
+  g <- grid::textGrob(label, gp = grid::gpar(fontsize = size * ggplot2::.pt))
+  c(grid::convertWidth(grid::grobWidth(g), "in", valueOnly = TRUE),
+    grid::convertHeight(grid::grobHeight(g), "in", valueOnly = TRUE))
+}
+
+# This function describes the room in one panel of W by H inches. It returns
+# the panel's curves in inches, filled in every 0.02 inches, and a function
+# that tells whether a label of size `s` with its bottom left corner at
+# `corner` is free: inside the panel and clear of both curves, the dotted
+# lines, the marked heights, the Bayes factor label and the boxes in `also`.
+# Boxes are c(left, bottom, right, top), and the obstacles keep a margin.
+.label_space <- function(p, W, H) {
+  pt <- 1 / 72
+  inches <- function(d) list(x = d$x * W, y = d$y * H)
+  curves <- lapply(p$curves, inches)
+  dense <- function(curve) {
+    n <- length(curve$x)
+    if (n < 2L) return(curve)
+    step <- pmax(1L, ceiling(sqrt(diff(curve$x)^2 + diff(curve$y)^2) / 0.02))
+    t <- unlist(lapply(step, function(k) (seq_len(k) - 1L) / k))
+    i <- rep(seq_len(n - 1L), step)
+    list(x = c(curve$x[i] + t * (curve$x[i + 1L] - curve$x[i]), curve$x[n]),
+         y = c(curve$y[i] + t * (curve$y[i + 1L] - curve$y[i]), curve$y[n]))
+  }
+  lines <- Reduce(function(a, b) Map(c, a, b), lapply(curves, dense))
+
+  blocked <- list()
+  bf <- p$bf[!is.na(p$bf)]
+  if (length(bf)) {
+    text <- lapply(seq_along(bf), function(i) {
+      .text_size(if (i == 1L) parse(text = bf[[i]]) else bf[[i]], 3.35)
+    })
+    last <- text[[length(text)]][2L]
+    blocked$bf <- c(W - 1.05 * max(vapply(text, `[`, 0, 1L)) - 3 * pt,
+                    H - c(1.2, 3, 4.55)[length(text)] * last - 3 * pt, W, H)
+  }
+  for (v in p$nulls * W) {
+    blocked[[length(blocked) + 1L]] <- c(v - 2.5 * pt, 0, v + 2.5 * pt, H)
+  }
+  for (k in seq_along(p$marks$x)) {
+    m <- c(p$marks$x[k] * W, p$marks$y[k] * H)
+    blocked[[length(blocked) + 1L]] <- c(m - 6 * pt, m + 6 * pt)
+  }
+  free <- function(corner, s, also = list()) {
+    b <- c(corner, corner + s)
+    if (b[1L] < 0 || b[2L] < 0 || b[3L] > W || b[4L] > H) return(FALSE)
+    inside <- lines$x > b[1L] - pt & lines$x < b[3L] + pt &
+      lines$y > b[2L] - pt & lines$y < b[4L] + pt
+    !any(inside) && !any(vapply(c(blocked, also), function(o) {
+      b[1L] < o[3L] && o[1L] < b[3L] && b[2L] < o[4L] && o[2L] < b[4L]
+    }, TRUE))
+  }
+  list(curves = curves, free = free, W = W, H = H)
+}
+
+# This function places the labels of the two curves of one panel, or returns
+# NULL when one finds no free place. The posterior is named over its line as
+# near its peak as it fits, or beside the peak; the prior over its line, or
+# under it, as far from the posterior peak as it fits. Each place is the
+# bottom left corner of the label, in inches.
+.curve_label_places <- function(p, size, space) {
+  posterior <- space$curves$Posterior
+  prior <- space$curves$Prior
+  if (length(posterior$x) < 2L || length(prior$x) < 2L) return(NULL)
+  pt <- 1 / 72
+  free <- space$free
+
+  # Places just over (or under) a curve along the panel, ordered by `key` of
+  # their centres.
+  along <- function(curve, s, key, under = FALSE) {
+    lefts <- seq(2 * pt, space$W - 2 * pt - s[1L], length.out = 25L)
+    lefts <- lefts[order(key(lefts + s[1L] / 2))]
+    lapply(lefts, function(l) {
+      span <- curve$x >= l & curve$x <= l + s[1L]
+      if (!any(span)) return(NULL)
+      if (under) c(l, min(curve$y[span]) - 3 * pt - s[2L]) else
+        c(l, max(curve$y[span]) + 3 * pt)
+    })
+  }
+
+  # The posterior: over its line as near the peak as it fits, and then
+  # beside the peak, right and left.
+  s <- size$Posterior
+  peak <- which.max(posterior$y)
+  px <- posterior$x[peak]
+  py <- posterior$y[peak]
+  places <- c(along(posterior, s, function(centre) abs(centre - px)),
+              list(c(px + 6 * pt, py - s[2L]), c(px - 6 * pt - s[1L], py - s[2L])))
+  post <- Find(function(corner) free(corner, s), Filter(Negate(is.null), places))
+  if (is.null(post)) return(NULL)
+
+  # The prior: over its line as far from the posterior peak as it fits, and
+  # then under it.
+  s <- size$Prior
+  far <- function(centre) -abs(centre - px)
+  places <- c(along(prior, s, far), along(prior, s, far, under = TRUE))
+  prior_place <- Find(function(corner) {
+    free(corner, s, list(c(post, post + size$Posterior)))
+  }, Filter(Negate(is.null), places))
+  if (is.null(prior_place)) return(NULL)
+  list(Posterior = post, Prior = prior_place)
+}
+
+# This function stacks both names in the first free place down the left side
+# of the panel, then down its right side and then down three columns between
+# them. It returns an empty list when no place is free, so that a panel too
+# crowded for them leaves them to the others and to the caption.
+.stacked_label_places <- function(size, space) {
+  h <- size$Posterior[2L]
+  s <- c(max(size$Posterior[1L], size$Prior[1L]), 2.4 * h)
+  bottoms <- seq(space$H - 0.2 * h - s[2L], 0, by = -h / 2)
+  lefts <- seq(0.06, space$W - 0.06 - s[1L], length.out = 5L)[c(1, 5, 2, 4, 3)]
+  places <- unlist(lapply(lefts, function(l) {
+    lapply(bottoms, function(b) c(l, b))
+  }), recursive = FALSE)
+  corner <- Find(function(corner) space$free(corner, s), places)
+  if (is.null(corner)) return(list())
+  list(Posterior = corner + c(0, 1.4 * h), Prior = corner)
 }

@@ -152,12 +152,16 @@
 
 * Every plot shares one style: panel titles are plain text on the left over a
   thin grey line instead of the grey box, in the caterpillar, Bayes factor,
-  prior and power plots too. The Bayes
-  factor plot titles each panel "Hypothesis:" and its hypothesis, and writes
-  log BF with a subscript 10. The observed subjects of the regression and
+  prior and power plots too. The observed subjects of the regression and
   shrinkage plots are grey circles with a light, translucent fill, so the
   overlaps show where they gather, and the shrinkage segments pass under the
   points.
+* The Bayes factor plot titles each panel "Hypothesis:" and its hypothesis,
+  and writes log BF with a subscript 10. Instead of a legend on top, it names
+  the posterior and the prior on their curves in every panel, placed when the
+  plot is drawn so that they touch no line, point or label at that size;
+  where that fails in any panel, every panel stacks both names in a free
+  corner.
 * Every plot method takes `caption = FALSE` to leave out the caption, which
   is now a single paragraph.
 * `plot(type = "regression")` takes `nrow = 2` to stack the observed panel

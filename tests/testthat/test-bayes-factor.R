@@ -75,6 +75,42 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
   expect_identical(panel, "\"Hypothesis:\" ~ Delta*d*\"'\" > \"0\"")
   expect_no_error(parse(text = panel))
   expect_error(plot(b[, 1:3]), "lost")
+
+  # The curve labels are placed when the plot is drawn.
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  expect_no_error(print(plot(b)))
+})
+
+test_that("the curve labels go over their curves, or stack where they fit", {
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  x <- seq(0, 1, length.out = 101L)
+  panel <- list(
+    curves = list(Posterior = list(x = x, y = 0.7 * exp(-(x - 0.3)^2 / 0.01)),
+                  Prior = list(x = x, y = rep(0.2, 101L))),
+    nulls = 0.8, marks = list(x = numeric(0), y = numeric(0)),
+    bf = c('log~BF[10] == "1.00"', "moderate, favours H1", NA))
+  size <- lapply(c(Posterior = "Posterior", Prior = "Prior"), .text_size,
+                 size = 3.5)
+
+  # In a roomy panel the posterior is named over its peak, the prior over its
+  # line away from it, and neither crosses the dotted line at 0.8.
+  space <- .label_space(panel, 4, 3)
+  places <- .curve_label_places(panel, size, space)
+  expect_gt(places$Posterior[2L], 0.7 * 3)
+  expect_lt(abs(places$Posterior[1L] + size$Posterior[1L] / 2 - 0.3 * 4),
+            size$Posterior[1L])
+  expect_gt(places$Prior[2L], 0.2 * 3)
+  expect_gt(abs(places$Prior[1L] - 0.3 * 4), 1)
+  expect_true(places$Prior[1L] + size$Prior[1L] < 0.8 * 4 ||
+                places$Prior[1L] > 0.8 * 4)
+
+  # In a cramped one the labels do not fit over the curves, and the stacked
+  # names find no free place either.
+  space <- .label_space(panel, 1, 0.4)
+  expect_null(.curve_label_places(panel, size, space))
+  expect_identical(.stacked_label_places(size, space), list())
 })
 
 test_that("every kind of hypothesis gives a panel title that parses", {

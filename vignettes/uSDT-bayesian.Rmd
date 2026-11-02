@@ -156,7 +156,7 @@ the model with brms:
 fit_bayes <- hsdt(data_usdt, estimation = "bayesian", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 48.2s.
+✔ Sampled 4 chains in 59.4s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
@@ -522,7 +522,7 @@ fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
                 parameterization = "regression", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 55.6s.
+✔ Sampled 4 chains in 56.1s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.

@@ -17,19 +17,19 @@
 # same model it fits to real data, criterion check included.
 .simulate_usdt_data <- function(pop, N, cells, split, labels) {
   w <- matrix(stats::rnorm(2L * N), N)
-  d <- cbind(direct = pop$mu_D + pop$sigma_D * w[, 1L],
-             indirect = pop$mu_I + pop$sigma_I *
+  d <- cbind(awareness = pop$mu_A + pop$sigma_A * w[, 1L],
+             influence = pop$mu_I + pop$sigma_I *
                (pop$rho * w[, 1L] + sqrt(1 - pop$rho^2) * w[, 2L]))
   u <- matrix(stats::rnorm(2L * N), N)
   r <- pop$cor_criterion
   criterion <- cbind(
-    direct = pop$criterion_D + pop$sd_criterion_D * u[, 1L],
-    indirect = pop$criterion_I + pop$sd_criterion_I *
+    awareness = pop$criterion_A + pop$sd_criterion_A * u[, 1L],
+    influence = pop$criterion_I + pop$sd_criterion_I *
       (r * u[, 1L] + sqrt(1 - r^2) * u[, 2L]))
-  sigma <- c(direct = pop$sd_signal_D, indirect = pop$sd_signal_I)
+  sigma <- c(awareness = pop$sd_signal_A, influence = pop$sd_signal_I)
   subjects <- formatC(seq_len(N), width = nchar(N), flag = "0")
 
-  counts <- lapply(c("direct", "indirect"), function(k) {
+  counts <- lapply(c("awareness", "influence"), function(k) {
     ns <- cells$signal[[k]]
     nn <- cells$noise[[k]]
     if (split[[k]]) {
@@ -49,24 +49,24 @@
     }
     list(hits = hits, false_alarms = false_alarms, signal = ns, noise = nn)
   })
-  names(counts) <- c("direct", "indirect")
+  names(counts) <- c("awareness", "influence")
 
   # The aggregated rows follow the layout of usdt_data_tasks(), in deviation
   # coding.
-  agg <- do.call(rbind, lapply(c("direct", "indirect"), function(k) {
+  agg <- do.call(rbind, lapply(c("awareness", "influence"), function(k) {
     x <- counts[[k]]
     data.frame(subj = rep(subjects, each = 2L),
-               task = if (k == "direct") "D" else "I",
+               task = if (k == "awareness") "A" else "I",
                sig = rep(c(FALSE, TRUE), N),
                y = as.integer(as.vector(rbind(x$false_alarms, x$hits))),
                n = as.integer(rep(c(x$noise, x$signal), N)),
                stringsAsFactors = FALSE)
   }))
-  agg$task <- factor(agg$task, levels = c("D", "I"))
+  agg$task <- factor(agg$task, levels = c("A", "I"))
   agg$cond <- ifelse(agg$sig, 0.5, -0.5)
-  agg$c_D <- as.integer(agg$task == "D")
+  agg$c_A <- as.integer(agg$task == "A")
   agg$c_I <- as.integer(agg$task == "I")
-  agg$d_D <- agg$cond * (agg$task == "D")
+  agg$d_A <- agg$cond * (agg$task == "A")
   agg$d_I <- agg$cond * (agg$task == "I")
   agg <- agg[order(agg$subj, agg$task, agg$sig), ]
   rownames(agg) <- NULL
@@ -74,7 +74,7 @@
   # A split task has its criterion fixed only if the split leaves it at zero,
   # as usdt_data_tasks() decides.
   check <- .criterion_check(agg, "deviation")
-  tasks <- lapply(c("direct", "indirect"), function(k) {
+  tasks <- lapply(c("awareness", "influence"), function(k) {
     total <- cells$signal[[k]] + cells$noise[[k]]
     list(dichotomized = split[[k]], subject = "subject",
          condition_col = "condition", response_col = "response",
@@ -83,16 +83,17 @@
          dic = list(odd = if (total %% 2L == 1L) N else 0L,
                     p = rep(1 / 2, N)))
   })
-  names(tasks) <- c("direct", "indirect")
+  names(tasks) <- c("awareness", "influence")
   structure(list(
     agg = agg,
     meta = list(
       input = "simulated study", entry = "usdt_power()", coding = "deviation",
-      ties = c(direct = "noise", indirect = "noise"), labels = labels,
+      ties = c(awareness = "noise", influence = "noise"), labels = labels,
       tasks = tasks,
-      criterion_zero = c(direct = split[["direct"]] && check$direct$negligible,
-                         indirect = split[["indirect"]] &&
-                           check$indirect$negligible),
+      criterion_zero = c(awareness = split[["awareness"]] &&
+                           check$awareness$negligible,
+                         influence = split[["influence"]] &&
+                           check$influence$negligible),
       criterion = check, n_subj = N, n_both = N, n_only = 0L,
       n_trials = sum(agg$n), n_rows = nrow(agg),
       descriptives = .descriptives(agg, "deviation"))),
@@ -138,7 +139,7 @@
 
   # The rows of usdt_tests() give every quantity its interval.
   rows <- m$tests
-  at <- match(c("d'(indirect) - d'(direct)", "correlation", "intercept",
+  at <- match(c("d'(influence) - d'(awareness)", "correlation", "intercept",
                 "slope"), rows$term)
   ok <- rows$status[at] == "ok"
   out[["fitted"]] <- 1

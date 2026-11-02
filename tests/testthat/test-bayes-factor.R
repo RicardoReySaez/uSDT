@@ -87,10 +87,10 @@ test_that("every kind of hypothesis gives a panel title that parses", {
 
 test_that("the priors of the tested quantities match simulated prior draws", {
   set.seed(4)
-  priors <- usdt_priors(dprime = list(direct = "student_t(5, 0.5, 1)",
-                                      indirect = "skew_normal(0, 0.5, 3)"),
-                        sd_dprime = list(direct = "gamma(3, 6)",
-                                         indirect = "student_t(4, 0, 0.5)"),
+  priors <- usdt_priors(dprime = list(awareness = "student_t(5, 0.5, 1)",
+                                      influence = "skew_normal(0, 0.5, 3)"),
+                        sd_dprime = list(awareness = "gamma(3, 6)",
+                                         influence = "student_t(4, 0, 0.5)"),
                         cor_dprime = "lkj(2)",
                         intercept = "student_t(5, 0.2, 0.4)")
   quantities <- c("diff", "rho", "intercept", "slope")
@@ -133,18 +133,18 @@ test_that("very heavy-tailed draws still give a posterior density", {
 })
 
 test_that("brms priors become the priors of the tested quantities", {
-  variables <- c("b_direct", "b_cond_D", "b_cond_I", "sd_subj__direct",
-                 "sd_subj__cond_D", "sd_subj__cond_I",
-                 "cor_subj__direct__cond_D", "cor_subj__direct__cond_I",
-                 "cor_subj__cond_D__cond_I")
+  variables <- c("b_awareness", "b_cond_A", "b_cond_I", "sd_subj__awareness",
+                 "sd_subj__cond_A", "sd_subj__cond_I",
+                 "cor_subj__awareness__cond_A", "cor_subj__awareness__cond_I",
+                 "cor_subj__cond_A__cond_I")
   table <- data.frame(
     prior = c("", "normal(0, 1)", "normal(0.5, 2)", "", "student_t(3, 0, 2.5)",
               "", "cauchy(0, 1)", "", "lkj(2)", ""),
     class = c("b", "b", "b", "b", "sd", "sd", "sd", "sd", "cor", "cor"),
-    coef = c("", "", "cond_I", "cond_D", "", "", "cond_I", "cond_D", "", ""),
+    coef = c("", "", "cond_I", "cond_A", "", "", "cond_I", "cond_A", "", ""),
     group = c("", "", "", "", "", "subj", "subj", "subj", "", "subj"),
     stringsAsFactors = FALSE)[-1L, ]
-  p <- .brms_priors(table, variables, "cond_D", "cond_I")
+  p <- .brms_priors(table, variables, "cond_A", "cond_I")
 
   expect_identical(.prior_rows(p, "dprime")$args, list(c(0, 1), c(0.5, 2)))
   sd <- .prior_rows(p, "sd_dprime")
@@ -157,20 +157,20 @@ test_that("brms priors become the priors of the tested quantities", {
   fitted <- table
   fitted$class[fitted$class == "cor"] <- "L"
   fitted$prior[fitted$prior == "lkj(2)"] <- "lkj_corr_cholesky(2)"
-  expect_identical(.prior_rows(.brms_priors(fitted, variables, "cond_D",
+  expect_identical(.prior_rows(.brms_priors(fitted, variables, "cond_A",
                                             "cond_I"),
                                "cor_dprime", "both")$args[[1L]], 2.5)
 
   flat <- table
   flat$prior[flat$class == "b"] <- ""
-  expect_error(.brms_priors(flat, variables, "cond_D", "cond_I"),
+  expect_error(.brms_priors(flat, variables, "cond_A", "cond_I"),
                "flat default")
 
   # An SD prior uSDT cannot simulate stops only the quantities that need it.
   circular <- table
   circular$prior[circular$class == "sd" & circular$coef == ""] <-
     c("von_mises(0, 1)", "")
-  p <- .brms_priors(circular, variables, "cond_D", "cond_I")
+  p <- .brms_priors(circular, variables, "cond_A", "cond_I")
   expect_no_error(.quantity_priors(p, c("diff", "rho"), "correlation"))
   expect_error(.quantity_priors(p, "slope", "correlation"), "cannot simulate")
 })

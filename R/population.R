@@ -7,18 +7,18 @@
 
 #' Population values for planning a uSDT study
 #'
-#' Describes the population a planned study samples from: how direct and
-#' indirect sensitivity (\eqn{d'}) vary and covary across subjects, and how
+#' Describes the population a planned study samples from: how awareness and
+#' influence sensitivity (\eqn{d'}) vary and covary across subjects, and how
 #' the response criteria vary. The arguments take the names of
 #' [usdt_priors()], with numbers instead of priors, and the population can be
 #' written in either parameterization of [hsdt()].
 #'
 #' @param dprime Mean \eqn{d'} of each task. Under the latent regression
-#'   parameterization (when `intercept` is given), the mean of the direct task
-#'   only.
+#'   parameterization (when `intercept` is given), the mean of the awareness
+#'   task only.
 #' @param sd_dprime Between-subject standard deviation of \eqn{d'} in each
 #'   task.
-#' @param cor_dprime Correlation between direct and indirect \eqn{d'} across
+#' @param cor_dprime Correlation between awareness and influence \eqn{d'} across
 #'   subjects.
 #' @param criterion Mean criterion \eqn{c} of each task, on the classical scale
 #'   where positive values are conservative.
@@ -28,9 +28,9 @@
 #' @param sd_signal Standard deviation of the signal distribution of each task,
 #'   relative to the noise distribution. The default, 1, is the equal-variance
 #'   model that [hsdt()] fits.
-#' @param intercept Intercept of the latent regression of indirect on direct
+#' @param intercept Intercept of the latent regression of influence on awareness
 #'   \eqn{d'}. Giving it selects the latent regression parameterization, in
-#'   which it replaces the indirect mean.
+#'   which it replaces the influence mean.
 #' @param from A frequentist [hsdt()] fit, such as a pilot study, whose
 #'   estimates give every value not set in the call.
 #'
@@ -38,28 +38,28 @@
 #' # Values for each task
 #'
 #' `dprime`, `sd_dprime`, `criterion`, `sd_criterion` and `sd_signal` take one
-#' value for both tasks or one for each, as `c(direct = , indirect = )` or
-#' `list(direct = , indirect = )`. The correlations and the intercept take a
+#' value for both tasks or one for each, as `c(awareness = , influence = )` or
+#' `list(awareness = , influence = )`. The correlations and the intercept take a
 #' single value.
 #'
 #' # The two parameterizations
 #'
 #' The correlation parameterization gives the bivariate normal distribution of
-#' \eqn{d'}: its means \eqn{\mu_D} and \eqn{\mu_I}, standard deviations
-#' \eqn{\sigma_D} and \eqn{\sigma_I} and correlation \eqn{\rho}. The latent
+#' \eqn{d'}: its means \eqn{\mu_A} and \eqn{\mu_I}, standard deviations
+#' \eqn{\sigma_A} and \eqn{\sigma_I} and correlation \eqn{\rho}. The latent
 #' regression parameterization gives the intercept \eqn{\beta_0} instead of
 #' \eqn{\mu_I}, which then follows as
-#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}, as in
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}, as in
 #' `hsdt(parameterization = "regression")`. Both describe the same
 #' distribution, and the printed population reports the tested quantities of
-#' either: the difference \eqn{\mu_I - \mu_D} (H1), the correlation (H2) and
+#' either: the difference \eqn{\mu_I - \mu_A} (H1), the correlation (H2) and
 #' the intercept and slope of the latent regression (H3).
 #'
 #' The parameterization decides what stays fixed when a value changes, in a
 #' scenario or in [update()]. Under the correlation parameterization a new
 #' correlation keeps both means and moves the intercept (unless
-#' \eqn{\mu_D = 0}); under the latent regression it keeps the intercept and
-#' moves the indirect mean, and with it the difference.
+#' \eqn{\mu_A = 0}); under the latent regression it keeps the intercept and
+#' moves the influence mean, and with it the difference.
 #'
 #' # Criteria
 #'
@@ -74,7 +74,8 @@
 #' arguments with several values give one scenario for each combination. A
 #' value shared by both tasks keeps them equal in every scenario:
 #' `sd_dprime = c(0.2, 0.3)` gives two scenarios, while
-#' `sd_dprime = list(direct = c(0.2, 0.3), indirect = c(0.2, 0.3))` gives four.
+#' `sd_dprime = list(awareness = c(0.2, 0.3), influence = c(0.2, 0.3))` gives
+#' four.
 #'
 #' # Values from a fitted model
 #'
@@ -82,29 +83,29 @@
 #' standard deviations and correlations, and the arguments set in the call
 #' replace them, so `usdt_population(from = m, cor_dprime = 0.3)` keeps every
 #' estimate of `m` except the correlation. Setting `intercept` switches to the
-#' latent regression parameterization and drops the estimated indirect mean. A
+#' latent regression parameterization and drops the estimated influence mean. A
 #' criterion fixed at zero by the median split is zero with no variation.
 #'
 #' @return An object of class `usdt_population`: a data frame with one row per
-#'   scenario and the columns `scenario`, `mu_D`, `mu_I`, `sigma_D`,
+#'   scenario and the columns `scenario`, `mu_A`, `mu_I`, `sigma_A`,
 #'   `sigma_I`, `rho`, the tested quantities `diff`, `intercept` and `slope`,
-#'   and `criterion_D`, `criterion_I`, `sd_criterion_D`, `sd_criterion_I`,
-#'   `cor_criterion`, `sd_signal_D` and `sd_signal_I`. Its `parameterization`
+#'   and `criterion_A`, `criterion_I`, `sd_criterion_A`, `sd_criterion_I`,
+#'   `cor_criterion`, `sd_signal_A` and `sd_signal_I`. Its `parameterization`
 #'   attribute is `"correlation"` or `"regression"`.
 #'
 #' @seealso [usdt_priors()], [hsdt()]
 #'
 #' @examples
 #' # The correlation parameterization: means, SDs and correlation of d'
-#' pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-#'                        sd_dprime = c(direct = 0.35, indirect = 0.30),
+#' pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+#'                        sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                        cor_dprime = 0.3)
 #' pop
 #'
 #' # The latent regression parameterization: the intercept replaces the
-#' # indirect mean
+#' # influence mean
 #' usdt_population(dprime = 0.15, intercept = 0.25,
-#'                 sd_dprime = c(direct = 0.35, indirect = 0.30),
+#'                 sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                 cor_dprime = 0.3)
 #'
 #' # Three scenarios for the correlation
@@ -112,15 +113,16 @@
 #'
 #' # The estimates of a pilot study, with a weaker correlation
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #' usdt_population(from = hsdt(d), cor_dprime = 0.3)
 #'
@@ -140,7 +142,7 @@ usdt_population <- function(dprime        = NULL,
   if (is.null(from)) {
     values <- list(criterion = criterion, sd_criterion = sd_criterion,
                    cor_criterion = cor_criterion, sd_signal = sd_signal)
-    labels <- c(direct = "Direct", indirect = "Indirect")
+    labels <- c(awareness = "Awareness", influence = "Influence")
   } else {
     values <- .population_from_fit(from)
     labels <- from$data$meta$labels
@@ -159,9 +161,9 @@ usdt_population <- function(dprime        = NULL,
   }
   for (a in set) values[a] <- list(get(a))
 
-  # A fitted indirect mean gives way to an intercept set in the call.
+  # A fitted influence mean gives way to an intercept set in the call.
   if (!is.null(from) && !is.null(values$intercept) && !"dprime" %in% set) {
-    values$dprime <- .direct_value(values$dprime)
+    values$dprime <- .awareness_value(values$dprime)
   }
   .population_build(values, labels)
 }
@@ -186,17 +188,17 @@ print.usdt_population <- function(x, ...) {
     if (length(unique(v)) > 1L) "varies" else number(v[1L])
   }
   rows <- list(
-    c("mean d'", cell("mu_D"), if (regression) paste0(cell("mu_I"), "*") else
+    c("mean d'", cell("mu_A"), if (regression) paste0(cell("mu_I"), "*") else
       cell("mu_I")),
-    c("sd(d')", cell("sigma_D"), cell("sigma_I")),
+    c("sd(d')", cell("sigma_A"), cell("sigma_I")),
     c("cor(d')", cell("rho"), ""),
     if (regression) c("intercept", cell("intercept"), ""),
-    c("mean c", cell("criterion_D"), cell("criterion_I")),
-    c("sd(c)", cell("sd_criterion_D"), cell("sd_criterion_I")),
+    c("mean c", cell("criterion_A"), cell("criterion_I")),
+    c("sd(c)", cell("sd_criterion_A"), cell("sd_criterion_I")),
     if (any(x$cor_criterion != 0)) c("cor(c)", cell("cor_criterion"), ""),
-    if (any(c(x$sd_signal_D, x$sd_signal_I) != 1))
-      c("sd(signal)", cell("sd_signal_D"), cell("sd_signal_I")))
-  rows <- rbind(c("Parameter", labels[["direct"]], labels[["indirect"]]),
+    if (any(c(x$sd_signal_A, x$sd_signal_I) != 1))
+      c("sd(signal)", cell("sd_signal_A"), cell("sd_signal_I")))
+  rows <- rbind(c("Parameter", labels[["awareness"]], labels[["influence"]]),
                 do.call(rbind, rows))
 
   # formatC() pads by characters, so labels such as the delta stay aligned.
@@ -210,7 +212,7 @@ print.usdt_population <- function(x, ...) {
   delta <- paste0(chars$delta, "d'")
   if (n == 1L) {
     tested <- list(c("", "Tested quantity", "Value"),
-                   c("H1", paste0(delta, " (indirect - direct)"),
+                   c("H1", paste0(delta, " (influence - awareness)"),
                      number(x$diff)),
                    c("H2", "correlation", number(x$rho)),
                    c("H3", "intercept", number(x$intercept)),
@@ -226,8 +228,8 @@ print.usdt_population <- function(x, ...) {
 
   cat("\n")
   if (regression) {
-    cat("  * The indirect mean follows from the intercept:",
-        "mu_I = b0 + rho (sd_I / sd_D) mu_D.\n")
+    cat("  * The influence mean follows from the intercept:",
+        "mu_I = b0 + rho (sd_I / sd_A) mu_A.\n")
   }
   cat("  A task split at the median has its criterion fixed at 0.\n")
   invisible(x)
@@ -258,12 +260,12 @@ update.usdt_population <- function(object, ...) {
     new <- changes[[a]]
     task_names <- names(new)
     if (a %in% .population_task_args && length(task_names) == 1L &&
-        task_names %in% c("direct", "indirect") &&
+        task_names %in% c("awareness", "influence") &&
         !(a == "dprime" && !is.null(values$intercept))) {
       old <- values[[a]]
       if (!is.list(old)) {
-        old <- if (is.null(names(old))) list(direct = old, indirect = old) else
-          as.list(old)
+        old <- if (is.null(names(old)))
+          list(awareness = old, influence = old) else as.list(old)
       }
       old[[task_names]] <- new[[task_names]]
       values[[a]] <- old
@@ -272,10 +274,10 @@ update.usdt_population <- function(object, ...) {
     }
   }
 
-  # An intercept added to a correlation population replaces the indirect mean.
+  # An intercept added to a correlation population replaces the influence mean.
   if (!is.null(values$intercept) && is.null(attr(object, "values")$intercept) &&
       !"dprime" %in% names(changes)) {
-    values$dprime <- .direct_value(values$dprime)
+    values$dprime <- .awareness_value(values$dprime)
   }
   .population_build(values, attr(object, "labels"))
 }
@@ -299,11 +301,11 @@ update.usdt_population <- function(object, ...) {
 .population_task_args <- c("dprime", "sd_dprime", "criterion", "sd_criterion",
                            "sd_signal")
 
-# This function keeps the direct value of a task argument: the `direct`
+# This function keeps the awareness value of a task argument: the `awareness`
 # element when the tasks are named, and the shared value otherwise.
-.direct_value <- function(x) {
+.awareness_value <- function(x) {
   if (is.null(names(x))) return(x)
-  x[["direct"]]
+  x[["awareness"]]
 }
 
 # This function reads the values of a population from a frequentist hsdt()
@@ -320,15 +322,15 @@ update.usdt_population <- function(object, ...) {
     .usdt_stop("`from` takes a frequentist hsdt() fit.")
   }
   e <- fit$pars$est
-  sd_d <- sqrt(c(direct = e[["s2_D"]], indirect = e[["s2_I"]]))
-  mu_d <- c(direct = e[["gamma_D"]], indirect = e[["gamma_I"]])
+  sd_d <- sqrt(c(awareness = e[["s2_A"]], influence = e[["s2_I"]]))
+  mu_d <- c(awareness = e[["gamma_A"]], influence = e[["gamma_I"]])
   beta <- lme4::fixef(fit$fit)
   re <- fit$pars$re
   treatment <- identical(fit$data$meta$coding, "treatment")
 
-  criterion <- sd_criterion <- c(direct = 0, indirect = 0)
-  for (k in c("direct", "indirect")) {
-    term <- if (k == "direct") "c_D" else "c_I"
+  criterion <- sd_criterion <- c(awareness = 0, influence = 0)
+  for (k in c("awareness", "influence")) {
+    term <- if (k == "awareness") "c_A" else "c_I"
     if (!term %in% fit$design$criteria) next
     sd_c <- re$sd[re$term == term]
     criterion[[k]] <- -beta[[term]] - if (treatment) mu_d[[k]] / 2 else 0
@@ -363,21 +365,21 @@ update.usdt_population <- function(object, ...) {
   }
   regression <- !is.null(values$intercept)
 
-  # The direct mean stands alone under the latent regression.
+  # The awareness mean stands alone under the latent regression.
   if (regression) {
     d <- values$dprime
     task_names <- names(d)
-    if ("indirect" %in% task_names) {
-      .usdt_stop("`intercept` replaces the indirect mean d', so `dprime` ",
-                 "takes the direct mean only.")
+    if ("influence" %in% task_names) {
+      .usdt_stop("`intercept` replaces the influence mean d', so `dprime` ",
+                 "takes the awareness mean only.")
     }
-    if (!is.null(task_names) && !identical(task_names, "direct")) {
+    if (!is.null(task_names) && !identical(task_names, "awareness")) {
       .usdt_stop("`dprime` names `", task_names[1L], "`; under the latent ",
-                 "regression it takes the direct mean only.")
+                 "regression it takes the awareness mean only.")
     }
     values$dprime <- unname(if (is.list(d)) d[[1L]] else d)
-  } else if (identical(names(values$dprime), "direct")) {
-    .usdt_stop("`dprime` needs the indirect mean too, unless `intercept` ",
+  } else if (identical(names(values$dprime), "awareness")) {
+    .usdt_stop("`dprime` needs the influence mean too, unless `intercept` ",
                "gives the latent regression.")
   }
 
@@ -405,16 +407,16 @@ update.usdt_population <- function(object, ...) {
                       KEEP.OUT.ATTRS = FALSE)
   pick <- function(arg, column) frames[[arg]][[column]][grid[[arg]]]
 
-  mu_D <- if (regression) pick("dprime", "value") else pick("dprime", "direct")
-  sigma_D <- pick("sd_dprime", "direct")
-  sigma_I <- pick("sd_dprime", "indirect")
+  mu_A <- pick("dprime", if (regression) "value" else "awareness")
+  sigma_A <- pick("sd_dprime", "awareness")
+  sigma_I <- pick("sd_dprime", "influence")
   rho <- pick("cor_dprime", "value")
   mu_I <- if (regression) {
-    pick("intercept", "value") + rho * sigma_I / sigma_D * mu_D
+    pick("intercept", "value") + rho * sigma_I / sigma_A * mu_A
   } else {
-    pick("dprime", "indirect")
+    pick("dprime", "influence")
   }
-  B <- cbind(mu_D = mu_D, mu_I = mu_I, sigma_D = sigma_D, sigma_I = sigma_I,
+  B <- cbind(mu_A = mu_A, mu_I = mu_I, sigma_A = sigma_A, sigma_I = sigma_I,
              rho = rho)
   q <- .usdt_quantities(.bivariate_primitives(B))
 
@@ -424,17 +426,17 @@ update.usdt_population <- function(object, ...) {
     intercept = if (regression) pick("intercept", "value") else
       unname(q[, "intercept"]),
     slope = unname(q[, "slope"]),
-    criterion_D = pick("criterion", "direct"),
-    criterion_I = pick("criterion", "indirect"),
-    sd_criterion_D = pick("sd_criterion", "direct"),
-    sd_criterion_I = pick("sd_criterion", "indirect"),
+    criterion_A = pick("criterion", "awareness"),
+    criterion_I = pick("criterion", "influence"),
+    sd_criterion_A = pick("sd_criterion", "awareness"),
+    sd_criterion_I = pick("sd_criterion", "influence"),
     cor_criterion = pick("cor_criterion", "value"),
-    sd_signal_D = pick("sd_signal", "direct"),
-    sd_signal_I = pick("sd_signal", "indirect"),
+    sd_signal_A = pick("sd_signal", "awareness"),
+    sd_signal_I = pick("sd_signal", "influence"),
     row.names = NULL)
 
   if (!regression) values$intercept <- NULL
-  if (regression) values$dprime <- list(direct = values$dprime)
+  if (regression) values$dprime <- list(awareness = values$dprime)
   structure(out, class = c("usdt_population", "data.frame"),
             parameterization = if (regression) "regression" else "correlation",
             labels = labels, values = values)
@@ -442,7 +444,7 @@ update.usdt_population <- function(object, ...) {
 
 # This function checks one argument of usdt_population() and returns its
 # scenarios, one row each: a `value` column for an argument without tasks,
-# and `direct` and `indirect` columns for one with tasks. A value shared by
+# and `awareness` and `influence` columns for one with tasks. A value shared by
 # both tasks keeps them equal; values given for each task are crossed. `kind`
 # is the range of the argument: any real value (`mean`), positive (`sd`),
 # non-negative (`sd0`) or a correlation (`cor`).
@@ -472,24 +474,24 @@ update.usdt_population <- function(object, ...) {
   task_names <- names(x)
   if (is.null(task_names)) {
     v <- unique(check(x))
-    return(data.frame(direct = v, indirect = v))
+    return(data.frame(awareness = v, influence = v))
   }
   per_task <- .per_task(x, arg)
-  expand.grid(direct = unique(check(per_task$direct,
-                                    paste0(arg, "$direct"))),
-              indirect = unique(check(per_task$indirect,
-                                      paste0(arg, "$indirect"))),
+  expand.grid(awareness = unique(check(per_task$awareness,
+                                       paste0(arg, "$awareness"))),
+              influence = unique(check(per_task$influence,
+                                       paste0(arg, "$influence"))),
               KEEP.OUT.ATTRS = FALSE)
 }
 
 # This function prints one row per scenario with the parameters that vary and
 # the tested quantities.
 .print_population_scenarios <- function(x, regression, delta, number) {
-  inputs <- c(mu_D = "mean d' D", mu_I = "mean d' I", sigma_D = "sd(d') D",
+  inputs <- c(mu_A = "mean d' A", mu_I = "mean d' I", sigma_A = "sd(d') A",
               sigma_I = "sd(d') I", rho = "cor(d')", intercept = "intercept",
-              criterion_D = "mean c D", criterion_I = "mean c I",
-              sd_criterion_D = "sd(c) D", sd_criterion_I = "sd(c) I",
-              cor_criterion = "cor(c)", sd_signal_D = "sd(sig) D",
+              criterion_A = "mean c A", criterion_I = "mean c I",
+              sd_criterion_A = "sd(c) A", sd_criterion_I = "sd(c) I",
+              cor_criterion = "cor(c)", sd_signal_A = "sd(sig) A",
               sd_signal_I = "sd(sig) I")
   if (!regression) inputs <- inputs[names(inputs) != "intercept"]
   varies <- names(inputs)[vapply(names(inputs), function(column) {

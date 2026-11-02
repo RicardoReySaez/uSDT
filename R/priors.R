@@ -31,7 +31,7 @@
 #' @param dprime Prior of the mean \eqn{d'} of each task.
 #' @param sd_dprime Prior of the between-subject standard deviation of
 #'   \eqn{d'} in each task.
-#' @param cor_dprime Prior of the correlation between direct and indirect
+#' @param cor_dprime Prior of the correlation between awareness and influence
 #'   \eqn{d'} across subjects.
 #' @param criterion Prior of the mean criterion \eqn{c} of each task, on the
 #'   classical scale where positive values are conservative.
@@ -43,14 +43,15 @@
 #'   relative to the noise distribution. It is used only under unequal
 #'   variances.
 #' @param intercept Prior of the intercept of the latent regression of
-#'   indirect on direct \eqn{d'}. It is used only by the latent regression
-#'   parameterization, where it replaces the prior of the indirect mean
+#'   influence on awareness \eqn{d'}. It is used only by the latent regression
+#'   parameterization, where it replaces the prior of the influence mean
 #'   \eqn{d'}.
 #'
 #' @details
 #' `dprime`, `sd_dprime`, `criterion`, `sd_criterion` and `sd_signal` take one
-#' prior for both tasks or one per task as `list(direct = ..., indirect = ...)`.
-#' The correlations take a single prior.
+#' prior for both tasks or one per task as
+#' `list(awareness = ..., influence = ...)`. The correlations take a single
+#' prior.
 #'
 #' The defaults are centred at zero and weakly informative on the probit
 #' scale: `normal(0, 1)` for the mean \eqn{d'}, `normal(0, 0.5)` for the mean
@@ -69,22 +70,22 @@
 #' not change when both standard deviation priors are rescaled by the same
 #' factor, because the slope depends on their ratio.
 #'
-#' The latent regression parameterization moves the prior of the indirect mean
+#' The latent regression parameterization moves the prior of the influence mean
 #' to the intercept \eqn{\beta_0} of the latent regression, so that both the
 #' intercept (H3) and the correlation (H2) have the priors you give them. It
-#' keeps the priors of the direct mean, of both standard deviations and of the
-#' correlation, and the indirect mean follows from them as
-#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}; `dprime`
-#' then applies to the direct task only. The intercept takes `normal(0, 1)` by
-#' default, a weakly informative prior that leaves the estimate to the data.
+#' keeps the priors of the awareness mean, of both standard deviations and of
+#' the correlation, and the influence mean follows from them as
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}; `dprime`
+#' then applies to the awareness task only. The intercept takes `normal(0, 1)`
+#' by default, a weakly informative prior that leaves the estimate to the data.
 #' Two things follow:
 #' * the difference between the means (H1) has an induced prior,
-#'   \eqn{\beta_0 + (\rho \sigma_I / \sigma_D - 1) \mu_D}, with the heavy tails
+#'   \eqn{\beta_0 + (\rho \sigma_I / \sigma_A - 1) \mu_A}, with the heavy tails
 #'   the intercept has under the correlation parameterization;
 #' * the intercept and the correlation are independent a priori but not a
-#'   posteriori. The data fix the indirect mean, the sum of \eqn{\beta_0} and
-#'   \eqn{\rho (\sigma_I / \sigma_D) \mu_D}, so a narrow intercept prior also
-#'   narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_D} is small.
+#'   posteriori. The data fix the influence mean, the sum of \eqn{\beta_0} and
+#'   \eqn{\rho (\sigma_I / \sigma_A) \mu_A}, so a narrow intercept prior also
+#'   narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_A} is small.
 #'   The Bayes factor of a correlation hypothesis then depends on the
 #'   intercept prior too.
 #'
@@ -96,9 +97,9 @@
 #' # Default priors
 #' usdt_priors()
 #'
-#' # A narrower prior for the mean indirect sensitivity
-#' usdt_priors(dprime = list(direct = "normal(0, 1)",
-#'                           indirect = "normal(0, 0.5)"))
+#' # A narrower prior for the mean influence sensitivity
+#' usdt_priors(dprime = list(awareness = "normal(0, 1)",
+#'                           influence = "normal(0, 0.5)"))
 #'
 #' # A correlation prior that concentrates near zero
 #' usdt_priors(cor_dprime = "lkj(2)")
@@ -145,7 +146,8 @@ print.usdt_priors <- function(x, ...) {
   .print_prior_rows(x)
   cat("\n  Standard deviation priors are truncated at zero. cor(c) applies when\n",
       "  both criteria are estimated, and sd(signal) under unequal variances.\n",
-      "  Under the latent regression, intercept replaces the indirect mean d'.\n",
+      "  Under the latent regression, intercept replaces the influence mean ",
+      "d'.\n",
       sep = "")
   invisible(x)
 }
@@ -183,10 +185,11 @@ print.usdt_priors <- function(x, ...) {
 # the criterion correlation when both are estimated, and of the signal SDs
 # under unequal variances.
 .used_priors <- function(priors, design) {
-  free <- c("direct", "indirect")[design$free_c == 1L]
+  free <- c("awareness", "influence")[design$free_c == 1L]
   regression <- design$parameterization == "regression"
   sensitivities <- priors$parameter %in% c("sd_dprime", "cor_dprime") |
-    (priors$parameter == "dprime" & (!regression | priors$task == "direct")) |
+    (priors$parameter == "dprime" &
+       (!regression | priors$task == "awareness")) |
     (priors$parameter == "intercept" & regression)
   keep <- sensitivities |
     (priors$parameter %in% c("criterion", "sd_criterion") &
@@ -271,7 +274,8 @@ print.usdt_priors <- function(x, ...) {
 }
 
 # This function returns the rows of one prior parameter in the given task order.
-.prior_rows <- function(priors, parameter, tasks = c("direct", "indirect")) {
+.prior_rows <- function(priors, parameter,
+                        tasks = c("awareness", "influence")) {
   rows <- priors[priors$parameter == parameter, , drop = FALSE]
   rows[match(tasks, rows$task), , drop = FALSE]
 }
@@ -343,22 +347,23 @@ print.usdt_priors <- function(x, ...) {
 
 # This function simulates the population distribution of the two sensitivities
 # from its priors, one draw per row: their means, SDs and correlation. Under
-# the latent regression the indirect mean follows from the intercept as
-# mu_I = b0 + rho * sigma_I / sigma_D * mu_D.
+# the latent regression the influence mean follows from the intercept as
+# mu_I = b0 + rho * sigma_I / sigma_A * mu_A.
 .prior_draws <- function(priors, n, parameterization) {
   draw <- function(parameter, task) .prior_sample(priors, parameter, task, n)
   if (parameterization == "regression") {
-    mu_D <- draw("dprime", "direct")
-    sigma_D <- draw("sd_dprime", "direct")
-    sigma_I <- draw("sd_dprime", "indirect")
+    mu_A <- draw("dprime", "awareness")
+    sigma_A <- draw("sd_dprime", "awareness")
+    sigma_I <- draw("sd_dprime", "influence")
     rho <- draw("cor_dprime", "both")
-    return(cbind(mu_D = mu_D,
-                 mu_I = draw("intercept", "both") + rho * sigma_I / sigma_D * mu_D,
-                 sigma_D = sigma_D, sigma_I = sigma_I, rho = rho))
+    return(cbind(mu_A = mu_A,
+                 mu_I = draw("intercept", "both") +
+                   rho * sigma_I / sigma_A * mu_A,
+                 sigma_A = sigma_A, sigma_I = sigma_I, rho = rho))
   }
-  cbind(mu_D = draw("dprime", "direct"), mu_I = draw("dprime", "indirect"),
-        sigma_D = draw("sd_dprime", "direct"),
-        sigma_I = draw("sd_dprime", "indirect"),
+  cbind(mu_A = draw("dprime", "awareness"), mu_I = draw("dprime", "influence"),
+        sigma_A = draw("sd_dprime", "awareness"),
+        sigma_I = draw("sd_dprime", "influence"),
         rho = draw("cor_dprime", "both"))
 }
 
@@ -370,7 +375,7 @@ print.usdt_priors <- function(x, ...) {
   draw <- function(row) .prior_fun(row)$r(n)
   B <- .prior_draws(priors, n, design$parameterization)
   z <- matrix(stats::rnorm(2L * n), n)
-  d <- cbind(B[, "mu_D"] + B[, "sigma_D"] * z[, 1L],
+  d <- cbind(B[, "mu_A"] + B[, "sigma_A"] * z[, 1L],
              B[, "mu_I"] + B[, "sigma_I"] *
                (B[, "rho"] * z[, 1L] + sqrt(1 - B[, "rho"]^2) * z[, 2L]))
   signal <- .prior_rows(priors, "sd_signal")
@@ -422,17 +427,17 @@ print.usdt_priors <- function(x, ...) {
   }
   regression <- parameterization == "regression"
 
-  # slope = rho r with r = sigma_I / sigma_D. The difference and the intercept
-  # shift the indirect mean or, under the latent regression, the intercept:
-  # diff = mu_I - mu_D = b0 + (slope - 1) mu_D and b0 = mu_I - slope mu_D.
+  # slope = rho r with r = sigma_I / sigma_A. The difference and the intercept
+  # shift the influence mean or, under the latent regression, the intercept:
+  # diff = mu_I - mu_A = b0 + (slope - 1) mu_A and b0 = mu_I - slope mu_A.
   rho <- prior("cor_dprime")
   out <- list(rho = exact(rho, bounds = c(-1, 1)))
   shifted <- if (regression) "diff" else "intercept"
   if (any(c("diff", "intercept") %in% quantities)) {
-    mu_D <- draw("dprime", "direct")
+    mu_A <- draw("dprime", "awareness")
   }
   if (any(c(shifted, "slope") %in% quantities)) {
-    r <- draw("sd_dprime", "indirect") / draw("sd_dprime", "direct")
+    r <- draw("sd_dprime", "influence") / draw("sd_dprime", "awareness")
     slope <- rho$r(n) * r
     out$slope <- .transformed_prior(rho, function(x) x / r,
                                     function(x) -log(r))
@@ -441,17 +446,17 @@ print.usdt_priors <- function(x, ...) {
     b0 <- prior("intercept")
     out$intercept <- exact(b0)
     if ("diff" %in% quantities) {
-      out$diff <- .transformed_prior(b0, function(x) x - (slope - 1) * mu_D,
+      out$diff <- .transformed_prior(b0, function(x) x - (slope - 1) * mu_A,
                                      function(x) 0)
     }
     return(out)
   }
-  mu_I <- prior("dprime", "indirect")
+  mu_I <- prior("dprime", "influence")
   if ("diff" %in% quantities) {
-    out$diff <- .transformed_prior(mu_I, function(x) x + mu_D, function(x) 0)
+    out$diff <- .transformed_prior(mu_I, function(x) x + mu_A, function(x) 0)
   }
   if ("intercept" %in% quantities) {
-    out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_D,
+    out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_A,
                                         function(x) 0)
   }
   out
@@ -499,7 +504,7 @@ print.usdt_priors <- function(x, ...) {
 #' @param parameterization How the model describes the two sensitivities, as
 #'   in [hsdt()]: by their means, standard deviations and correlation
 #'   (`"correlation"`, the default) or by the latent regression of the
-#'   indirect on the direct one (`"regression"`).
+#'   influence on the awareness one (`"regression"`).
 #' @param ... Ignored.
 #'
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
@@ -530,9 +535,9 @@ print.usdt_priors <- function(x, ...) {
 #' @examples
 #' plot(usdt_priors())
 #'
-#' # A narrower prior for the mean indirect sensitivity
-#' plot(usdt_priors(dprime = list(direct = "normal(0, 1)",
-#'                                indirect = "normal(0, 0.5)")))
+#' # A narrower prior for the mean influence sensitivity
+#' plot(usdt_priors(dprime = list(awareness = "normal(0, 1)",
+#'                                influence = "normal(0, 0.5)")))
 #'
 #' # The latent regression, with a prior on its intercept
 #' plot(usdt_priors(intercept = "normal(0, 0.3)"),
@@ -569,8 +574,8 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
 # data, the criteria fixed by the median split are those hsdt() fixes.
 .prior_check_data <- function(priors, data, unequal_variances,
                               parameterization) {
-  labels <- if (is.null(data)) c(direct = "Direct", indirect = "Indirect") else
-    data$meta$labels
+  labels <- if (is.null(data))
+    c(awareness = "Awareness", influence = "Influence") else data$meta$labels
   design <- if (is.null(data)) {
     list(free_c = c(1L, 1L), unequal_variances = unequal_variances,
          parameterization = parameterization)
@@ -624,7 +629,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
   curves$rate <- factor(curves$rate,
                         levels = c("Hit rate", "False-alarm rate"))
   list(curves = curves, labels = labels,
-       fixed = unname(labels[c("direct", "indirect")][design$free_c == 0L]),
+       fixed = unname(labels[c("awareness", "influence")][design$free_c == 0L]),
        unequal_variances = unequal_variances,
        parameterization = parameterization,
        nulls = data.frame(panel = factor(panels[-1L], levels = panels), x = 0))
@@ -649,8 +654,9 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
 
   # The tasks keep the colours of the ROC plot, and the hypotheses those of the
   # model estimates in the shrinkage plot.
-  task_colours <- stats::setNames(c("#176B60", "#B6543A"),
-                                  unname(values$labels[c("direct", "indirect")]))
+  task_colours <- stats::setNames(
+    c("#176B60", "#B6543A"),
+    unname(values$labels[c("awareness", "influence")]))
   model_colour <- "#116B60"
   model_fill <- "#3FA88E"
 

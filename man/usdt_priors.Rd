@@ -24,7 +24,7 @@ usdt_priors(
 \item{sd_dprime}{Prior of the between-subject standard deviation of
 \eqn{d'} in each task.}
 
-\item{cor_dprime}{Prior of the correlation between direct and indirect
+\item{cor_dprime}{Prior of the correlation between awareness and influence
 \eqn{d'} across subjects.}
 
 \item{criterion}{Prior of the mean criterion \eqn{c} of each task, on the
@@ -41,8 +41,8 @@ relative to the noise distribution. It is used only under unequal
 variances.}
 
 \item{intercept}{Prior of the intercept of the latent regression of
-indirect on direct \eqn{d'}. It is used only by the latent regression
-parameterization, where it replaces the prior of the indirect mean
+influence on awareness \eqn{d'}. It is used only by the latent regression
+parameterization, where it replaces the prior of the influence mean
 \eqn{d'}.}
 
 \item{x}{A \code{usdt_priors} object.}
@@ -80,8 +80,9 @@ eta concentrate it around zero.
 }
 \details{
 \code{dprime}, \code{sd_dprime}, \code{criterion}, \code{sd_criterion} and \code{sd_signal} take one
-prior for both tasks or one per task as \code{list(direct = ..., indirect = ...)}.
-The correlations take a single prior.
+prior for both tasks or one per task as
+\code{list(awareness = ..., influence = ...)}. The correlations take a single
+prior.
 
 The defaults are centred at zero and weakly informative on the probit
 scale: \code{normal(0, 1)} for the mean \eqn{d'}, \code{normal(0, 0.5)} for the mean
@@ -100,23 +101,23 @@ the intercept prior is symmetric around zero but has heavy tails. It does
 not change when both standard deviation priors are rescaled by the same
 factor, because the slope depends on their ratio.
 
-The latent regression parameterization moves the prior of the indirect mean
+The latent regression parameterization moves the prior of the influence mean
 to the intercept \eqn{\beta_0} of the latent regression, so that both the
 intercept (H3) and the correlation (H2) have the priors you give them. It
-keeps the priors of the direct mean, of both standard deviations and of the
-correlation, and the indirect mean follows from them as
-\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}; \code{dprime}
-then applies to the direct task only. The intercept takes \code{normal(0, 1)} by
-default, a weakly informative prior that leaves the estimate to the data.
+keeps the priors of the awareness mean, of both standard deviations and of
+the correlation, and the influence mean follows from them as
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}; \code{dprime}
+then applies to the awareness task only. The intercept takes \code{normal(0, 1)}
+by default, a weakly informative prior that leaves the estimate to the data.
 Two things follow:
 \itemize{
 \item the difference between the means (H1) has an induced prior,
-\eqn{\beta_0 + (\rho \sigma_I / \sigma_D - 1) \mu_D}, with the heavy tails
+\eqn{\beta_0 + (\rho \sigma_I / \sigma_A - 1) \mu_A}, with the heavy tails
 the intercept has under the correlation parameterization;
 \item the intercept and the correlation are independent a priori but not a
-posteriori. The data fix the indirect mean, the sum of \eqn{\beta_0} and
-\eqn{\rho (\sigma_I / \sigma_D) \mu_D}, so a narrow intercept prior also
-narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_D} is small.
+posteriori. The data fix the influence mean, the sum of \eqn{\beta_0} and
+\eqn{\rho (\sigma_I / \sigma_A) \mu_A}, so a narrow intercept prior also
+narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_A} is small.
 The Bayes factor of a correlation hypothesis then depends on the
 intercept prior too.
 }
@@ -125,9 +126,9 @@ intercept prior too.
 # Default priors
 usdt_priors()
 
-# A narrower prior for the mean indirect sensitivity
-usdt_priors(dprime = list(direct = "normal(0, 1)",
-                          indirect = "normal(0, 0.5)"))
+# A narrower prior for the mean influence sensitivity
+usdt_priors(dprime = list(awareness = "normal(0, 1)",
+                          influence = "normal(0, 0.5)"))
 
 # A correlation prior that concentrates near zero
 usdt_priors(cor_dprime = "lkj(2)")

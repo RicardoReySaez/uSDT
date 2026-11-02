@@ -4,7 +4,7 @@
 \alias{usdt_reliability}
 \alias{summary.usdt_reliability}
 \alias{print.usdt_reliability}
-\title{Reliability of direct and indirect task measures}
+\title{Reliability of awareness and influence task measures}
 \usage{
 usdt_reliability(object)
 
@@ -75,15 +75,16 @@ Gourevitch and Galanter formula when \eqn{\sigma_s = 1}.
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 r <- usdt_reliability(hsdt(d))

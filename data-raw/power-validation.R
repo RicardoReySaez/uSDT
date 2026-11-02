@@ -14,23 +14,23 @@ nsim <- 1000L
 hypotheses <- c("diff = 0", "rho = 0", "intercept = 0")
 
 # A plausible unconscious-processing population, and the estimates of
-# hsdt() on the data of Vadillo et al. (2025), whose direct task is
+# hsdt() on the data of Vadillo et al. (2025), whose awareness task is
 # unreliable.
 populations <- list(
-  A = usdt_population(dprime = c(direct = 0.15, indirect = 0.30),
-                      sd_dprime = c(direct = 0.35, indirect = 0.30),
+  A = usdt_population(dprime = c(awareness = 0.15, influence = 0.30),
+                      sd_dprime = c(awareness = 0.35, influence = 0.30),
                       cor_dprime = 0.3, criterion = 0.1, sd_criterion = 0.3),
-  Vadillo = usdt_population(dprime = c(direct = 0.235, indirect = 0.128),
-                            sd_dprime = c(direct = 0.122, indirect = 0.088),
+  Vadillo = usdt_population(dprime = c(awareness = 0.235, influence = 0.128),
+                            sd_dprime = c(awareness = 0.122, influence = 0.088),
                             cor_dprime = 0.49, criterion = 0.036,
                             sd_criterion = 0.25))
 designs <- data.frame(
   population = c(rep("A", 5L), rep("Vadillo", 3L)),
   subjects = c(40, 80, 160, 80, 80, 104, 300, 104),
-  trials_direct = c(64, 64, 64, 32, 128, 64, 64, 256),
-  trials_indirect = c(200, 200, 200, 100, 400, 384, 384, 384))
+  trials_awareness = c(64, 64, 64, 32, 128, 64, 64, 256),
+  trials_influence = c(200, 200, 200, 100, 400, 384, 384, 384))
 
-split <- c(direct = FALSE, indirect = TRUE)
+split <- c(awareness = FALSE, influence = TRUE)
 tests <- lapply(hypotheses, .parse_hypothesis)
 base <- .moment_base()
 
@@ -38,17 +38,17 @@ rows <- lapply(seq_len(nrow(designs)), function(i) {
   d <- designs[i, ]
   pop <- populations[[d$population]]
   scenario <- as.list(as.data.frame(pop)[1L, ])
-  cells <- list(signal = c(direct = d$trials_direct / 2,
-                           indirect = d$trials_indirect / 2),
-                noise = c(direct = d$trials_direct / 2,
-                          indirect = d$trials_indirect / 2))
+  cells <- list(signal = c(awareness = d$trials_awareness / 2,
+                           influence = d$trials_influence / 2),
+                noise = c(awareness = d$trials_awareness / 2,
+                          influence = d$trials_influence / 2))
   v <- .error_variance(scenario, cells, split)
   approximate <- .power_approximate(scenario, d$subjects, v, tests, 0.05,
                                     base)$rows
   simulated <- usdt_power(pop, subjects = d$subjects,
-                          trials = c(direct = d$trials_direct,
-                                     indirect = d$trials_indirect),
-                          hypothesis = hypotheses, dichotomize = "indirect",
+                          trials = c(awareness = d$trials_awareness,
+                                     influence = d$trials_influence),
+                          hypothesis = hypotheses, dichotomize = "influence",
                           method = "simulation", nsim = nsim, seed = 2026L + i,
                           ncores = ncores, progress = FALSE)
   message(d$population, " ", d$subjects, " subjects: done")

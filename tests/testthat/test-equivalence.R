@@ -10,7 +10,7 @@ equivalence_model <- function() {
   set.seed(21)
   trials <- make_trials(n_subj = 30L, n_trials = 80L)
   d <- usdt_data_long(trials, task_col = "task",
-                      task_levels      = c(direct = "D", indirect = "I"),
+                      task_levels      = c(awareness = "A", influence = "I"),
                       subject_col      = "subj",
                       condition_col    = "cond",
                       condition_levels = c(signal = 1, noise = 0),
@@ -94,8 +94,8 @@ test_that("each test agrees with the interval it reports", {
   expect_equal(e$p.value[5L], .wald(est, se, null = -0.6)$p.value)
 
   # The same model fitted directly with glmer gives the same tests.
-  direct <- usdt_equivalence(m$fit, hypotheses[1:3])
-  expect_equal(direct$p.value, e$p.value[1:3])
+  awareness <- usdt_equivalence(m$fit, hypotheses[1:3])
+  expect_equal(awareness$p.value, e$p.value[1:3])
 })
 
 test_that("the correlation is bounded on its scale and tested on Fisher-z", {
@@ -118,7 +118,7 @@ test_that("the correlation is bounded on its scale and tested on Fisher-z", {
 
 test_that("a boundary fit keeps the difference and points to the bootstrap", {
   m <- equivalence_model()
-  p <- .pars_of(m, "d_D", "d_I")
+  p <- .pars_of(m, "d_A", "d_I")
   p$joint_ok <- FALSE
   p$inference_reason <- "the sensitivity covariance is on the boundary"
   s <- .equiv_wald(p, bootable = TRUE)

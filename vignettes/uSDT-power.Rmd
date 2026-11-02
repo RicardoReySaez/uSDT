@@ -55,7 +55,7 @@ library(uSDT)
 ## Three numbers to choose
 
 A study of unconscious processing has three sizes to choose: how many
-subjects, how many trials of the direct task and how many of the indirect
+subjects, how many trials of the awareness task and how many of the influence
 task. They do not play the same role. The trials of a task decide how
 precisely each subject's sensitivity ($d'$) is measured, its *reliability*;
 the subjects decide how well the population is described. And the three
@@ -68,9 +68,9 @@ hypotheses do not depend on them in the same way:
   each task attenuates it (Spearman, 1904), so trials matter through the
   reliability of each task.
 - **H3**, the intercept of the latent regression, the test for unconscious
-  processing, extrapolates the indirect sensitivity to a direct sensitivity of
+  processing, extrapolates the influence sensitivity to an awareness sensitivity of
   zero. Its precision depends on how well the slope is known, which needs a
-  reliable direct task.
+  reliable awareness task.
 
 uSDT plans a study the way Franco-Martínez, Vadillo and Rey-Sáez (preprint)
 plan multisite studies: describe the population, compute the power of a
@@ -87,15 +87,15 @@ which the package includes, serve as one here:
 ```{r}
 #| label: pilot
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 pilot <- hsdt(d)
 ```
@@ -105,8 +105,8 @@ of a fit with `from`, and any value given in the call replaces the estimate.
 The pilot's intercept, 0.044, is too small to be the effect a study is
 planned for. A study should be able to detect the smallest effect that would
 matter, say an intercept of 0.1. Giving the intercept writes the population
-in the latent regression parameterization, which keeps the direct mean, both
-standard deviations and the correlation, and moves the indirect mean so that
+in the latent regression parameterization, which keeps the awareness mean, both
+standard deviations and the correlation, and moves the influence mean so that
 the intercept is 0.1:
 
 ```{r}
@@ -118,8 +118,8 @@ pop
 The arguments have the names of [`usdt_priors()`](../reference/usdt_priors.html)
 and take numbers: `dprime`, `sd_dprime`, `cor_dprime`, `criterion`,
 `sd_criterion` and `intercept`. A population can also be written from scratch,
-in either parameterization, as `usdt_population(dprime = c(direct = 0.2,
-indirect = 0.3), sd_dprime = 0.3, cor_dprime = 0.4)`.
+in either parameterization, as `usdt_population(dprime = c(awareness = 0.2,
+influence = 0.3), sd_dprime = 0.3, cor_dprime = 0.4)`.
 
 The plot shows the distribution of the true $d'$ across subjects, with the
 latent regression line and its intercept. Given the trials of each task, it
@@ -130,14 +130,14 @@ adds, as a dashed ellipse, the distribution of the $d'$ those trials measure:
 #| fig.width: 6.5
 #| fig.height: 6.5
 #| out.width: "75%"
-plot(pop, trials = c(direct = 64, indirect = 384), dichotomize = "indirect")
+plot(pop, trials = c(awareness = 64, influence = 384), dichotomize = "influence")
 ```
 
-The subjects of this population differ very little in their direct
+The subjects of this population differ very little in their awareness
 sensitivity (a standard deviation of 0.12), much less than 64 trials can tell
-apart. The measured direct $d'$ spreads almost three times as widely as the
-true one: the reliability of the direct task is 0.13. Most of what a study
-would see in the direct task is measurement error, and that is what limits H2
+apart. The measured awareness $d'$ spreads almost three times as widely as the
+true one: the reliability of the awareness task is 0.13. Most of what a study
+would see in the awareness task is measurement error, and that is what limits H2
 and H3.
 
 ## The power of a design
@@ -151,14 +151,14 @@ the direction of the population values:
 
 ```{r}
 #| label: power
-usdt_power(pop, subjects = 104, trials = c(direct = 64, indirect = 384),
+usdt_power(pop, subjects = 104, trials = c(awareness = 64, influence = 384),
            hypothesis = c("diff < 0", "rho = 0", "intercept > 0"),
-           dichotomize = "indirect")
+           dichotomize = "influence")
 ```
 
 The pilot's design would detect an intercept of 0.1 in one study out of three.
 The `Estimable` column explains part of it: in a third of the studies, the fit
-ends on the boundary, with the direct variance at zero or the correlation at
+ends on the boundary, with the awareness variance at zero or the correlation at
 1, and [`hsdt()`](../reference/hsdt.html) cannot test the correlation or the
 latent regression. Those studies count as failures to reject.
 
@@ -168,14 +168,14 @@ draws power against the subjects:
 ```{r}
 #| label: power-curves
 curves <- usdt_power(pop, subjects = seq(50, 800, 25),
-                     trials = list(direct = c(64, 256), indirect = 384),
+                     trials = list(awareness = c(64, 256), influence = 384),
                      hypothesis = c("rho = 0", "intercept > 0"),
-                     dichotomize = "indirect")
+                     dichotomize = "influence")
 plot(curves)
 ```
 
-Four times as many direct trials do more for H2 and H3 than many more subjects:
-they raise the reliability of the direct task from 0.13 to 0.37.
+Four times as many awareness trials do more for H2 and H3 than many more subjects:
+they raise the reliability of the awareness task from 0.13 to 0.37.
 
 ### How the power is computed
 
@@ -187,12 +187,12 @@ known covariance, and their sample mean and covariance a known distribution.
 `usdt_power()` draws them 20,000 times, estimates the population as the fitted
 model would, runs each test with the standard errors it would compute, and
 counts the rejections. A draw whose estimated covariance is not valid is a fit
-on the boundary and does not reject. The probability that the direct variance
-ends on the boundary is close to $\Phi(-R_D \sqrt{N / 2})$, with $R_D$ the
-reliability of the direct task: about 0.18 with 104 subjects and $R_D = 0.13$.
+on the boundary and does not reject. The probability that the awareness variance
+ends on the boundary is close to $\Phi(-R_A \sqrt{N / 2})$, with $R_A$ the
+reliability of the awareness task: about 0.18 with 104 subjects and $R_A = 0.13$.
 
 With `method = "simulation"`, `usdt_power()` instead simulates whole studies,
-splits the indirect responses at each subject's median as
+splits the influence responses at each subject's median as
 [`meyen_split()`](../reference/meyen_split.html) does, fits each one with
 `hsdt()` and tests it. That takes minutes, so it is kept for checking a
 design, below.
@@ -210,33 +210,33 @@ test and 2 per trial of visual search.
 #| label: plan
 plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.8,
                   subjects = c(50, 1000),
-                  trials = list(direct = c(32, 512), indirect = c(192, 768)),
-                  cost = c(subject = 600, direct = 5, indirect = 2),
-                  dichotomize = "indirect")
+                  trials = list(awareness = c(32, 512), influence = c(192, 768)),
+                  cost = c(subject = 600, awareness = 5, influence = 2),
+                  dichotomize = "influence")
 plan
 ```
 
 The cheapest design is a small study with long tasks, and both trial counts
-end at the limit of their ranges: with a direct task this unreliable, more
+end at the limit of their ranges: with an awareness task this unreliable, more
 trials are cheaper than more subjects. A recognition test of 500 trials,
 however, may not be feasible, since testing the displays so many times could
-change what is remembered. With at most 128 direct trials:
+change what is remembered. With at most 128 awareness trials:
 
 ```{r}
 #| label: plan-limited
 plan <- usdt_plan(pop, hypothesis = "intercept > 0", power = 0.8,
                   subjects = c(50, 2000),
-                  trials = list(direct = c(32, 128), indirect = c(192, 768)),
-                  cost = c(subject = 600, direct = 5, indirect = 2),
-                  dichotomize = "indirect")
+                  trials = list(awareness = c(32, 128), influence = c(192, 768)),
+                  cost = c(subject = 600, awareness = 5, influence = 2),
+                  dichotomize = "influence")
 plan
 plot(plan)
 ```
 
-The plot shows the cost of the cheapest design for each number of direct
+The plot shows the cost of the cheapest design for each number of awareness
 trials. The grey line is the closed form that the search starts from; the
 green points are the designs the search checked with the draws of
-`usdt_power()`; the circle is the chosen one. With an unreliable direct task
+`usdt_power()`; the circle is the chosen one. With an unreliable awareness task
 the closed form is optimistic, so the search does not trust it and checks a
 lattice of designs and the neighbours of the best.
 
@@ -248,21 +248,21 @@ power, as in `usdt_plan(pop, precision = c(intercept = 0.2), trials = ...)`.
 
 The plan rests on the population. Several values in an argument of
 `usdt_population()` give one scenario each, and
-[`update()`](../reference/usdt_population.html) changes them. With the direct
-task at 128 trials and the indirect task at 384, a larger intercept or a
+[`update()`](../reference/usdt_population.html) changes them. With the awareness
+task at 128 trials and the influence task at 384, a larger intercept or a
 weaker correlation than assumed needs another number of subjects:
 
 ```{r}
 #| label: scenarios
 scenarios <- update(pop, intercept = c(0.1, 0.15), cor_dprime = c(0.3, 0.49))
 usdt_plan(scenarios, hypothesis = "intercept > 0", power = 0.8,
-          subjects = c(50, 3000), trials = c(direct = 128, indirect = 384),
-          dichotomize = "indirect")
+          subjects = c(50, 3000), trials = c(awareness = 128, influence = 384),
+          dichotomize = "influence")
 ```
 
 An intercept of 0.15 needs about half the subjects that 0.1 needs. A weaker
 correlation needs fewer subjects, not more: with a flatter slope, the
-intercept depends less on how far the regression is extrapolated to a direct
+intercept depends less on how far the regression is extrapolated to an awareness
 sensitivity of zero.
 
 ## The smallest effect the design detects
@@ -275,10 +275,10 @@ parameterization says. With the chosen design:
 ```{r}
 #| label: mdes
 mdes <- usdt_mdes(pop, subjects = plan$design$subjects,
-                  trials = c(direct = plan$design$trials_direct,
-                             indirect = plan$design$trials_indirect),
+                  trials = c(awareness = plan$design$trials_awareness,
+                             influence = plan$design$trials_influence),
                   hypothesis = c("diff < 0", "rho = 0", "intercept > 0"),
-                  dichotomize = "indirect")
+                  dichotomize = "influence")
 mdes
 plot(mdes)
 ```
@@ -318,7 +318,7 @@ The figure compares, for eight designs of two populations, the power of the
 three point nulls from the closed form, from the approximation of
 `usdt_power()` and from 1000 simulated studies analysed with `hsdt()`.
 Population A is a plausible case of unconscious processing, with reliabilities
-from 0.4 to 0.85; the Vadillo population has a direct reliability of 0.13 with
+from 0.4 to 0.85; the Vadillo population has an awareness reliability of 0.13 with
 64 trials.
 
 ```{r}
@@ -328,8 +328,8 @@ from 0.4 to 0.85; the Vadillo population has a direct reliability of 0.13 with
 validation <- utils::read.csv(system.file("extdata", "power-validation.csv",
                                           package = "uSDT"))
 validation$design <- sprintf("%s subjects, %s + %s trials",
-                             validation$subjects, validation$trials_direct,
-                             validation$trials_indirect)
+                             validation$subjects, validation$trials_awareness,
+                             validation$trials_influence)
 validation$design <- factor(validation$design,
                             levels = rev(unique(validation$design)))
 validation$population <- factor(validation$population,
@@ -388,13 +388,13 @@ ggplot2::ggplot(long, ggplot2::aes(x = power, y = design)) +
 ```
 
 For H1 all three agree. For H2 and H3 they agree while both tasks are
-reasonably reliable, and the closed form drifts away as the direct task
+reasonably reliable, and the closed form drifts away as the awareness task
 becomes unreliable, because it ignores the fits on the boundary. For H2 it is
 optimistic: the studies that would reject the correlation are precisely those
 whose estimated covariance is too large for the estimated variances, and they
 end on the boundary, where the test cannot be run. For H3 in the Vadillo
 population it is pessimistic instead: the studies that stay off the boundary
-are those with a larger estimated direct variance, and with it a larger
+are those with a larger estimated awareness variance, and with it a larger
 estimated intercept. The approximation of `usdt_power()` sees those boundary
 fits and follows the simulation much more closely, though it is still
 somewhat optimistic for the Vadillo population, where the fitted model reaches

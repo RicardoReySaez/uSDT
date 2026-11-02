@@ -5,24 +5,24 @@
 # Last modified: 09-09-2026
 
 # This function draws two correlated sensitivities per subject and returns one
-# balanced block of trials for each task. With `rt = TRUE` the indirect task
+# balanced block of trials for each task. With `rt = TRUE` the influence task
 # returns lognormal times that fall as the evidence rises, so a faster response
 # is the signal response and a median split has something to work on.
 make_trials <- function(n_subj = 50, n_trials = 100,
-                        gamma_D = 0.8, gamma_I = 0.3,
-                        sd_D = 0.5, sd_I = 0.3, rho = 0.5,
-                        crit_D = 0, sd_crit = 0.3,
+                        gamma_A = 0.8, gamma_I = 0.3,
+                        sd_A = 0.5, sd_I = 0.3, rho = 0.5,
+                        crit_A = 0, sd_crit = 0.3,
                         crit_I = 0, sd_crit_I = 0.3,
                         rt = FALSE) {
 
   # The model draws two related sensitivities for each subject.
-  S <- matrix(c(sd_D^2, rho * sd_D * sd_I,
-                rho * sd_D * sd_I, sd_I^2), nrow = 2L)
+  S <- matrix(c(sd_A^2, rho * sd_A * sd_I,
+                rho * sd_A * sd_I, sd_I^2), nrow = 2L)
   u  <- matrix(stats::rnorm(n_subj * 2L), n_subj) %*% chol(S)
 
-  # A median split leaves the indirect criterion at zero without variation.
+  # A median split leaves the influence criterion at zero without variation.
   if (rt) { crit_I <- 0; sd_crit_I <- 0 }
-  uc <- list(D = stats::rnorm(n_subj, 0, sd_crit),
+  uc <- list(A = stats::rnorm(n_subj, 0, sd_crit),
              I = stats::rnorm(n_subj, 0, sd_crit_I))
 
   # Each subject receives a balanced block for both tasks.
@@ -32,10 +32,10 @@ make_trials <- function(n_subj = 50, n_trials = 100,
 
   out <- vector("list", 2L * n_subj)
   k <- 1L
-  for (task in c("D", "I")) {
-    g  <- if (task == "D") gamma_D else gamma_I
-    uu <- if (task == "D") u[, 1L] else u[, 2L]
-    cc <- if (task == "D") crit_D + uc$D else crit_I + uc$I
+  for (task in c("A", "I")) {
+    g  <- if (task == "A") gamma_A else gamma_I
+    uu <- if (task == "A") u[, 1L] else u[, 2L]
+    cc <- if (task == "A") crit_A + uc$A else crit_I + uc$I
 
     for (i in seq_len(n_subj)) {
 

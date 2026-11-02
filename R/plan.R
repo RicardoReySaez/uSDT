@@ -24,16 +24,16 @@
 #' @param trials Number of trials per subject in each task, signal and noise
 #'   trials together: one number fixes it, and a range `c(min, max)` lets the
 #'   plan choose it. One value or range for both tasks, which keeps them equal,
-#'   or one for each as `c(direct = , indirect = )` or
-#'   `list(direct = , indirect = )`.
+#'   or one for each as `c(awareness = , influence = )` or
+#'   `list(awareness = , influence = )`.
 #' @param cost Cost of a design, which the plan minimises: a named vector with
-#'   the cost of each `subject` (a session, recruitment) and of each `direct`
-#'   and `indirect` trial, in any unit (missing names cost 0), so that a design
-#'   costs `subjects * (subject + direct * trials_direct + indirect *
-#'   trials_indirect)`; or a function of `subjects`, `direct` and `indirect`
-#'   that returns the cost of each design. Needed when more than one of the
-#'   subjects and the trials is free; with only one free, the plan minimises
-#'   it.
+#'   the cost of each `subject` (a session, recruitment) and of each
+#'   `awareness` and `influence` trial, in any unit (missing names cost 0), so
+#'   that a design costs `subjects * (subject + awareness * trials_awareness +
+#'   influence * trials_influence)`; or a function of `subjects`, `awareness`
+#'   and `influence` that returns the cost of each design. Needed when more
+#'   than one of the subjects and the trials is free; with only one free, the
+#'   plan minimises it.
 #' @param budget Largest cost allowed. With a budget, the plan finds the
 #'   design with the highest power that costs no more, and `power` is not
 #'   used.
@@ -49,7 +49,7 @@
 #' @return An object of class `usdt_plan`: a list with `$design`, a data frame
 #'   with one row per scenario and hypothesis (or quantity, for a precision
 #'   target) and the columns `scenario`, `hypothesis`, `subjects`,
-#'   `trials_direct`, `trials_indirect`, `power` (approximate, as in
+#'   `trials_awareness`, `trials_influence`, `power` (approximate, as in
 #'   [usdt_power()]), `estimable`, `width` (for a precision target), `cost`
 #'   and `limit` (the free argument whose limit the design reaches, if any);
 #'   `$frontier`, the smallest number of subjects that reaches the target
@@ -74,7 +74,7 @@
 #'
 #' The design chosen this way rests on the approximation. Simulate it with
 #' `usdt_power(plan, method = "simulation")` before relying on it, as the
-#' approximation is somewhat optimistic for H2 and H3 when the direct task is
+#' approximation is somewhat optimistic for H2 and H3 when the awareness task is
 #' unreliable.
 #'
 #' # Costs
@@ -91,39 +91,42 @@
 #' @seealso [usdt_power()], [usdt_mdes()], [usdt_population()]
 #'
 #' @examples
-#' pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-#'                        sd_dprime = c(direct = 0.35, indirect = 0.30),
+#' pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+#'                        sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                        cor_dprime = 0.3, criterion = 0.1)
 #'
 #' # Subjects for given trials
 #' usdt_plan(pop, hypothesis = "diff = 0",
-#'           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+#'           trials = c(awareness = 64, influence = 200),
+#'           dichotomize = "influence")
 #'
 #' # Subjects and trials together, with the session time of each in seconds
 #' plan <- usdt_plan(pop, hypothesis = "diff = 0", power = 0.9,
 #'                   subjects = c(20, 300),
-#'                   trials = list(direct = c(32, 160), indirect = c(100, 300)),
-#'                   cost = c(subject = 600, direct = 4, indirect = 1.5),
-#'                   dichotomize = "indirect")
+#'                   trials = list(awareness = c(32, 160),
+#'                                 influence = c(100, 300)),
+#'                   cost = c(subject = 600, awareness = 4, influence = 1.5),
+#'                   dichotomize = "influence")
 #' plan
 #'
 #' # The most powerful design within 30 hours of sessions
 #' usdt_plan(pop, hypothesis = "rho = 0", subjects = c(20, 400),
-#'           trials = list(direct = c(32, 256), indirect = c(100, 800)),
-#'           cost = c(subject = 600, direct = 4, indirect = 1.5),
-#'           budget = 30 * 3600, dichotomize = "indirect")
+#'           trials = list(awareness = c(32, 256), influence = c(100, 800)),
+#'           cost = c(subject = 600, awareness = 4, influence = 1.5),
+#'           budget = 30 * 3600, dichotomize = "influence")
 #'
 #' # The intercept within an interval 0.2 wide
 #' usdt_plan(pop, precision = c(intercept = 0.2),
-#'           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+#'           trials = c(awareness = 64, influence = 200),
+#'           dichotomize = "influence")
 #'
 #' \donttest{
 #' # The intercept, whose search checks more designs (several seconds)
 #' usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
 #'           subjects = c(20, 300),
-#'           trials = list(direct = c(32, 160), indirect = c(100, 300)),
-#'           cost = c(subject = 600, direct = 4, indirect = 1.5),
-#'           dichotomize = "indirect")
+#'           trials = list(awareness = c(32, 160), influence = c(100, 300)),
+#'           cost = c(subject = 600, awareness = 4, influence = 1.5),
+#'           dichotomize = "influence")
 #'
 #' # Check the chosen design by simulation
 #' usdt_power(plan, method = "simulation", nsim = 50, seed = 1)
@@ -141,7 +144,8 @@ usdt_plan <- function(population,
                       combine     = c("each", "all"),
                       alpha       = 0.05,
                       signal      = 0.5,
-                      dichotomize = c("none", "indirect", "direct", "both")) {
+                      dichotomize = c("none", "influence", "awareness",
+                                      "both")) {
 
   # The function checks the population, the targets and the design space.
   .check_plan_population(population)
@@ -173,9 +177,9 @@ usdt_plan <- function(population,
       .usdt_stop("more than one of the subjects and the trials is free, and ",
                  "many of their combinations reach the target. Give the ",
                  "`cost` of a design to choose among them, e.g. cost = ",
-                 "c(subject = 600, direct = 4, indirect = 1.5) in seconds of ",
-                 "session, or cost = c(subject = 1) to use as few subjects as ",
-                 "the trials allow.")
+                 "c(subject = 600, awareness = 4, influence = 1.5) in ",
+                 "seconds of session, or cost = c(subject = 1) to use as few ",
+                 "subjects as the trials allow.")
     }
     if (!any(free)) {
       .usdt_stop("nothing is free: give a range for the subjects or the ",
@@ -252,12 +256,12 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
   }
   cat("  Subjects     ", range_text(sp$subjects), "\n", sep = "")
   if (sp$linked) {
-    cat("  Trials       ", range_text(sp$trials$direct), " in each task\n",
+    cat("  Trials       ", range_text(sp$trials$awareness), " in each task\n",
         sep = "")
   } else {
-    cat("  Trials       ", labels[["direct"]], " ",
-        range_text(sp$trials$direct), "; ", labels[["indirect"]], " ",
-        range_text(sp$trials$indirect), "\n", sep = "")
+    cat("  Trials       ", labels[["awareness"]], " ",
+        range_text(sp$trials$awareness), "; ", labels[["influence"]], " ",
+        range_text(sp$trials$influence), "\n", sep = "")
   }
   if (!is.null(st$cost)) {
     cat("  Cost         ", .cost_text(st$cost, labels), "\n", sep = "")
@@ -268,15 +272,15 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
                                                          digits = digits))
   d <- x$design
   head <- c(if (scenarios > 1L) "Scenario", "Target", "Subjects",
-            labels[["direct"]], labels[["indirect"]],
+            labels[["awareness"]], labels[["influence"]],
             if (st$mode == "precision") "Width" else "Power", "Estimable",
             "Cost")
   rows <- lapply(seq_len(nrow(d)), function(i) {
     r <- d[i, ]
     c(if (scenarios > 1L) as.character(r$scenario), r$hypothesis,
       if (is.na(r$subjects)) "-" else as.character(r$subjects),
-      if (is.na(r$trials_direct)) "-" else as.character(r$trials_direct),
-      if (is.na(r$trials_indirect)) "-" else as.character(r$trials_indirect),
+      if (is.na(r$trials_awareness)) "-" else as.character(r$trials_awareness),
+      if (is.na(r$trials_influence)) "-" else as.character(r$trials_influence),
       number(if (st$mode == "precision") r$width else r$power),
       number(r$estimable),
       if (is.na(r$cost)) "-" else formatC(r$cost, format = "fg", digits = 6L,
@@ -326,15 +330,15 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
 #'   [usdt_plan()], whose designs, hypotheses and settings are then used.
 #' @param power Power to reach (default 0.80).
 #' @param vary Optional name of the population value to move instead of the
-#'   tested quantity: `"mu_D"`, `"mu_I"`, `"sigma_D"`, `"sigma_I"`, `"rho"`,
-#'   `"intercept"`, `"criterion_D"`, `"criterion_I"`, `"sd_criterion_D"` or
+#'   tested quantity: `"mu_A"`, `"mu_I"`, `"sigma_A"`, `"sigma_I"`, `"rho"`,
+#'   `"intercept"`, `"criterion_A"`, `"criterion_I"`, `"sd_criterion_A"` or
 #'   `"sd_criterion_I"`. Needs `range`.
 #' @param range With `vary`, the interval of values to search, `c(from, to)`;
 #'   the result is the value nearest to `from` that reaches the power.
 #'
 #' @return An object of class `usdt_mdes`: a data frame with one row per
 #'   scenario, design and hypothesis, and the columns `scenario`, `subjects`,
-#'   `trials_direct`, `trials_indirect`, `hypothesis`, `varies` (the value
+#'   `trials_awareness`, `trials_influence`, `hypothesis`, `varies` (the value
 #'   moved), `population` (its value in the population), `power_population`
 #'   (the power there) and `mdes` (the value at which the power is reached, or
 #'   `NA` if it is not reached in the range searched). For an equivalence
@@ -344,11 +348,11 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
 #' @details
 #' Moving a quantity keeps the other values of the population fixed as its
 #' parameterization says (see [usdt_population()]): the difference moves the
-#' indirect mean with the direct mean fixed; the intercept moves the indirect
-#' mean with the means and SDs and the correlation fixed; the correlation
-#' (and the slope, through it) keeps both means under the correlation
-#' parameterization and the intercept under the latent regression. The search
-#' runs from the value of H0 (or the nearest bound) outwards, in the
+#' influence mean with the awareness mean fixed; the intercept moves the
+#' influence mean with the means and SDs and the correlation fixed; the
+#' correlation (and the slope, through it) keeps both means under the
+#' correlation parameterization and the intercept under the latent regression.
+#' The search runs from the value of H0 (or the nearest bound) outwards, in the
 #' direction of H1, and the power along the way comes from the same draws of
 #' the sample mean and covariance as in [usdt_power()], so it can level off
 #' below the target when fits on the boundary are frequent; the result is
@@ -357,22 +361,22 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
 #' @seealso [usdt_power()], [usdt_plan()]
 #'
 #' @examples
-#' pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-#'                        sd_dprime = c(direct = 0.35, indirect = 0.30),
+#' pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+#'                        sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                        cor_dprime = 0.3, criterion = 0.1)
 #'
-#' usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-#'           dichotomize = "indirect")
+#' usdt_mdes(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+#'           dichotomize = "influence")
 #'
 #' # The narrowest equivalence margin for the difference
-#' usdt_mdes(update(pop, dprime = c(direct = 0.15, indirect = 0.15)),
-#'           subjects = 80, trials = c(direct = 64, indirect = 200),
-#'           hypothesis = "diff in [-0.2, 0.2]", dichotomize = "indirect")
+#' usdt_mdes(update(pop, dprime = c(awareness = 0.15, influence = 0.15)),
+#'           subjects = 80, trials = c(awareness = 64, influence = 200),
+#'           hypothesis = "diff in [-0.2, 0.2]", dichotomize = "influence")
 #'
-#' # The SD of the direct d' the intercept test needs
-#' usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-#'           hypothesis = "intercept > 0", vary = "sigma_D",
-#'           range = c(0.05, 0.6), dichotomize = "indirect")
+#' # The SD of the awareness d' the intercept test needs
+#' usdt_mdes(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+#'           hypothesis = "intercept > 0", vary = "sigma_A",
+#'           range = c(0.05, 0.6), dichotomize = "influence")
 #'
 #' @export
 usdt_mdes <- function(population, subjects, trials,
@@ -380,7 +384,7 @@ usdt_mdes <- function(population, subjects, trials,
                       power       = 0.80,
                       alpha       = 0.05,
                       signal      = 0.5,
-                      dichotomize = c("none", "indirect", "direct", "both"),
+                      dichotomize = c("none", "influence", "awareness", "both"),
                       vary        = NULL,
                       range       = NULL) {
 
@@ -422,8 +426,8 @@ usdt_mdes <- function(population, subjects, trials,
           trials_t <- unlist(design$trials[t, ])
           rows[[length(rows) + 1L]] <- data.frame(
             scenario = pop$scenario, subjects = N,
-            trials_direct = trials_t[["direct"]],
-            trials_indirect = trials_t[["indirect"]],
+            trials_awareness = trials_t[["awareness"]],
+            trials_influence = trials_t[["influence"]],
             hypothesis = .bf_label(.bf_name(h$quantity), h),
             quantity = h$quantity, varies = res$varies,
             population = res$current, power_population = res$power_current,
@@ -451,24 +455,24 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   number <- function(v) ifelse(is.na(v), "NA", formatC(v, format = "f",
                                                          digits = digits))
   number_h <- c(diff = "H1", rho = "H2", intercept = "H3", slope = "H3")
-  several <- nrow(unique(x[c("scenario", "subjects", "trials_direct",
-                             "trials_indirect")])) > 1L
-  head <- c(if (several) c("Scenario", "Subjects", labels[["direct"]],
-                           labels[["indirect"]]),
+  several <- nrow(unique(x[c("scenario", "subjects", "trials_awareness",
+                             "trials_influence")])) > 1L
+  head <- c(if (several) c("Scenario", "Subjects", labels[["awareness"]],
+                           labels[["influence"]]),
             "Hypothesis", "Varies", "Population", "Power there", "Smallest")
   rows <- lapply(seq_len(nrow(x)), function(i) {
     r <- x[i, ]
     c(if (several) c(as.character(r$scenario), as.character(r$subjects),
-                     as.character(r$trials_direct),
-                     as.character(r$trials_indirect)),
+                     as.character(r$trials_awareness),
+                     as.character(r$trials_influence)),
       paste(number_h[[r$quantity]], r$hypothesis), r$varies,
       number(r$population), number(r$power_population), number(r$mdes))
   })
   if (!several) {
     r <- x[1L, ]
     cat("  Design       ", r$subjects, " subjects; trials per subject: ",
-        r$trials_direct, " ", labels[["direct"]], ", ", r$trials_indirect, " ",
-        labels[["indirect"]], "\n\n", sep = "")
+        r$trials_awareness, " ", labels[["awareness"]], ", ",
+        r$trials_influence, " ", labels[["influence"]], "\n\n", sep = "")
   }
   table <- rbind(head, do.call(rbind, rows))
   widths <- apply(table, 2L, function(v) max(nchar(v)))
@@ -494,7 +498,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     .usdt_stop("`population` must come from usdt_population(), not a plain ",
                class(population)[1L], ".")
   }
-  if (any(c(population$sd_signal_D, population$sd_signal_I) != 1)) {
+  if (any(c(population$sd_signal_A, population$sd_signal_I) != 1)) {
     .usdt_stop("planning uses the power approximation, which assumes the ",
                "equal-variance model that hsdt() fits, so `sd_signal` must ",
                "be 1.")
@@ -525,8 +529,8 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 }
 
 # This function checks the value usdt_mdes() moves instead of the quantity.
-.mdes_vary <- c("mu_D", "mu_I", "sigma_D", "sigma_I", "rho", "intercept",
-                "criterion_D", "criterion_I", "sd_criterion_D",
+.mdes_vary <- c("mu_A", "mu_I", "sigma_A", "sigma_I", "rho", "intercept",
+                "criterion_A", "criterion_I", "sd_criterion_A",
                 "sd_criterion_I")
 .check_vary <- function(vary, range) {
   if (is.null(vary)) {
@@ -562,15 +566,15 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   }
   subjects <- range_of(subjects, "subjects", 3L)
   linked <- is.null(names(trials))
-  t <- if (linked) list(direct = trials, indirect = trials) else
+  t <- if (linked) list(awareness = trials, influence = trials) else
     .per_task(trials, "trials")
-  ranges <- list(direct = range_of(t$direct, if (linked) "trials" else
-                   "trials$direct", 2L),
-                 indirect = range_of(t$indirect, if (linked) "trials" else
-                   "trials$indirect", 2L))
+  ranges <- list(awareness = range_of(t$awareness, if (linked) "trials" else
+                   "trials$awareness", 2L),
+                 influence = range_of(t$influence, if (linked) "trials" else
+                   "trials$influence", 2L))
 
   proportion <- .per_task(signal, "signal")
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     p <- proportion[[k]]
     if (!is.numeric(p) || length(p) != 1L || is.na(p) || p <= 0 || p >= 1) {
       .usdt_stop("`signal` must be one proportion inside (0, 1) for each ",
@@ -600,20 +604,20 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     as.integer(values)
   }
   if (linked) {
-    common <- step[["direct"]] * step[["indirect"]] /
-      .gcd(step[["direct"]], step[["indirect"]])
-    v <- axis(ranges$direct, common, "the")
-    grid <- data.frame(direct = v, indirect = v)
+    common <- step[["awareness"]] * step[["influence"]] /
+      .gcd(step[["awareness"]], step[["influence"]])
+    v <- axis(ranges$awareness, common, "the")
+    grid <- data.frame(awareness = v, influence = v)
   } else {
-    grid <- expand.grid(direct = axis(ranges$direct, step[["direct"]],
-                                      "direct"),
-                        indirect = axis(ranges$indirect, step[["indirect"]],
-                                        "indirect"),
+    grid <- expand.grid(awareness = axis(ranges$awareness, step[["awareness"]],
+                                         "awareness"),
+                        influence = axis(ranges$influence, step[["influence"]],
+                                         "influence"),
                         KEEP.OUT.ATTRS = FALSE)
   }
   free <- c(subjects = length(subjects) == 2L,
-            direct = length(ranges$direct) == 2L,
-            indirect = !linked && length(ranges$indirect) == 2L)
+            awareness = length(ranges$awareness) == 2L,
+            influence = !linked && length(ranges$influence) == 2L)
   list(subjects = subjects, trials = ranges, linked = linked, grid = grid,
        proportion = proportion, free = free)
 }
@@ -635,37 +639,39 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # value.
 .plan_cost <- function(cost, free) {
   if (is.null(cost)) {
-    if (free[["subjects"]]) return(function(N, TD, TI) N)
-    if (free[["direct"]]) return(function(N, TD, TI) TD)
-    return(function(N, TD, TI) TI)
+    if (free[["subjects"]]) return(function(N, TA, TI) N)
+    if (free[["awareness"]]) return(function(N, TA, TI) TA)
+    return(function(N, TA, TI) TI)
   }
   if (is.function(cost)) {
-    return(function(N, TD, TI) {
-      out <- cost(subjects = N, direct = TD, indirect = TI)
+    return(function(N, TA, TI) {
+      out <- cost(subjects = N, awareness = TA, influence = TI)
       if (!is.numeric(out) || length(out) != length(N) || anyNA(out)) {
         .usdt_stop("`cost` must return one number per design.")
       }
       out
     })
   }
-  parts <- c("subject", "direct", "indirect")
+  parts <- c("subject", "awareness", "influence")
   if (!is.numeric(cost) || is.null(names(cost)) || !all(names(cost) %in% parts) ||
       anyNA(cost) || any(cost < 0) || all(cost == 0)) {
     .usdt_stop("`cost` must be a function or a named vector of costs, e.g. ",
-               "c(subject = 600, direct = 4, indirect = 1.5).")
+               "c(subject = 600, awareness = 4, influence = 1.5).")
   }
   unit <- stats::setNames(rep(0, 3L), parts)
   unit[names(cost)] <- cost
-  function(N, TD, TI) {
-    N * (unit[["subject"]] + unit[["direct"]] * TD + unit[["indirect"]] * TI)
+  function(N, TA, TI) {
+    N * (unit[["subject"]] + unit[["awareness"]] * TA +
+           unit[["influence"]] * TI)
   }
 }
 
 # This function describes a cost argument.
 .cost_text <- function(cost, labels) {
   if (is.function(cost)) return("a function of the subjects and trials")
-  parts <- c(subject = "subject", direct = paste(labels[["direct"]], "trial"),
-             indirect = paste(labels[["indirect"]], "trial"))
+  parts <- c(subject = "subject",
+             awareness = paste(labels[["awareness"]], "trial"),
+             influence = paste(labels[["influence"]], "trial"))
   values <- vapply(cost, format, "")
   paste(paste(values, "per", parts[names(cost)]), collapse = " + ")
 }
@@ -673,19 +679,18 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # This function gives the error variance of each task for every number of
 # trials of the grid.
 .plan_error_variance <- function(pop, grid, proportion, split) {
-  one <- function(k, values) {
-    vapply(values, function(t) {
-      cells <- list(signal = c(direct = t * proportion[["direct"]],
-                               indirect = t * proportion[["indirect"]]),
-                    noise = c(direct = t * (1 - proportion[["direct"]]),
-                              indirect = t * (1 - proportion[["indirect"]])))
+  column <- function(k) {
+    values <- unique(grid[[k]])
+    v <- vapply(values, function(t) {
+      cells <- list(signal = c(awareness = t * proportion[["awareness"]],
+                               influence = t * proportion[["influence"]]),
+                    noise = c(awareness = t * (1 - proportion[["awareness"]]),
+                              influence = t * (1 - proportion[["influence"]])))
       .error_variance(pop, cells, split)[[k]]
     }, 0)
+    v[match(grid[[k]], values)]
   }
-  direct <- unique(grid$direct)
-  indirect <- unique(grid$indirect)
-  cbind(direct = one("direct", direct)[match(grid$direct, direct)],
-        indirect = one("indirect", indirect)[match(grid$indirect, indirect)])
+  cbind(awareness = column("awareness"), influence = column("influence"))
 }
 
 # This function gives the closed-form standard errors of every test with one
@@ -693,12 +698,12 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # sqrt(N).
 .plan_se1 <- function(pop, v) {
   n <- nrow(v)
-  s2D <- pop$sigma_D^2; s2I <- pop$sigma_I^2
-  sDI <- pop$rho * pop$sigma_D * pop$sigma_I
-  truth <- matrix(c(pop$mu_D, pop$mu_I, s2D, s2I, sDI), n, 5L, byrow = TRUE,
-                  dimnames = list(NULL, c("gamma_D", "gamma_I", "s2_D", "s2_I",
-                                          "s_DI")))
-  .moment_tests(truth, s2D + v[, "direct"], s2I + v[, "indirect"], sDI, 1)
+  s2A <- pop$sigma_A^2; s2I <- pop$sigma_I^2
+  sAI <- pop$rho * pop$sigma_A * pop$sigma_I
+  truth <- matrix(c(pop$mu_A, pop$mu_I, s2A, s2I, sAI), n, 5L, byrow = TRUE,
+                  dimnames = list(NULL, c("gamma_A", "gamma_I", "s2_A", "s2_I",
+                                          "s_AI")))
+  .moment_tests(truth, s2A + v[, "awareness"], s2I + v[, "influence"], sAI, 1)
 }
 
 # This function gives the closed-form power of one hypothesis for each design,
@@ -706,7 +711,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 .plan_closed_power <- function(h, pop, se1, N, alpha) {
   test <- .power_test(h)
   centre <- switch(test,
-    covariance = pop$rho * pop$sigma_D * pop$sigma_I,
+    covariance = pop$rho * pop$sigma_A * pop$sigma_I,
     fisher = atanh(pop$rho),
     c(diff = pop$diff, intercept = pop$intercept, slope = pop$slope)[[test]])
   .power_normal(h$op, .power_bounds(h), centre, se1[[test]]$se / sqrt(N),
@@ -841,11 +846,11 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
       found <- .plan_budget(closed, moment, j, space, cost_fun, budget, lo, hi)
     } else {
       N0 <- .min_subjects(closed, lo, hi, n, goal)
-      cost0 <- ifelse(is.na(N0), NA_real_, cost_fun(N0, grid$direct,
-                                                     grid$indirect))
+      cost0 <- ifelse(is.na(N0), NA_real_, cost_fun(N0, grid$awareness,
+                                                     grid$influence))
       frontier[[length(frontier) + 1L]] <- data.frame(
-        hypothesis = label(j), trials_direct = grid$direct,
-        trials_indirect = grid$indirect, subjects = N0, cost = cost0,
+        hypothesis = label(j), trials_awareness = grid$awareness,
+        trials_influence = grid$influence, subjects = N0, cost = cost0,
         stringsAsFactors = FALSE)
       found <- if (mode == "precision") {
         .plan_precision(N0, cost0, moment, grid, j, pop, se1, alpha)
@@ -883,8 +888,8 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # first need not be the best.
 .plan_search <- function(bound, score, space, max_checks = 150L) {
   grid <- space$grid
-  axes <- if (space$linked) list(unique(grid$direct)) else
-    list(unique(grid$direct), unique(grid$indirect))
+  axes <- if (space$linked) list(unique(grid$awareness)) else
+    list(unique(grid$awareness), unique(grid$influence))
   dims <- lengths(axes)
   row_of <- function(pos) {
     if (length(dims) == 1L) pos[1L] else pos[1L] + (pos[2L] - 1L) * dims[1L]
@@ -946,15 +951,15 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     N <- .refine_subjects(function(N) fast(i, N, j)[["power"]], N0[i], lo,
                           hi, goal)
     subjects[i] <<- N
-    if (is.na(N)) Inf else cost_fun(N, grid$direct[i], grid$indirect[i])
+    if (is.na(N)) Inf else cost_fun(N, grid$awareness[i], grid$influence[i])
   }
   checked <- .plan_search(cost0, score, space)
   if (!length(checked)) return(.plan_none())
-  seen <- data.frame(trials_direct = grid$direct[checked],
-                     trials_indirect = grid$indirect[checked],
+  seen <- data.frame(trials_awareness = grid$awareness[checked],
+                     trials_influence = grid$influence[checked],
                      subjects = subjects[checked],
-                     cost = cost_fun(subjects[checked], grid$direct[checked],
-                                     grid$indirect[checked]))
+                     cost = cost_fun(subjects[checked], grid$awareness[checked],
+                                     grid$influence[checked]))
 
   # All the draws settle the subjects of the five best designs, which differ
   # by less than the Monte Carlo error of the search, and the cheapest wins.
@@ -963,11 +968,11 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     N <- .refine_subjects(function(N) moment(i, N, j)[["power"]], subjects[i],
                           lo, hi, goal)
     if (is.na(N)) next
-    cst <- cost_fun(N, grid$direct[i], grid$indirect[i])
+    cst <- cost_fun(N, grid$awareness[i], grid$influence[i])
     if (is.null(best) || cst < best$cost) {
       m <- moment(i, N, j)
-      best <- data.frame(subjects = N, trials_direct = grid$direct[i],
-                         trials_indirect = grid$indirect[i],
+      best <- data.frame(subjects = N, trials_awareness = grid$awareness[i],
+                         trials_influence = grid$influence[i],
                          power = m[["power"]], estimable = m[["estimable"]],
                          width = NA_real_, cost = cst)
     }
@@ -981,8 +986,8 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   if (all(is.na(cost0))) return(.plan_none())
   i <- which.min(cost0)
   m <- moment(i, N0[i], 1L)
-  data.frame(subjects = N0[i], trials_direct = grid$direct[i],
-             trials_indirect = grid$indirect[i], power = NA_real_,
+  data.frame(subjects = N0[i], trials_awareness = grid$awareness[i],
+             trials_influence = grid$influence[i], power = NA_real_,
              estimable = if (q == "diff") 1 else m[["estimable"]],
              width = .plan_width(q, pop, lapply(se1, function(e)
                list(se = e$se[i])), N0[i], alpha),
@@ -996,7 +1001,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 .plan_budget <- function(closed, moment, j, space, cost_fun, budget, lo, hi) {
   grid <- space$grid
   n <- nrow(grid)
-  affordable <- function(N) -cost_fun(N, grid$direct, grid$indirect)
+  affordable <- function(N) -cost_fun(N, grid$awareness, grid$influence)
   N <- .min_subjects(function(N) affordable(hi - N + lo), lo, hi, n, -budget)
   N <- ifelse(is.na(N), NA_real_, hi - N + lo)
   p0 <- ifelse(is.na(N), NA_real_, closed(ifelse(is.na(N), lo, N)))
@@ -1011,16 +1016,16 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   }, 0)
   i <- utils::head(checked, 5L)[which.max(power_full)]
   m <- moment(i, N[i], j)
-  data.frame(subjects = N[i], trials_direct = grid$direct[i],
-             trials_indirect = grid$indirect[i], power = m[["power"]],
+  data.frame(subjects = N[i], trials_awareness = grid$awareness[i],
+             trials_influence = grid$influence[i], power = m[["power"]],
              estimable = m[["estimable"]], width = NA_real_,
-             cost = cost_fun(N[i], grid$direct[i], grid$indirect[i]))
+             cost = cost_fun(N[i], grid$awareness[i], grid$influence[i]))
 }
 
 # The row of a target no design reaches.
 .plan_none <- function() {
-  data.frame(subjects = NA_real_, trials_direct = NA_real_,
-             trials_indirect = NA_real_, power = NA_real_,
+  data.frame(subjects = NA_real_, trials_awareness = NA_real_,
+             trials_influence = NA_real_, power = NA_real_,
              estimable = NA_real_, width = NA_real_, cost = NA_real_)
 }
 
@@ -1037,9 +1042,10 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   if (space$free[["subjects"]] && near(found$subjects, space$subjects)) {
     at <- c(at, "`subjects`")
   }
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     r <- space$trials[[k]]
-    if (length(r) == 2L && (space$free[[k]] || (k == "indirect" && space$linked)) &&
+    if (length(r) == 2L &&
+        (space$free[[k]] || (k == "influence" && space$linked)) &&
         near(found[[paste0("trials_", k)]], space$grid[[k]])) {
       at <- c(at, if (space$linked) "`trials`" else paste0("`trials$", k, "`"))
     }
@@ -1052,31 +1058,31 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
 # others again, keeping fixed what the parameterization keeps fixed.
 .scenario_with <- function(pop, what, value, parameterization) {
   regression <- identical(parameterization, "regression")
-  slope <- function() pop$rho * pop$sigma_I / pop$sigma_D
+  slope <- function() pop$rho * pop$sigma_I / pop$sigma_A
   switch(what,
-    diff = pop$mu_I <- pop$mu_D + value,
-    intercept = pop$mu_I <- value + slope() * pop$mu_D,
+    diff = pop$mu_I <- pop$mu_A + value,
+    intercept = pop$mu_I <- value + slope() * pop$mu_A,
     slope = ,
     rho = {
-      rho <- if (what == "slope") value * pop$sigma_D / pop$sigma_I else value
+      rho <- if (what == "slope") value * pop$sigma_A / pop$sigma_I else value
       if (regression) {
-        pop$mu_I <- pop$intercept + rho * pop$sigma_I / pop$sigma_D * pop$mu_D
+        pop$mu_I <- pop$intercept + rho * pop$sigma_I / pop$sigma_A * pop$mu_A
       }
       pop$rho <- rho
     },
     {
-      if (what %in% c("sigma_D", "sigma_I") && regression) {
+      if (what %in% c("sigma_A", "sigma_I") && regression) {
         pop[[what]] <- value
-        pop$mu_I <- pop$intercept + slope() * pop$mu_D
-      } else if (what == "mu_D" && regression) {
-        pop$mu_D <- value
-        pop$mu_I <- pop$intercept + slope() * pop$mu_D
+        pop$mu_I <- pop$intercept + slope() * pop$mu_A
+      } else if (what == "mu_A" && regression) {
+        pop$mu_A <- value
+        pop$mu_I <- pop$intercept + slope() * pop$mu_A
       } else {
         pop[[what]] <- value
       }
     })
   q <- .usdt_quantities(.bivariate_primitives(cbind(
-    mu_D = pop$mu_D, mu_I = pop$mu_I, sigma_D = pop$sigma_D,
+    mu_A = pop$mu_A, mu_I = pop$mu_I, sigma_A = pop$sigma_A,
     sigma_I = pop$sigma_I, rho = pop$rho)))
   pop$diff <- q[, "diff"][[1L]]
   pop$intercept <- q[, "intercept"][[1L]]
@@ -1094,7 +1100,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   engine <- function(draws) {
     chi <- .moment_chi(draws, N)
     function(p, hyp = h) {
-      if (!is.finite(p$sigma_D) || p$sigma_D <= 0 || !is.finite(p$sigma_I) ||
+      if (!is.finite(p$sigma_A) || p$sigma_A <= 0 || !is.finite(p$sigma_I) ||
           p$sigma_I <= 0 || abs(p$rho) >= 1) return(0)
       v <- .error_variance(p, cells, split)
       .power_approximate(p, N, v, list(hyp), alpha, draws, chi)$rows$power
@@ -1110,11 +1116,11 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
   # between H0 and the power, so the curve shows the rise; it doubles, up to a
   # limit, while the power is not reached.
   v <- .error_variance(pop, cells, split)
-  truth <- cbind(gamma_D = pop$mu_D, gamma_I = pop$mu_I,
-                 s2_D = pop$sigma_D^2, s2_I = pop$sigma_I^2,
-                 s_DI = pop$rho * pop$sigma_D * pop$sigma_I)
-  se <- .moment_tests(truth, truth[, "s2_D"] + v[["direct"]],
-                      truth[, "s2_I"] + v[["indirect"]], truth[, "s_DI"],
+  truth <- cbind(gamma_A = pop$mu_A, gamma_I = pop$mu_I,
+                 s2_A = pop$sigma_A^2, s2_I = pop$sigma_I^2,
+                 s_AI = pop$rho * pop$sigma_A * pop$sigma_I)
+  se <- .moment_tests(truth, truth[, "s2_A"] + v[["awareness"]],
+                      truth[, "s2_I"] + v[["influence"]], truth[, "s_AI"],
                       N)[[h$quantity]]$se
   span <- 2.5 * (stats::qnorm(1 - alpha / 2) + stats::qnorm(power)) * se
 
@@ -1146,7 +1152,7 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
     from <- if (h$op == "out" && direction > 0) b else a
     limit <- switch(h$quantity,
       rho = direction * 0.99,
-      slope = direction * 0.99 * pop$sigma_I / pop$sigma_D,
+      slope = direction * 0.99 * pop$sigma_I / pop$sigma_A,
       from + direction * 5)
     to <- from + direction * min(abs(limit - from), span)
     f <- function(x) at(.scenario_with(pop, h$quantity, x, parameterization))
@@ -1185,8 +1191,8 @@ print.usdt_mdes <- function(x, digits = 3L, ...) {
         .bf_label(.bf_name(h$quantity), h), ""))]
     usdt_mdes(.population_rows(st$population, d$scenario[i]),
               subjects = d$subjects[i],
-              trials = c(direct = d$trials_direct[i],
-                         indirect = d$trials_indirect[i]),
+              trials = c(awareness = d$trials_awareness[i],
+                         influence = d$trials_influence[i]),
               hypothesis = hyp, power = power, alpha = st$alpha,
               signal = st$signal, dichotomize = st$split, vary = vary,
               range = range)

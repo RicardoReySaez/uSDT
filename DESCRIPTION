@@ -20,20 +20,20 @@ Authors@R: c(
            role    = "aut",
            comment = c(ORCID = "0000-0001-8421-816X")))
 Description: Fits hierarchical signal detection theory (SDT) models to paired
-    direct and indirect measures, the design used to test for unconscious
-    processing. Continuous indirect measures (typically response times) are
+    awareness and influence measures, the design used to test for unconscious
+    processing. Continuous influence measures (typically response times) are
     dichotomized with the within-subject median split of Meyen et al. (2022)
     <doi:10.1037/xge0001065> so that both tasks are placed on a common
     sensitivity scale. The package estimates a binomial probit mixed model in
     which the two sensitivities are correlated random effects, and tests the
     three hypotheses of interest: the group-level difference between
     sensitivities, their latent correlation, and the latent regression of the
-    indirect on the direct measure, whose intercept is the test for
+    influence on the awareness measure, whose intercept is the test for
     unconscious processing. Frequentist estimation uses 'lme4'. Bayesian
     estimation uses 'brms', which runs 'Stan' through 'rstan' or 'cmdstanr',
     with priors on the means, standard deviations and correlation of the two
     sensitivities, or on the intercept of the latent regression in place of
-    the indirect mean, and weighs each hypothesis with Bayes factors: the
+    the influence mean, and weighs each hypothesis with Bayes factors: the
     Savage-Dickey density ratio for point hypotheses (Wagenmakers et al., 2010
     <doi:10.1016/j.cogpsych.2009.12.001>) and the change from prior to
     posterior odds for directional and interval ones. The tests and Bayes

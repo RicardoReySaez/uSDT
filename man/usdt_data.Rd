@@ -8,8 +8,8 @@
 \title{Prepare data for hierarchical SDT models}
 \usage{
 usdt_data_tasks(
-  direct,
-  indirect,
+  awareness,
+  influence,
   subject_col,
   condition_col = NULL,
   condition_levels = NULL,
@@ -19,10 +19,10 @@ usdt_data_tasks(
   trials_col = NULL,
   successes_type = c("auto", "counts", "proportions"),
   sdt_cols = NULL,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   ties = c("noise", "random"),
   coding = c("deviation", "treatment"),
-  labels = c(direct = "Direct", indirect = "Indirect")
+  labels = c(awareness = "Awareness", influence = "Influence")
 )
 
 usdt_data_long(
@@ -38,7 +38,7 @@ usdt_data_long(
   trials_col = NULL,
   successes_type = c("auto", "counts", "proportions"),
   sdt_cols = NULL,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   ties = c("noise", "random"),
   coding = c("deviation", "treatment"),
   labels = NULL
@@ -47,7 +47,8 @@ usdt_data_long(
 \method{print}{usdt_data}(x, ...)
 }
 \arguments{
-\item{direct, indirect}{Data frames for each task (used in \code{usdt_data_tasks()}).}
+\item{awareness, influence}{Data frames for each task (used in
+\code{usdt_data_tasks()}).}
 
 \item{subject_col}{Name of the column that identifies participants.}
 
@@ -77,8 +78,8 @@ or \code{"auto"}.}
 \code{c(hit = "H", miss = "M", fa = "FA", cr = "CR")}.}
 
 \item{dichotomize}{Which tasks to split at the median using \code{\link[=meyen_split]{meyen_split()}}.
-Use \code{"none"}, \code{"direct"}, \code{"indirect"}, \code{"both"}, or a list like
-\code{list(direct = FALSE, indirect = TRUE)}.}
+Use \code{"none"}, \code{"awareness"}, \code{"influence"}, \code{"both"}, or a list like
+\code{list(awareness = FALSE, influence = TRUE)}.}
 
 \item{ties}{How to handle trials that fall exactly on the median.
 See \code{\link[=meyen_split]{meyen_split()}}.}
@@ -93,7 +94,7 @@ See \code{\link[=meyen_split]{meyen_split()}}.}
 \item{task_col}{Name of the column that identifies the task in \code{data}.}
 
 \item{task_levels}{Named vector mapping task labels, like
-\code{c(direct = "D", indirect = "I")}.}
+\code{c(awareness = "A", influence = "I")}.}
 
 \item{x}{A \code{usdt_data} object.}
 
@@ -104,7 +105,7 @@ An object of class \code{usdt_data}. The \verb{$agg} table contains the counts
 used by \code{\link[=hsdt]{hsdt()}}, and \verb{$meta} contains setup details and summaries.
 }
 \description{
-Formats direct and indirect task data into a standardized structure for
+Formats awareness and influence task data into a standardized structure for
 \code{\link[=hsdt]{hsdt()}}. Use \code{usdt_data_tasks()} when tasks are stored in separate data
 frames, or \code{usdt_data_long()} when both tasks are kept in a single data frame
 with a column that identifies each task.
@@ -118,10 +119,11 @@ verify the column settings before fitting the model.
 Arguments for columns and levels take either a single value (used for both
 tasks) or a list with separate settings for each task:
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{condition_col    = list(direct = "cond", indirect = "cue")
-condition_levels = list(direct   = c(signal = "old", noise = "new"),
-                        indirect = c(signal = "congruent", noise = "incongruent"))
-dichotomize      = list(direct = FALSE, indirect = TRUE)
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{condition_col    = list(awareness = "cond", influence = "cue")
+condition_levels = list(awareness = c(signal = "old", noise = "new"),
+                        influence = c(signal = "congruent",
+                                      noise = "incongruent"))
+dichotomize      = list(awareness = FALSE, influence = TRUE)
 }\if{html}{\out{</div>}}
 
 This works for all column and level arguments, so you can combine trial-level
@@ -141,24 +143,25 @@ estimate it.
 
 \examples{
 # 1. Tasks in separate data frames
-# Direct task: binary choices (old/new)
-# Indirect task: response times (split at the median)
+# Awareness task: binary choices (old/new)
+# Influence task: response times (split at the median)
 d_separate <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 d_separate
 
 # 2. Tasks combined in a single long data frame
 long <- rbind(
-  data.frame(task      = "D",
+  data.frame(task      = "A",
              subj      = vadillo_awareness$subj,
              condition = vadillo_awareness$condition,
              response  = vadillo_awareness$judged.old),
@@ -171,14 +174,15 @@ long <- rbind(
 d_long <- usdt_data_long(
   long,
   task_col         = "task",
-  task_levels      = c(direct = "D", indirect = "I"),
+  task_levels      = c(awareness = "A", influence = "I"),
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
   response_col     = "response",
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 d_long
 

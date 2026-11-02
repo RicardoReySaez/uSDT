@@ -24,13 +24,13 @@ usdt_population(
 }
 \arguments{
 \item{dprime}{Mean \eqn{d'} of each task. Under the latent regression
-parameterization (when \code{intercept} is given), the mean of the direct task
-only.}
+parameterization (when \code{intercept} is given), the mean of the awareness
+task only.}
 
 \item{sd_dprime}{Between-subject standard deviation of \eqn{d'} in each
 task.}
 
-\item{cor_dprime}{Correlation between direct and indirect \eqn{d'} across
+\item{cor_dprime}{Correlation between awareness and influence \eqn{d'} across
 subjects.}
 
 \item{criterion}{Mean criterion \eqn{c} of each task, on the classical scale
@@ -45,9 +45,9 @@ each task. Zero gives every subject the same criterion.}
 relative to the noise distribution. The default, 1, is the equal-variance
 model that \code{\link[=hsdt]{hsdt()}} fits.}
 
-\item{intercept}{Intercept of the latent regression of indirect on direct
+\item{intercept}{Intercept of the latent regression of influence on awareness
 \eqn{d'}. Giving it selects the latent regression parameterization, in
-which it replaces the indirect mean.}
+which it replaces the influence mean.}
 
 \item{from}{A frequentist \code{\link[=hsdt]{hsdt()}} fit, such as a pilot study, whose
 estimates give every value not set in the call.}
@@ -62,43 +62,43 @@ other.}
 }
 \value{
 An object of class \code{usdt_population}: a data frame with one row per
-scenario and the columns \code{scenario}, \code{mu_D}, \code{mu_I}, \code{sigma_D},
+scenario and the columns \code{scenario}, \code{mu_A}, \code{mu_I}, \code{sigma_A},
 \code{sigma_I}, \code{rho}, the tested quantities \code{diff}, \code{intercept} and \code{slope},
-and \code{criterion_D}, \code{criterion_I}, \code{sd_criterion_D}, \code{sd_criterion_I},
-\code{cor_criterion}, \code{sd_signal_D} and \code{sd_signal_I}. Its \code{parameterization}
+and \code{criterion_A}, \code{criterion_I}, \code{sd_criterion_A}, \code{sd_criterion_I},
+\code{cor_criterion}, \code{sd_signal_A} and \code{sd_signal_I}. Its \code{parameterization}
 attribute is \code{"correlation"} or \code{"regression"}.
 }
 \description{
-Describes the population a planned study samples from: how direct and
-indirect sensitivity (\eqn{d'}) vary and covary across subjects, and how
+Describes the population a planned study samples from: how awareness and
+influence sensitivity (\eqn{d'}) vary and covary across subjects, and how
 the response criteria vary. The arguments take the names of
 \code{\link[=usdt_priors]{usdt_priors()}}, with numbers instead of priors, and the population can be
 written in either parameterization of \code{\link[=hsdt]{hsdt()}}.
 }
 \section{Values for each task}{
 \code{dprime}, \code{sd_dprime}, \code{criterion}, \code{sd_criterion} and \code{sd_signal} take one
-value for both tasks or one for each, as \code{c(direct = , indirect = )} or
-\code{list(direct = , indirect = )}. The correlations and the intercept take a
+value for both tasks or one for each, as \code{c(awareness = , influence = )} or
+\code{list(awareness = , influence = )}. The correlations and the intercept take a
 single value.
 }
 
 \section{The two parameterizations}{
 The correlation parameterization gives the bivariate normal distribution of
-\eqn{d'}: its means \eqn{\mu_D} and \eqn{\mu_I}, standard deviations
-\eqn{\sigma_D} and \eqn{\sigma_I} and correlation \eqn{\rho}. The latent
+\eqn{d'}: its means \eqn{\mu_A} and \eqn{\mu_I}, standard deviations
+\eqn{\sigma_A} and \eqn{\sigma_I} and correlation \eqn{\rho}. The latent
 regression parameterization gives the intercept \eqn{\beta_0} instead of
 \eqn{\mu_I}, which then follows as
-\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}, as in
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}, as in
 \code{hsdt(parameterization = "regression")}. Both describe the same
 distribution, and the printed population reports the tested quantities of
-either: the difference \eqn{\mu_I - \mu_D} (H1), the correlation (H2) and
+either: the difference \eqn{\mu_I - \mu_A} (H1), the correlation (H2) and
 the intercept and slope of the latent regression (H3).
 
 The parameterization decides what stays fixed when a value changes, in a
 scenario or in \code{\link[=update]{update()}}. Under the correlation parameterization a new
 correlation keeps both means and moves the intercept (unless
-\eqn{\mu_D = 0}); under the latent regression it keeps the intercept and
-moves the indirect mean, and with it the difference.
+\eqn{\mu_A = 0}); under the latent regression it keeps the intercept and
+moves the influence mean, and with it the difference.
 }
 
 \section{Criteria}{
@@ -113,7 +113,8 @@ Several values in an argument give one scenario for each, and several
 arguments with several values give one scenario for each combination. A
 value shared by both tasks keeps them equal in every scenario:
 \code{sd_dprime = c(0.2, 0.3)} gives two scenarios, while
-\code{sd_dprime = list(direct = c(0.2, 0.3), indirect = c(0.2, 0.3))} gives four.
+\code{sd_dprime = list(awareness = c(0.2, 0.3), influence = c(0.2, 0.3))} gives
+four.
 }
 
 \section{Values from a fitted model}{
@@ -121,21 +122,21 @@ With \code{from}, the estimates of a frequentist \code{\link[=hsdt]{hsdt()}} fit
 standard deviations and correlations, and the arguments set in the call
 replace them, so \code{usdt_population(from = m, cor_dprime = 0.3)} keeps every
 estimate of \code{m} except the correlation. Setting \code{intercept} switches to the
-latent regression parameterization and drops the estimated indirect mean. A
+latent regression parameterization and drops the estimated influence mean. A
 criterion fixed at zero by the median split is zero with no variation.
 }
 
 \examples{
 # The correlation parameterization: means, SDs and correlation of d'
-pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                       sd_dprime = c(direct = 0.35, indirect = 0.30),
+pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                       sd_dprime = c(awareness = 0.35, influence = 0.30),
                        cor_dprime = 0.3)
 pop
 
 # The latent regression parameterization: the intercept replaces the
-# indirect mean
+# influence mean
 usdt_population(dprime = 0.15, intercept = 0.25,
-                sd_dprime = c(direct = 0.35, indirect = 0.30),
+                sd_dprime = c(awareness = 0.35, influence = 0.30),
                 cor_dprime = 0.3)
 
 # Three scenarios for the correlation
@@ -143,15 +144,16 @@ update(pop, cor_dprime = c(0.1, 0.3, 0.5))
 
 # The estimates of a pilot study, with a weaker correlation
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 usdt_population(from = hsdt(d), cor_dprime = 0.3)
 

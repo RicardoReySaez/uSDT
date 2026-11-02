@@ -1,4 +1,4 @@
-"population","subjects","trials_direct","trials_indirect","hypothesis","closed","approximate","simulation","simulation_low","simulation_high","estimable_approximate","estimable_simulation","nsim"
+"population","subjects","trials_awareness","trials_influence","hypothesis","closed","approximate","simulation","simulation_low","simulation_high","estimable_approximate","estimable_simulation","nsim"
 "A",40,64,200,"diff = 0",0.428037558850625,0.4362,0.471,0.440232445701164,0.501989506290999,1,1,1000
 "A",40,64,200,"rho = 0",0.218544868462842,0.18605,0.194,0.170681429567328,0.219660546625832,0.9935,0.996,1000
 "A",40,64,200,"intercept = 0",0.983877192717059,0.9097,0.891,0.87016750824881,0.908839966615486,0.9935,0.996,1000

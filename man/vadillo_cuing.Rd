@@ -32,9 +32,9 @@ Data retrieved from \url{https://osf.io/jp3gx/}.
 vadillo_cuing
 }
 \description{
-Trial-level indirect-task data from Experiment 2 of Vadillo et al. (2025).
+Trial-level influence-task data from Experiment 2 of Vadillo et al. (2025).
 The object reproduces the source CSV file without filtering or recoding and
-can be used as the \code{indirect} input to \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.
+can be used as the \code{influence} input to \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.
 }
 \examples{
 data(vadillo_cuing)

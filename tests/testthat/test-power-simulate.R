@@ -7,16 +7,16 @@
 
 # This function gives the scenario and the design most tests simulate.
 simulation_case <- function(...) {
-  pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                         sd_dprime = c(direct = 0.35, indirect = 0.30),
+  pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                         sd_dprime = c(awareness = 0.35, influence = 0.30),
                          cor_dprime = 0.3, criterion = 0.1,
                          sd_criterion = 0.3, ...)
   list(population = pop,
        scenario = as.list(as.data.frame(pop)[1L, ]),
-       cells = list(signal = c(direct = 32, indirect = 60),
-                    noise = c(direct = 32, indirect = 60)),
-       split = c(direct = FALSE, indirect = TRUE),
-       labels = c(direct = "Direct", indirect = "Indirect"))
+       cells = list(signal = c(awareness = 32, influence = 60),
+                    noise = c(awareness = 32, influence = 60)),
+       split = c(awareness = FALSE, influence = TRUE),
+       labels = c(awareness = "Awareness", influence = "Influence"))
 }
 
 test_that("a simulated study has the layout of usdt_data_tasks()", {
@@ -26,32 +26,33 @@ test_that("a simulated study has the layout of usdt_data_tasks()", {
                            case$labels)
   expect_s3_class(d, "usdt_data")
   expect_equal(nrow(d$agg), 4L * 30L)
-  expect_named(d$agg, c("subj", "task", "sig", "y", "n", "cond", "c_D", "c_I",
-                        "d_D", "d_I"))
-  expect_equal(d$agg$n[d$agg$task == "D"], rep(32L, 60L))
+  expect_named(d$agg, c("subj", "task", "sig", "y", "n", "cond", "c_A", "c_I",
+                        "d_A", "d_I"))
+  expect_equal(d$agg$n[d$agg$task == "A"], rep(32L, 60L))
 
   # The median split gives every subject half signal responses, so the
   # criterion of that task is fixed and the other is estimated.
   split <- d$agg[d$agg$task == "I", ]
   expect_equal(as.vector(tapply(split$y, split$subj, sum)), rep(60, 30L))
-  expect_identical(d$meta$criterion_zero, c(direct = FALSE, indirect = TRUE))
+  expect_identical(d$meta$criterion_zero, c(awareness = FALSE,
+                                            influence = TRUE))
   expect_output(print(d), "simulated study")
-  expect_identical(hsdt(d)$design$criteria, "c_D")
+  expect_identical(hsdt(d)$design$criteria, "c_A")
 })
 
 test_that("simulated studies recover the population", {
   case <- simulation_case()
   set.seed(8)
   d <- .simulate_usdt_data(case$scenario, 400L,
-                           list(signal = c(direct = 60, indirect = 150),
-                                noise = c(direct = 60, indirect = 150)),
+                           list(signal = c(awareness = 60, influence = 150),
+                                noise = c(awareness = 60, influence = 150)),
                            case$split, case$labels)
   # With 400 subjects the means and SDs have standard errors near 0.02 and
   # the correlation near 0.1, so each must lie within three of them.
   e <- hsdt(d)$pars$est
-  expect_true(all(abs(e[c("gamma_D", "gamma_I")] - c(0.15, 0.30)) < 0.07))
-  expect_true(all(abs(sqrt(e[c("s2_D", "s2_I")]) - c(0.35, 0.30)) < 0.07))
-  expect_lt(abs(e[["s_DI"]] / sqrt(e[["s2_D"]] * e[["s2_I"]]) - 0.3), 0.3)
+  expect_true(all(abs(e[c("gamma_A", "gamma_I")] - c(0.15, 0.30)) < 0.07))
+  expect_true(all(abs(sqrt(e[c("s2_A", "s2_I")]) - c(0.35, 0.30)) < 0.07))
+  expect_lt(abs(e[["s_AI"]] / sqrt(e[["s2_A"]] * e[["s2_I"]]) - 0.3), 0.3)
 })
 
 test_that("each simulated study is decided as usdt_tests() and usdt_equivalence() decide it", {
@@ -86,8 +87,9 @@ test_that("each simulated study is decided as usdt_tests() and usdt_equivalence(
 
 test_that("a simulation reports power with its Monte Carlo error and precision", {
   case <- simulation_case()
-  p <- usdt_power(case$population, subjects = 30, trials = c(direct = 64, indirect = 120),
-                  dichotomize = "indirect", method = "simulation", nsim = 6,
+  p <- usdt_power(case$population, subjects = 30,
+                  trials = c(awareness = 64, influence = 120),
+                  dichotomize = "influence", method = "simulation", nsim = 6,
                   seed = 2, combine = "all")
   expect_s3_class(p, "usdt_power")
   expect_true(all(c("mc_se", "power.low", "power.high", "failures") %in%
@@ -107,8 +109,9 @@ test_that("a simulation reports power with its Monte Carlo error and precision",
   set.seed(1)
   before <- stats::runif(1L)
   set.seed(1)
-  again <- usdt_power(case$population, subjects = 30, trials = c(direct = 64, indirect = 120),
-                      dichotomize = "indirect", method = "simulation",
+  again <- usdt_power(case$population, subjects = 30,
+                      trials = c(awareness = 64, influence = 120),
+                      dichotomize = "influence", method = "simulation",
                       nsim = 6, seed = 2, combine = "all")
   expect_identical(stats::runif(1L), before)
   expect_identical(again$power, p$power)
@@ -117,8 +120,9 @@ test_that("a simulation reports power with its Monte Carlo error and precision",
 test_that("failed fits count as failures to reject", {
   case <- simulation_case()
   local_mocked_bindings(.power_fit = function(data, level) stop("no fit"))
-  p <- usdt_power(case$population, subjects = 30, trials = c(direct = 64, indirect = 120),
-                  dichotomize = "indirect", method = "simulation", nsim = 4,
+  p <- usdt_power(case$population, subjects = 30,
+                  trials = c(awareness = 64, influence = 120),
+                  dichotomize = "influence", method = "simulation", nsim = 4,
                   seed = 1)
   expect_true(all(p$power == 0))
   expect_true(all(p$estimable == 0))
@@ -127,15 +131,15 @@ test_that("failed fits count as failures to reject", {
 })
 
 test_that("a population with unequal variances can only be simulated", {
-  case <- simulation_case(sd_signal = c(direct = 1, indirect = 1.3))
+  case <- simulation_case(sd_signal = c(awareness = 1, influence = 1.3))
   expect_error(usdt_power(case$population, subjects = 30, trials = 100),
                "method = \"simulation\"")
   local_mocked_bindings(.power_fit = function(data, level) stop("no fit"))
   p <- usdt_power(case$population, subjects = 30, trials = 100,
-                  dichotomize = "indirect", method = "simulation", nsim = 2,
+                  dichotomize = "influence", method = "simulation", nsim = 2,
                   seed = 1)
   expect_true(all(is.na(p$se)))
-  expect_true(all(is.na(p$reliability_direct)))
+  expect_true(all(is.na(p$reliability_awareness)))
 })
 
 test_that("the summary needs a simulation, and the arguments are checked", {
@@ -157,8 +161,9 @@ test_that("a parallel run gives the studies of a sequential one", {
   skip_on_cran()
   case <- simulation_case()
   run <- function(ncores) {
-    usdt_power(case$population, subjects = 30, trials = c(direct = 64, indirect = 120),
-               dichotomize = "indirect", method = "simulation", nsim = 4,
+    usdt_power(case$population, subjects = 30,
+               trials = c(awareness = 64, influence = 120),
+               dichotomize = "influence", method = "simulation", nsim = 4,
                seed = 5, ncores = ncores)
   }
   expect_identical(run(2L)$power, run(1L)$power)

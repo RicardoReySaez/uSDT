@@ -1,6 +1,6 @@
 bayes_data <- function(df) {
   usdt_data_long(df, task_col = "task",
-                 task_levels      = c(direct = "D", indirect = "I"),
+                 task_levels      = c(awareness = "A", influence = "I"),
                  subject_col      = "subj",
                  condition_col    = "cond",
                  condition_levels = c(signal = 1, noise = 0),
@@ -69,16 +69,16 @@ test_that("the latent regression reports the same quantities", {
   expect_identical(m$tests$term, f$tests$term)
   expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
 
-  # The model samples the indirect mean under the prior of the intercept,
+  # The model samples the influence mean under the prior of the intercept,
   # which then has an exact prior like the correlation, and a slope compared
   # with zero is tested on the correlation.
   table <- brms::prior_summary(m$fit)
   expect_true(any(startsWith(table$prior, "target += normal_lpdf(b_dI[1]")))
   draws <- unclass(posterior::as_draws_matrix(m$fit))
-  slope <- draws[, "cor_subj__dD_Intercept__dI_Intercept"] *
-    draws[, "sd_subj__dI_Intercept"] / draws[, "sd_subj__dD_Intercept"]
+  slope <- draws[, "cor_subj__dA_Intercept__dI_Intercept"] *
+    draws[, "sd_subj__dI_Intercept"] / draws[, "sd_subj__dA_Intercept"]
   expect_equal(m$tests$estimate[3L], mean(draws[, "b_dI_Intercept"] -
-                                            slope * draws[, "b_dD_Intercept"]))
+                                            slope * draws[, "b_dA_Intercept"]))
   set.seed(3)
   b <- usdt_bf(m, c("intercept = 0", "rho = 0", "slope = 0", "diff = 0"),
                plot = FALSE)
@@ -88,15 +88,16 @@ test_that("the latent regression reports the same quantities", {
 })
 
 test_that("brms variables are found whatever the order of the correlation", {
-  variables <- c("b_direct", "b_taskD:cond", "b_taskI:cond", "sd_subj__direct",
-                 "sd_subj__taskD:cond", "sd_subj__taskI:cond",
-                 "cor_subj__taskI:cond__taskD:cond", "lp__")
+  variables <- c("b_awareness", "b_taskA:cond", "b_taskI:cond",
+                 "sd_subj__awareness",
+                 "sd_subj__taskA:cond", "sd_subj__taskI:cond",
+                 "cor_subj__taskI:cond__taskA:cond", "lp__")
   expect_identical(
-    .brms_variables(variables, "taskD:cond", "taskI:cond"),
-    c("b_taskD:cond", "b_taskI:cond", "sd_subj__taskD:cond",
-      "sd_subj__taskI:cond", "cor_subj__taskI:cond__taskD:cond"))
-  expect_error(.brms_variables(variables, "d_D", "d_I"), "not found")
-  expect_error(.brms_variables(variables, "taskD:cond", "direct"),
+    .brms_variables(variables, "taskA:cond", "taskI:cond"),
+    c("b_taskA:cond", "b_taskI:cond", "sd_subj__taskA:cond",
+      "sd_subj__taskI:cond", "cor_subj__taskI:cond__taskA:cond"))
+  expect_error(.brms_variables(variables, "d_A", "d_I"), "not found")
+  expect_error(.brms_variables(variables, "taskA:cond", "awareness"),
                "no group-level term")
 })
 
@@ -114,26 +115,27 @@ test_that("a brms model is tested from its posterior", {
 
   set.seed(3)
   df <- make_trials(n_subj = 30, n_trials = 60)
-  df$cond_D <- (df$cond - 0.5) * (df$task == "D")
+  df$cond_A <- (df$cond - 0.5) * (df$task == "A")
   df$cond_I <- (df$cond - 0.5) * (df$task == "I")
-  df$direct <- as.integer(df$task == "D")
-  df$indirect <- as.integer(df$task == "I")
+  df$awareness <- as.integer(df$task == "A")
+  df$influence <- as.integer(df$task == "I")
   counts <- usdt_aggregate(df, "response",
-                           c("subj", "direct", "indirect", "cond_D", "cond_I"))
+                           c("subj", "awareness", "influence", "cond_A",
+                             "cond_I"))
   fit <- suppressWarnings(brms::brm(
-    y | trials(n) ~ 0 + direct + indirect + cond_D + cond_I +
-      (0 + direct + indirect | subj) + (0 + cond_D + cond_I | subj),
+    y | trials(n) ~ 0 + awareness + influence + cond_A + cond_I +
+      (0 + awareness + influence | subj) + (0 + cond_A + cond_I | subj),
     data = counts, family = binomial("probit"),
     prior = brms::prior(normal(0, 1), class = b), chains = 2, iter = 1000,
     seed = 1, refresh = 0, silent = 2, backend = test_backend()))
 
-  tests <- usdt_tests(fit, direct = "cond_D", indirect = "cond_I")
+  tests <- usdt_tests(fit, awareness = "cond_A", influence = "cond_I")
   expect_identical(tests$hypothesis, c("H1", "H2", "H3", "H3"))
-  expect_identical(latent_cor(fit, "cond_D", "cond_I")$p.value,
+  expect_identical(latent_cor(fit, "cond_A", "cond_I")$p.value,
                    tests$p.value[2L])
 
   # Its priors are read from the model, so it also gets Bayes factors.
-  b <- usdt_bf(fit, direct = "cond_D", indirect = "cond_I", plot = FALSE)
+  b <- usdt_bf(fit, awareness = "cond_A", influence = "cond_I", plot = FALSE)
   expect_true(all(is.finite(b$log_BF10)))
   expect_equal(b$estimate, tests$estimate[c(1L, 2L, 3L)])
 })

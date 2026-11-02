@@ -12,8 +12,8 @@
 #'
 #' * A `usdt_population` shows, for each scenario, the bivariate normal
 #'   distribution of the true \eqn{d'} across subjects (ellipses holding 50%
-#'   and 90% of them) with the latent regression of indirect on direct
-#'   \eqn{d'} and its intercept at \eqn{d'_D = 0}. With `trials`, a dashed
+#'   and 90% of them) with the latent regression of influence on awareness
+#'   \eqn{d'} and its intercept at \eqn{d'_A = 0}. With `trials`, a dashed
 #'   ellipse adds the distribution of the \eqn{d'} that those trials measure,
 #'   wider by the measurement error, which is what attenuates the observed
 #'   correlation.
@@ -42,22 +42,24 @@
 #' @seealso [usdt_population()], [usdt_power()], [usdt_mdes()], [usdt_plan()]
 #'
 #' @examples
-#' pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-#'                        sd_dprime = c(direct = 0.35, indirect = 0.30),
+#' pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+#'                        sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                        cor_dprime = 0.3, criterion = 0.1)
-#' plot(pop, trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+#' plot(pop, trials = c(awareness = 64, influence = 200),
+#'      dichotomize = "influence")
 #'
 #' plot(usdt_power(pop, subjects = seq(20, 300, 40),
-#'                 trials = c(direct = 64, indirect = 200),
-#'                 dichotomize = "indirect"))
+#'                 trials = c(awareness = 64, influence = 200),
+#'                 dichotomize = "influence"))
 #'
-#' plot(usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-#'                hypothesis = "intercept > 0", dichotomize = "indirect"))
+#' plot(usdt_mdes(pop, subjects = 80,
+#'                trials = c(awareness = 64, influence = 200),
+#'                hypothesis = "intercept > 0", dichotomize = "influence"))
 #'
 #' plot(usdt_plan(pop, hypothesis = "diff = 0", subjects = c(20, 300),
-#'                trials = list(direct = c(32, 96), indirect = 200),
-#'                cost = c(subject = 600, direct = 4, indirect = 1.5),
-#'                dichotomize = "indirect"))
+#'                trials = list(awareness = c(32, 96), influence = 200),
+#'                cost = c(subject = 600, awareness = 4, influence = 1.5),
+#'                dichotomize = "influence"))
 #'
 #' @name plot_power
 NULL
@@ -65,8 +67,8 @@ NULL
 #' @rdname plot_power
 #' @export
 plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
-                                 dichotomize = c("none", "indirect", "direct",
-                                                 "both"), ...) {
+                                 dichotomize = c("none", "influence",
+                                                 "awareness", "both"), ...) {
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   if (nrow(x) > 12L) {
     .usdt_stop("the population has ", nrow(x), " scenarios; plot at most 12, ",
@@ -85,9 +87,9 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
   notes <- character(0)
   for (s in seq_len(nrow(x))) {
     pop <- as.list(as.data.frame(x)[s, ])
-    Sigma <- matrix(c(pop$sigma_D^2, pop$rho * pop$sigma_D * pop$sigma_I,
-                      pop$rho * pop$sigma_D * pop$sigma_I, pop$sigma_I^2), 2L)
-    mu <- c(pop$mu_D, pop$mu_I)
+    Sigma <- matrix(c(pop$sigma_A^2, pop$rho * pop$sigma_A * pop$sigma_I,
+                      pop$rho * pop$sigma_A * pop$sigma_I, pop$sigma_I^2), 2L)
+    mu <- c(pop$mu_A, pop$mu_I)
     true <- .covariance_ellipse(mu, Sigma, c(0.5, 0.9))
     true$kind <- "true"
     observed <- NULL
@@ -99,8 +101,8 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
       reliability <- diag(Sigma) / (diag(Sigma) + v)
       if (s == 1L) {
         notes <- sprintf("reliability %.2f %s, %.2f %s", reliability[1L],
-                         labels[["direct"]], reliability[2L],
-                         labels[["indirect"]])
+                         labels[["awareness"]], reliability[2L],
+                         labels[["influence"]])
       }
     }
     both <- rbind(true, observed)
@@ -119,7 +121,7 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
   points <- unique(lines[c("scenario", "intercept")])
   points$x <- 0
   centres <- data.frame(scenario = factor(scenarios, levels = scenarios),
-                        x = x$mu_D, y = x$mu_I)
+                        x = x$mu_A, y = x$mu_I)
 
   model_colour <- "#116B60"
   model_fill <- "#3FA88E"
@@ -141,8 +143,8 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
   }
   caption <- .wrap_caption(
     "Ellipses hold 50% and 90% of the subjects' true d'. The line is the ",
-    "latent regression of indirect on direct d' (H3), and the open circle ",
-    "its intercept at a direct d' of zero; the filled point is the mean. ",
+    "latent regression of influence on awareness d' (H3), and the open circle ",
+    "its intercept at an awareness d' of zero; the filled point is the mean. ",
     if (length(notes)) paste0(
       "The dashed ellipse holds 90% of the d' that the trials measure (",
       notes, "): the measurement error widens it and weakens the observed ",
@@ -160,8 +162,8 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
       fill = "white") +
     ggplot2::facet_wrap(ggplot2::vars(.data[["scenario"]])) +
     ggplot2::labs(
-      x = bquote(.(labels[["direct"]]) ~ italic(d) * minute),
-      y = bquote(.(labels[["indirect"]]) ~ italic(d) * minute),
+      x = bquote(.(labels[["awareness"]]) ~ italic(d) * minute),
+      y = bquote(.(labels[["influence"]]) ~ italic(d) * minute),
       caption = caption) +
     .power_theme() +
     ggplot2::theme(aspect.ratio = 1,
@@ -185,17 +187,17 @@ plot.usdt_power <- function(x, ...) {
 
   # The axis is the number of subjects when it varies, otherwise the trials
   # of the task that varies; the rest of each design names the panel.
-  varies <- vapply(c("subjects", "trials_direct", "trials_indirect"),
+  varies <- vapply(c("subjects", "trials_awareness", "trials_influence"),
                    function(k) length(unique(d[[k]])) > 1L, TRUE)
   axis <- if (varies[["subjects"]]) "subjects" else
-    if (varies[["trials_direct"]]) "trials_direct" else
-      if (varies[["trials_indirect"]]) "trials_indirect" else NA_character_
+    if (varies[["trials_awareness"]]) "trials_awareness" else
+      if (varies[["trials_influence"]]) "trials_influence" else NA_character_
   axis_title <- switch(axis %||% "none",
     subjects = "Subjects",
-    trials_direct = paste(labels[["direct"]], "trials per subject"),
-    trials_indirect = paste(labels[["indirect"]], "trials per subject"),
+    trials_awareness = paste(labels[["awareness"]], "trials per subject"),
+    trials_influence = paste(labels[["influence"]], "trials per subject"),
     "Power")
-  others <- setdiff(c("subjects", "trials_direct", "trials_indirect"), axis)
+  others <- setdiff(c("subjects", "trials_awareness", "trials_influence"), axis)
   d$panel <- .design_panel(d, others, labels,
                            length(unique(d$scenario)) > 1L)
 
@@ -261,12 +263,12 @@ plot.usdt_mdes <- function(x, ...) {
   if (length(list(...))) .usdt_stop("`...` is not used by this plot.")
   labels <- attr(x, "labels")
   d <- as.data.frame(x)
-  several <- nrow(unique(d[c("scenario", "subjects", "trials_direct",
-                             "trials_indirect")])) > 1L
+  several <- nrow(unique(d[c("scenario", "subjects", "trials_awareness",
+                             "trials_influence")])) > 1L
   d$panel <- .ascii_hypothesis(d$hypothesis, d$quantity)
   if (several) {
     d$panel <- paste0(d$panel, "\n", .design_panel(
-      d, c("subjects", "trials_direct", "trials_indirect"), labels,
+      d, c("subjects", "trials_awareness", "trials_influence"), labels,
       length(unique(d$scenario)) > 1L))
   }
   d$panel <- factor(d$panel, levels = unique(d$panel))
@@ -317,7 +319,7 @@ plot.usdt_plan <- function(x, ...) {
   }
   labels <- attr(st$population, "labels")
   free <- st$space$free
-  trials_free <- c("direct", "indirect")[free[c("direct", "indirect")]]
+  trials_free <- c("awareness", "influence")[free[c("awareness", "influence")]]
   chosen <- x$design[!is.na(x$design$subjects), , drop = FALSE]
   if (!nrow(chosen)) .usdt_stop("no design of the plan reaches its target.")
   several <- length(unique(x$design$scenario)) > 1L
@@ -367,8 +369,8 @@ plot.usdt_plan <- function(x, ...) {
     # and more take the darkest colour. The grid of trials may be thinned
     # unevenly, so each design is a tile.
     f$relative <- f$cost / stats::ave(f$cost, f$panel, FUN = min)
-    return(ggplot2::ggplot(f, ggplot2::aes(x = .data[["trials_direct"]],
-                                           y = .data[["trials_indirect"]])) +
+    return(ggplot2::ggplot(f, ggplot2::aes(x = .data[["trials_awareness"]],
+                                           y = .data[["trials_influence"]])) +
       ggplot2::geom_tile(ggplot2::aes(fill = .data[["relative"]])) +
       ggplot2::geom_point(data = checked, colour = "#252A2D", size = 0.7,
                           alpha = 0.6) +
@@ -381,7 +383,7 @@ plot.usdt_plan <- function(x, ...) {
       ggplot2::scale_x_continuous(expand = c(0, 0)) +
       ggplot2::scale_y_continuous(expand = c(0, 0)) +
       ggplot2::labs(
-        x = axis_title("direct"), y = axis_title("indirect"),
+        x = axis_title("awareness"), y = axis_title("influence"),
         caption = .wrap_caption(
           "Cost of the cheapest design with each number of trials in the ",
           "closed form, relative to the cheapest of the panel; the steps ",
@@ -478,8 +480,8 @@ plot.usdt_plan <- function(x, ...) {
   parts <- lapply(columns, function(k) {
     switch(k,
       subjects = paste(d$subjects, "subjects"),
-      trials_direct = paste(d$trials_direct, labels[["direct"]]),
-      trials_indirect = paste(d$trials_indirect, labels[["indirect"]]))
+      trials_awareness = paste(d$trials_awareness, labels[["awareness"]]),
+      trials_influence = paste(d$trials_influence, labels[["influence"]]))
   })
   text <- do.call(paste, c(parts, sep = ", "))
   if (scenarios) text <- paste0("Scenario ", d$scenario, ": ", text)
@@ -491,10 +493,10 @@ plot.usdt_plan <- function(x, ...) {
 # between them.
 .scenario_labels <- function(x) {
   if (nrow(x) == 1L) return("")
-  inputs <- c(mu_D = "mean d' D", mu_I = "mean d' I", sigma_D = "sd(d') D",
+  inputs <- c(mu_A = "mean d' A", mu_I = "mean d' I", sigma_A = "sd(d') A",
               sigma_I = "sd(d') I", rho = "cor(d')", intercept = "intercept",
-              criterion_D = "mean c D", criterion_I = "mean c I",
-              sd_criterion_D = "sd(c) D", sd_criterion_I = "sd(c) I",
+              criterion_A = "mean c A", criterion_I = "mean c I",
+              sd_criterion_A = "sd(c) A", sd_criterion_I = "sd(c) I",
               cor_criterion = "cor(c)")
   if (!identical(attr(x, "parameterization"), "regression")) {
     inputs <- inputs[names(inputs) != "intercept"]
@@ -540,7 +542,8 @@ plot.usdt_plan <- function(x, ...) {
   rows <- lapply(seq_len(nrow(d)), function(i) {
     pop <- .population_rows(st$population, d$scenario[i])
     subjects <- d$subjects[i]
-    trials <- list(direct = d$trials_direct[i], indirect = d$trials_indirect[i])
+    trials <- list(awareness = d$trials_awareness[i],
+                   influence = d$trials_influence[i])
     if (axis == "subjects") {
       top <- min(max(sp$subjects), max(3 * subjects, min(sp$subjects) + 20))
       subjects <- unique(round(seq(min(sp$subjects), top, length.out = 60L)))

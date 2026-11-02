@@ -15,10 +15,10 @@
 
   # The criterion settings select the criterion terms.
   czero <- d$meta$criterion_zero
-  keep  <- c(direct = TRUE, indirect = TRUE)
+  keep  <- c(awareness = TRUE, influence = TRUE)
   if (fix_criteria == "auto") keep <- !czero
-  crit  <- c("c_D", "c_I")[c(keep[["direct"]], keep[["indirect"]])]
-  slope <- c("d_D", "d_I")
+  crit  <- c("c_A", "c_I")[c(keep[["awareness"]], keep[["influence"]])]
+  slope <- c("d_A", "d_I")
 
   # Each model engine receives its expected response format.
   lhs <- if (response == "cbind") "cbind(y, n - y)" else "y | trials(n)"
@@ -41,7 +41,7 @@
       env = parent.frame()),
     criteria  = crit,
     slopes    = slope,
-    dropped   = c("c_D", "c_I")[!c(keep[["direct"]], keep[["indirect"]])],
+    dropped   = c("c_A", "c_I")[!c(keep[["awareness"]], keep[["influence"]])],
     n_fixed   = length(crit) + 2L,
     n_var     = nv
   )

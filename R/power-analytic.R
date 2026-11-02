@@ -8,7 +8,7 @@
 
 # Both engines treat each subject's d' as its true d' plus a measurement error
 # whose variance depends on the trials, independent between tasks. The observed
-# d' then have covariance S = Sigma + diag(vD, vI), and the sample mean and
+# d' then have covariance S = Sigma + diag(vA, vI), and the sample mean and
 # covariance of N subjects are sufficient for the five values the hypotheses
 # test. The closed form evaluates the tests at the population values; the
 # moment engine draws the sample mean and covariance and decides each test as
@@ -54,8 +54,8 @@
 # whose criterion the median split fixes at zero.
 .error_variance <- function(pop, cells, split) {
   gh <- .gauss_hermite()
-  out <- vapply(c("direct", "indirect"), function(k) {
-    s <- if (k == "direct") "D" else "I"
+  out <- vapply(c("awareness", "influence"), function(k) {
+    s <- if (k == "awareness") "A" else "I"
     d <- pop[[paste0("mu_", s)]] + pop[[paste0("sigma_", s)]] * gh$z
     sd_c <- pop[[paste0("sd_criterion_", s)]]
     if (split[[k]]) {
@@ -95,7 +95,7 @@
 }
 
 # This function gives the variance of g' x, where x holds the estimates of
-# the five values (gamma_D, gamma_I, s2_D, s2_I, s_DI) of N subjects whose
+# the five values (gamma_A, gamma_I, s2_A, s2_I, s_AI) of N subjects whose
 # observed d' have covariance S (entries S11, S22, S12). The means have
 # covariance S / N and the covariance entries Cov(s_ij, s_kl) =
 # (S_ik S_jl + S_il S_jk) / N, independent of the means. `g` has one row per
@@ -110,37 +110,39 @@
 }
 
 # This function gives the estimate and standard error of each tested quantity
-# from the five values `P` (a matrix with columns gamma_D, gamma_I, s2_D, s2_I
-# and s_DI) and the observed covariance S, with the gradients the fitted model
+# from the five values `P` (a matrix with columns gamma_A, gamma_I, s2_A, s2_I
+# and s_AI) and the observed covariance S, with the gradients the fitted model
 # uses (.diff_rows(), .cor_rows(), .reg_rows() and .cov_test()). The
 # correlation also has its Fisher-z estimate and standard error.
 .moment_tests <- function(P, S11, S22, S12, N) {
-  gD <- P[, "gamma_D"]; gI <- P[, "gamma_I"]
-  s2D <- P[, "s2_D"]; s2I <- P[, "s2_I"]; sDI <- P[, "s_DI"]
+  gA <- P[, "gamma_A"]; gI <- P[, "gamma_I"]
+  s2A <- P[, "s2_A"]; s2I <- P[, "s2_I"]; sAI <- P[, "s_AI"]
   n <- nrow(P)
   zero <- rep(0, n)
 
   # A draw on the boundary has no correlation, and its Fisher-z needs one
   # inside (-1, 1); those draws are not estimable anyway.
-  positive <- s2D > 0 & s2I > 0
-  root <- sqrt(ifelse(positive, s2D * s2I, NA_real_))
-  rho <- sDI / root
+  positive <- s2A > 0 & s2I > 0
+  root <- sqrt(ifelse(positive, s2A * s2I, NA_real_))
+  rho <- sAI / root
   inside <- !is.na(rho) & abs(rho) < 1
   fisher <- rep(NA_real_, n)
   fisher[inside] <- atanh(rho[inside])
-  slope <- sDI / s2D
+  slope <- sAI / s2A
 
   se <- function(g) sqrt(pmax(.moment_quad(g, S11, S22, S12, N), 0))
-  se_rho <- se(cbind(zero, zero, -rho / (2 * s2D), -rho / (2 * s2I), 1 / root))
+  se_rho <- se(cbind(zero, zero, -rho / (2 * s2A), -rho / (2 * s2I), 1 / root))
   list(
-    diff = list(estimate = gI - gD, se = se(cbind(-1, 1, zero, zero, zero))),
-    covariance = list(estimate = sDI, se = se(cbind(zero, zero, zero, zero, 1))),
+    diff = list(estimate = gI - gA, se = se(cbind(-1, 1, zero, zero, zero))),
+    covariance = list(estimate = sAI,
+                      se = se(cbind(zero, zero, zero, zero, 1))),
     rho = list(estimate = rho, se = se_rho),
     fisher = list(estimate = fisher, se = se_rho / (1 - rho^2)),
-    intercept = list(estimate = gI - slope * gD,
-                     se = se(cbind(-slope, 1, gD * sDI / s2D^2, zero, -gD / s2D))),
+    intercept = list(estimate = gI - slope * gA,
+                     se = se(cbind(-slope, 1, gA * sAI / s2A^2, zero,
+                                   -gA / s2A))),
     slope = list(estimate = slope,
-                 se = se(cbind(zero, zero, -sDI / s2D^2, zero, 1 / s2D))))
+                 se = se(cbind(zero, zero, -sAI / s2A^2, zero, 1 / s2A))))
 }
 
 # This function tells, for each set of five values, whether the fitted model
@@ -148,11 +150,11 @@
 # sensitivity covariance inside its valid range and every variance parameter
 # away from its bound (.usdt_pars() and .full_vcov()).
 .moment_estimable <- function(P) {
-  s2D <- P[, "s2_D"]; s2I <- P[, "s2_I"]; sDI <- P[, "s_DI"]
-  inside <- s2D > 1e-8 & s2I > 1e-8
-  rho <- ifelse(inside, sDI / sqrt(pmax(s2D, 1e-300) * pmax(s2I, 1e-300)), 1)
+  s2A <- P[, "s2_A"]; s2I <- P[, "s2_I"]; sAI <- P[, "s_AI"]
+  inside <- s2A > 1e-8 & s2I > 1e-8
+  rho <- ifelse(inside, sAI / sqrt(pmax(s2A, 1e-300) * pmax(s2I, 1e-300)), 1)
   inside & abs(rho) < 1 - 1e-6 &
-    sqrt(pmax(s2D, 0)) >= 1e-3 & sqrt(pmax(s2I * (1 - rho^2), 0)) >= 1e-3
+    sqrt(pmax(s2A, 0)) >= 1e-3 & sqrt(pmax(s2I * (1 - rho^2), 0)) >= 1e-3
 }
 
 # This function names the test the analysis runs for one hypothesis from
@@ -249,13 +251,13 @@
 # every hypothesis at once.
 .power_approximate <- function(pop, N, v, tests, alpha, base,
                                chi = .moment_chi(base, N)) {
-  s2D <- pop$sigma_D^2; s2I <- pop$sigma_I^2
-  sDI <- pop$rho * pop$sigma_D * pop$sigma_I
-  S11 <- s2D + v[["direct"]]; S22 <- s2I + v[["indirect"]]; S12 <- sDI
+  s2A <- pop$sigma_A^2; s2I <- pop$sigma_I^2
+  sAI <- pop$rho * pop$sigma_A * pop$sigma_I
+  S11 <- s2A + v[["awareness"]]; S22 <- s2I + v[["influence"]]; S12 <- sAI
 
   # The closed form evaluates the tests at the population values.
-  truth <- cbind(gamma_D = pop$mu_D, gamma_I = pop$mu_I, s2_D = s2D,
-                 s2_I = s2I, s_DI = sDI)
+  truth <- cbind(gamma_A = pop$mu_A, gamma_I = pop$mu_I, s2_A = s2A,
+                 s2_I = s2I, s_AI = sAI)
   expected <- .moment_tests(truth, S11, S22, S12, N)
 
   # The sample mean and covariance of each draw (Bartlett decomposition of
@@ -266,10 +268,10 @@
   H11 <- l11^2 * a11 / df
   H12 <- l11 * (l21 * a11 + l22 * a12) / df
   H22 <- (l21^2 * a11 + 2 * l21 * l22 * a12 + l22^2 * a22) / df
-  P <- cbind(gamma_D = pop$mu_D + l11 * base$z1 / sqrt(N),
+  P <- cbind(gamma_A = pop$mu_A + l11 * base$z1 / sqrt(N),
              gamma_I = pop$mu_I + (l21 * base$z1 + l22 * base$z2) / sqrt(N),
-             s2_D = H11 - v[["direct"]], s2_I = H22 - v[["indirect"]],
-             s_DI = H12)
+             s2_A = H11 - v[["awareness"]], s2_I = H22 - v[["influence"]],
+             s_AI = H12)
   drawn <- .moment_tests(P, H11, H22, H12, N)
   estimable <- .moment_estimable(P)
 
@@ -291,7 +293,7 @@
     decisions[, j] <- reject
 
     # The reported standard error is that of the quantity on its own scale.
-    centre <- switch(test, covariance = sDI, fisher = atanh(pop$rho), theta)
+    centre <- switch(test, covariance = sAI, fisher = atanh(pop$rho), theta)
     named <- switch(test, covariance = h$quantity, fisher = "rho", test)
     rows[[j]] <- data.frame(
       true = theta, se = expected[[named]]$se,

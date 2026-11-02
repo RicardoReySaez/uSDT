@@ -3,7 +3,7 @@
 # Author: Ricardo Rey-Sáez
 # Last modified: 03-10-2026
 
-#' Reliability of direct and indirect task measures
+#' Reliability of awareness and influence task measures
 #'
 #' Estimates the reliability of sensitivity (\eqn{d'}) by separating true
 #' variance across participants from sampling noise caused by finite trial counts.
@@ -66,15 +66,16 @@
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' r <- usdt_reliability(hsdt(d))
@@ -99,10 +100,10 @@ usdt_reliability <- function(object) {
   labels  <- object$data$meta$labels
   effects <- .task_effects(object$fit, unique(as.character(agg$subj)))$subjects
 
-  results <- lapply(c("D", "I"), function(task) {
+  results <- lapply(c("A", "I"), function(task) {
     slope   <- paste0("d_", task)
     columns <- c(intersect(paste0("c_", task), object$design$criteria), slope)
-    tau2    <- object$pars$est[[if (task == "D") "s2_D" else "s2_I"]]
+    tau2    <- object$pars$est[[if (task == "A") "s2_A" else "s2_I"]]
     rows    <- agg[agg$task == task, ]
     who     <- unique(as.character(rows$subj))
 
@@ -115,7 +116,7 @@ usdt_reliability <- function(object) {
         variance = .sensitivity_variance(cells, eta, length(columns) == 2L))
     }, c(dprime = 0, variance = 0))
 
-    label <- labels[[if (task == "D") "direct" else "indirect"]]
+    label <- labels[[if (task == "A") "awareness" else "influence"]]
     list(
       task = data.frame(task = label, subjects = length(who), tau2 = tau2,
                         mean_variance = mean(values["variance", ]),
@@ -197,8 +198,8 @@ usdt_reliability <- function(object) {
   interval <- function(x) stats::quantile(x, c(a, 1 - a), names = FALSE)
 
   results <- lapply(1:2, function(j) {
-    label <- labels[[c("direct", "indirect")[j]]]
-    rows <- agg[agg$task == c("D", "I")[j], ]
+    label <- labels[[c("awareness", "influence")[j]]]
+    rows <- agg[agg$task == c("A", "I")[j], ]
     who <- unique(as.character(rows$subj))
     d <- .subject_draws(object, "d", j, who)
     criterion <- .subject_draws(object, "c", j, who)
@@ -264,8 +265,9 @@ usdt_reliability <- function(object) {
     NA_real_, n_boot, nrow(subjects),
     dimnames = list(NULL, paste(subjects$task, subjects$subj, sep = "\r")))
 
-  for (task in c("D", "I")) {
-    label <- object$data$meta$labels[[if (task == "D") "direct" else "indirect"]]
+  for (task in c("A", "I")) {
+    label <- object$data$meta$labels[[if (task == "A") "awareness" else
+                                        "influence"]]
     slope <- paste0("d_", task)
     columns <- c(intersect(paste0("c_", task), object$design$criteria), slope)
     rows <- object$data$agg[object$data$agg$task == task, ]

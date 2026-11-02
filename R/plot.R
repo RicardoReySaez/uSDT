@@ -36,10 +36,10 @@
 #'
 #' Compares observed and latent associations across two panels sharing axes.
 #' The left panel shows observed \eqn{d'} values and an ordinary least-squares
-#' line. When direct task reliability is low, trial-level sampling noise
+#' line. When awareness task reliability is low, trial-level sampling noise
 #' attenuates this observed slope toward zero. The right panel plots the latent
-#' regression line (\eqn{d'_I} on \eqn{d'_D}) from H3, correcting for
-#' measurement error. The value of each line at \eqn{d'_D = 0} marks the
+#' regression line (\eqn{d'_I} on \eqn{d'_A}) from H3, correcting for
+#' measurement error. The value of each line at \eqn{d'_A = 0} marks the
 #' intercept testing for unconscious processing, and both panels display it the
 #' same way: an open circle at the point estimate with a vertical line spanning
 #' its confidence interval. The observed marker is the least-squares intercept
@@ -82,15 +82,16 @@
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' fit <- hsdt(d)
@@ -189,7 +190,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     q <- .usdt_quantities(e)
     slope <- q[, "slope"]
     intercept <- q[, "intercept"]
-    fit <- e[["gamma_I"]] + slope * (x - e[["gamma_D"]])
+    fit <- e[["gamma_I"]] + slope * (x - e[["gamma_A"]])
     if (!band) {
       # The reason above already says why there is no band.
     } else if (.has_boot_summary(object)) {
@@ -237,14 +238,15 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   panel_factor <- function(x) factor(x, levels = panels)
 
   # Least squares supplies the observed line, its confidence band and its tests.
-  spread <- stats::var(points$observed_direct)
+  spread <- stats::var(points$observed_awareness)
   naive_ok <- nrow(points) >= 2L && isTRUE(spread > 0)
   naive_fit <- if (naive_ok) {
-    stats::lm(observed_indirect ~ observed_direct, data = points)
+    stats::lm(observed_influence ~ observed_awareness, data = points)
   } else NULL
   # Zero joins the observed grid for the same reason it joins the latent one:
   # the value of the line there is the quantity both panels put on trial.
-  naive_span <- if (naive_ok) range(c(0, points$observed_direct)) else numeric(0)
+  naive_span <- if (naive_ok) range(c(0, points$observed_awareness)) else
+    numeric(0)
   naive_x <- if (naive_ok) {
     sort(unique(c(seq(naive_span[1L], naive_span[2L], length.out = 127L), 0)))
   } else numeric(0)
@@ -262,7 +264,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     coef_table <- summary(naive_fit)$coefficients
     naive_p[] <- coef_table[, "Pr(>|t|)"]
     prediction <- suppressWarnings(stats::predict(
-      naive_fit, newdata = data.frame(observed_direct = naive_x),
+      naive_fit, newdata = data.frame(observed_awareness = naive_x),
       interval = if (band) "confidence" else "none", level = object$level
     ))
     if (band && is.matrix(prediction)) {
@@ -287,10 +289,10 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   } else {
     object$pars$est
   }
-  latent_span <- if (is.finite(e[["s2_D"]]) && e[["s2_D"]] > 0) {
-    e[["gamma_D"]] + stats::qnorm(c(.025, .975)) * sqrt(e[["s2_D"]])
+  latent_span <- if (is.finite(e[["s2_A"]]) && e[["s2_A"]] > 0) {
+    e[["gamma_A"]] + stats::qnorm(c(.025, .975)) * sqrt(e[["s2_A"]])
   } else {
-    range(points$model_direct)
+    range(points$model_awareness)
   }
   latent_span <- range(c(0, latent_span))
   latent_x <- sort(unique(c(seq(latent_span[1L], latent_span[2L],
@@ -380,33 +382,33 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   plot <- plot +
     ggplot2::geom_segment(
       data = values$model_points,
-      ggplot2::aes(x = .data[["observed_direct"]],
-                   y = .data[["observed_indirect"]],
-                   xend = .data[["model_direct"]],
-                   yend = .data[["model_indirect"]]),
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]],
+                   xend = .data[["model_awareness"]],
+                   yend = .data[["model_influence"]]),
       inherit.aes = FALSE, colour = observed_colour, alpha = 0.34,
       linewidth = 0.42
     ) +
     ggplot2::geom_point(
       data = values$observed_points,
-      ggplot2::aes(x = .data[["observed_direct"]],
-                   y = .data[["observed_indirect"]]),
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]]),
       inherit.aes = FALSE,
       shape = 21, size = 2.4, stroke = 0.7,
       colour = observed_colour, fill = background, alpha = 0.8
     ) +
     ggplot2::geom_point(
       data = values$model_points,
-      ggplot2::aes(x = .data[["observed_direct"]],
-                   y = .data[["observed_indirect"]]),
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]]),
       inherit.aes = FALSE,
       shape = 21, size = 2.25, stroke = 0.65,
       colour = observed_colour, fill = background, alpha = 0.42
     ) +
     ggplot2::geom_point(
       data = values$model_points,
-      ggplot2::aes(x = .data[["model_direct"]],
-                   y = .data[["model_indirect"]]),
+      ggplot2::aes(x = .data[["model_awareness"]],
+                   y = .data[["model_influence"]]),
       inherit.aes = FALSE,
       shape = 21, size = 2.65, stroke = 0.75,
       colour = latent_colour, fill = "#3FA88E", alpha = 0.9
@@ -499,8 +501,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.06)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.06)) +
     ggplot2::labs(
-      x = bquote(.(labels[["direct"]]) ~ sensitivity ~ (italic(d) * minute)),
-      y = bquote(.(labels[["indirect"]]) ~ sensitivity ~ (italic(d) * minute)),
+      x = bquote(.(labels[["awareness"]]) ~ sensitivity ~ (italic(d) * minute)),
+      y = bquote(.(labels[["influence"]]) ~ sensitivity ~ (italic(d) * minute)),
       caption = caption
     ) +
     ggplot2::theme_classic(base_size = 14) +
@@ -531,24 +533,26 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   # The observed values come from the same prepared data as the model.
   observed <- sdt_moments(object$data, correction = "hautus")
   labels <- object$data$meta$labels
-  direct <- observed[observed$task == labels[["direct"]], c("subj", "dprime")]
-  indirect <- observed[observed$task == labels[["indirect"]], c("subj", "dprime")]
-  direct$subj <- as.character(direct$subj)
-  indirect$subj <- as.character(indirect$subj)
+  awareness <- observed[observed$task == labels[["awareness"]],
+                        c("subj", "dprime")]
+  influence <- observed[observed$task == labels[["influence"]],
+                        c("subj", "dprime")]
+  awareness$subj <- as.character(awareness$subj)
+  influence$subj <- as.character(influence$subj)
 
   # Both observed values place a subject on the plot.
-  indirect_row <- match(direct$subj, indirect$subj)
-  complete <- !is.na(indirect_row)
-  omitted <- length(unique(c(direct$subj, indirect$subj))) - sum(complete)
+  influence_row <- match(awareness$subj, influence$subj)
+  complete <- !is.na(influence_row)
+  omitted <- length(unique(c(awareness$subj, influence$subj))) - sum(complete)
   if (omitted > 0L) {
     .usdt_warn(omitted, " subject", if (omitted == 1L) " was" else "s were",
                " omitted because both observed sensitivities are required.")
   }
 
   data.frame(
-    subject = direct$subj[complete],
-    observed_direct = direct$dprime[complete],
-    observed_indirect = indirect$dprime[indirect_row[complete]],
+    subject = awareness$subj[complete],
+    observed_awareness = awareness$dprime[complete],
+    observed_influence = influence$dprime[influence_row[complete]],
     stringsAsFactors = FALSE
   )
 }
@@ -564,10 +568,10 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     cbind(colMeans(.subject_draws(object, "d", 1L, values$subject)),
           colMeans(.subject_draws(object, "d", 2L, values$subject)))
   } else {
-    .task_effects(object$fit, values$subject)$subjects[, c("d_D", "d_I")]
+    .task_effects(object$fit, values$subject)$subjects[, c("d_A", "d_I")]
   }
-  values$model_direct <- unname(model[, 1L])
-  values$model_indirect <- unname(model[, 2L])
+  values$model_awareness <- unname(model[, 1L])
+  values$model_influence <- unname(model[, 2L])
   values
 }
 
@@ -579,11 +583,11 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   # The contours show the shape of both groups of points.
   observed_ellipse <- .ellipse_points(
-    values$observed_direct, values$observed_indirect,
+    values$observed_awareness, values$observed_influence,
     levels = c(0.95, 0.80, 0.50)
   )
   model_ellipse <- .ellipse_points(
-    values$model_direct, values$model_indirect,
+    values$model_awareness, values$model_influence,
     levels = 0.90
   )
 
@@ -624,21 +628,21 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
       linetype = "dotted", linewidth = 0.5
     ) +
     ggplot2::geom_segment(
-      ggplot2::aes(x = .data[["observed_direct"]],
-                   y = .data[["observed_indirect"]],
-                   xend = .data[["model_direct"]],
-                   yend = .data[["model_indirect"]]),
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]],
+                   xend = .data[["model_awareness"]],
+                   yend = .data[["model_influence"]]),
       colour = observed_colour, alpha = 0.48, linewidth = 0.45
     ) +
     ggplot2::geom_point(
-      ggplot2::aes(x = .data[["observed_direct"]],
-                   y = .data[["observed_indirect"]]),
+      ggplot2::aes(x = .data[["observed_awareness"]],
+                   y = .data[["observed_influence"]]),
       shape = 21, size = 2.55, stroke = 0.75,
       colour = observed_colour, fill = background, alpha = 0.75
     ) +
     ggplot2::geom_point(
-      ggplot2::aes(x = .data[["model_direct"]],
-                   y = .data[["model_indirect"]]),
+      ggplot2::aes(x = .data[["model_awareness"]],
+                   y = .data[["model_influence"]]),
       shape = 21, size = 2.8, stroke = 0.75,
       colour = model_colour, fill = model_fill, alpha = 0.95
     ) +
@@ -650,8 +654,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.08)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.08)) +
     ggplot2::labs(
-      x = bquote(.(labels[["direct"]]) ~ sensitivity ~ (italic(d) * minute)),
-      y = bquote(.(labels[["indirect"]]) ~ sensitivity ~ (italic(d) * minute))
+      x = bquote(.(labels[["awareness"]]) ~ sensitivity ~ (italic(d) * minute)),
+      y = bquote(.(labels[["influence"]]) ~ sensitivity ~ (italic(d) * minute))
     ) +
     ggplot2::theme_classic(base_size = 14) +
     ggplot2::theme(
@@ -683,8 +687,8 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   # Each task keeps the order given by its observed values.
   tasks <- list(
-    direct = list(label = labels[["direct"]], term = "d_D"),
-    indirect = list(label = labels[["indirect"]], term = "d_I")
+    awareness = list(label = labels[["awareness"]], term = "d_A"),
+    influence = list(label = labels[["influence"]], term = "d_I")
   )
   result <- lapply(tasks, function(task) {
     raw <- observed[observed$task == task$label, ]
@@ -731,17 +735,18 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
     levels = c("Includes zero", "Excludes zero")
   )
   values$task <- factor(values$task,
-                        levels = c(labels[["direct"]], labels[["indirect"]]))
+                        levels = c(labels[["awareness"]],
+                                   labels[["influence"]]))
   values$method <- factor(values$method,
                           levels = c("Observed", "Model-estimated"))
   # Panel titles are drawn on a graphics device, so they stay ASCII: a device
   # in a single-byte locale cannot convert every character, and a failed
   # conversion is an error at render time rather than a missing glyph.
   panel_levels <- c(
-    paste0(labels[["direct"]], " task: Observed"),
-    paste0(labels[["direct"]], " task: Model-estimated"),
-    paste0(labels[["indirect"]], " task: Observed"),
-    paste0(labels[["indirect"]], " task: Model-estimated")
+    paste0(labels[["awareness"]], " task: Observed"),
+    paste0(labels[["awareness"]], " task: Model-estimated"),
+    paste0(labels[["influence"]], " task: Observed"),
+    paste0(labels[["influence"]], " task: Model-estimated")
   )
   values$panel <- factor(
     paste0(values$task, " task: ", values$method),
@@ -766,7 +771,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                  se = apply(draws, 2L, stats::sd), conf.low = limits[1L, ],
                  conf.high = limits[2L, ], stringsAsFactors = FALSE)
     })
-    return(stats::setNames(out, c("d_D", "d_I")))
+    return(stats::setNames(out, c("d_A", "d_I")))
   }
 
   # The whole interval needs reliable joint uncertainty.
@@ -776,7 +781,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   }
   conditional <- .conditional_se(object$fit, object$pars$V_full, object$devfun)
   fixed <- lme4::fixef(object$fit)
-  out <- lapply(c("d_D", "d_I"), function(term) {
+  out <- lapply(c("d_A", "d_I"), function(term) {
     rows <- conditional[conditional$grpvar == "subj" &
                           conditional$term == term, ]
     estimate <- fixed[[term]] + rows$condval
@@ -785,7 +790,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
                conf.high = estimate + critical * rows$se,
                stringsAsFactors = FALSE)
   })
-  stats::setNames(out, c("d_D", "d_I"))
+  stats::setNames(out, c("d_A", "d_I"))
 }
 
 # This function describes how many intervals include zero in each panel.
@@ -911,7 +916,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 .roc_parameters <- function(object, subject_id = NULL, conditional = FALSE) {
 
   # Four common names keep estimated and fixed criteria interchangeable.
-  parameters <- c("c_D", "c_I", "d_D", "d_I")
+  parameters <- c("c_A", "c_I", "d_A", "d_I")
   se <- stats::setNames(rep.int(NA_real_, length(parameters)), parameters)
 
   # The population curve uses fixed effects and their analytic sensitivity SEs.
@@ -950,10 +955,10 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   labels <- object$data$meta$labels
   tasks <- data.frame(
-    code = c("D", "I"),
-    task = unname(labels[c("direct", "indirect")]),
-    criterion = c("c_D", "c_I"),
-    sensitivity = c("d_D", "d_I"),
+    code = c("A", "I"),
+    task = unname(labels[c("awareness", "influence")]),
+    criterion = c("c_A", "c_I"),
+    sensitivity = c("d_A", "d_I"),
     stringsAsFactors = FALSE
   )
   if (is.null(subject)) return(tasks)
@@ -1100,7 +1105,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
   points <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
     task <- tasks[i, ]
-    j <- match(task$code, c("D", "I"))
+    j <- match(task$code, c("A", "I"))
 
     # The population curve uses the means and a subject curve its own values.
     if (is.null(subject)) {
@@ -1160,7 +1165,7 @@ plot.hsdt <- function(x, type = c("regression", "shrinkage",
 
   task_colours <- stats::setNames(
     c("#176B60", "#B6543A"),
-    unname(object$data$meta$labels[c("direct", "indirect")])
+    unname(object$data$meta$labels[c("awareness", "influence")])
   )
   curve_tasks <- unique(curves[c("curve", "task")])
   colours <- task_colours[curve_tasks$task]

@@ -56,9 +56,9 @@ library(uSDT)
 
 In many cognitive experiments, we want to know whether a stimulus or pattern influences 
 behavior even when participants are not aware of it. To test this, researchers often 
-collect two paired measures from the same participants: a **direct task** (asking 
+collect two paired measures from the same participants: an **awareness task** (asking 
 directly whether they noticed the masked stimulus or statistical regularity) and an 
-**indirect task** (measuring its behavioral effect, such as priming or faster response 
+**influence task** (measuring its behavioral effect, such as priming or faster response 
 times). The `uSDT` package brings these paired data together into a hierarchical Signal 
 Detection Theory (SDT) framework, helping you test key hypotheses about unconscious 
 processing within a single unified model.
@@ -77,19 +77,19 @@ In this tutorial, you will walk through three straightforward steps:
 ## The data
 
 To illustrate the workflow, `uSDT` includes trial-level data from a contextual 
-cuing experiment (Experiment 2 in [Vadillo, Malejka, & Shanks, 2025](https://doi.org/10.1037/xlm0001410)). The direct task (`vadillo_awareness`) is an explicit recognition test where participants judged whether a search display was repeated (`old`) or novel (`new`):
+cuing experiment (Experiment 2 in [Vadillo, Malejka, & Shanks, 2025](https://doi.org/10.1037/xlm0001410)). The awareness task (`vadillo_awareness`) is an explicit recognition test where participants judged whether a search display was repeated (`old`) or novel (`new`):
 
 ```{r}
-#| label: data-direct
+#| label: data-awareness
 head(vadillo_awareness)
 ```
 
-The indirect task (`vadillo_cuing`) measures the visual search itself through
+The influence task (`vadillo_cuing`) measures the visual search itself through
 response times. Contextual cuing occurs if participants find targets faster in
 repeated (`old`) displays than in `new` ones:
 
 ```{r}
-#| label: data-indirect
+#| label: data-influence
 head(vadillo_cuing)
 ```
 
@@ -106,14 +106,14 @@ and map their levels to signal and noise roles.
 
 Whenever an argument is shared across both tasks, you can pass **a single value** 
 (like `subject_col = "subj"`). When tasks differ, provide **a list per task** 
-using `list(direct = ..., indirect = ...)`:
+using `list(awareness = ..., influence = ...)`:
 
 ```{r}
 #| label: prepare
 data_usdt <- usdt_data_tasks(
   # One data frame per task
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
 
   # Shared subject column
   subject_col = "subj",
@@ -123,16 +123,16 @@ data_usdt <- usdt_data_tasks(
   condition_levels = c(signal = "old", noise = "new"),
 
   # Response columns differ: judgements vs continuous response times
-  response_col = list(direct = "judged.old", indirect = "rt"),
+  response_col = list(awareness = "judged.old", influence = "rt"),
 
   # How responses map to signal vs noise
   response_levels = list(
-    direct   = c(signal = 1, noise = 0),
-    indirect = c(signal = "faster", noise = "slower")
+    awareness = c(signal = 1, noise = 0),
+    influence = c(signal = "faster", noise = "slower")
   ),
 
   # Dichotomize continuous response times using a median split
-  dichotomize = list(direct = FALSE, indirect = TRUE),
+  dichotomize = list(awareness = FALSE, influence = TRUE),
   
   # Contrast coding scheme across conditions (deviation by-default)
   coding = "deviation"
@@ -154,7 +154,7 @@ By default, `uSDT` uses deviation coding.
 
 ### How the median split works
 
-Setting `dichotomize = list(direct = FALSE, indirect = TRUE)` converts continuous 
+Setting `dichotomize = list(awareness = FALSE, influence = TRUE)` converts continuous 
 RTs into binary responses via a median split computed within each subject across 
 all trials, following the approach proposed by [Meyen et al. (2022)](https://doi.org/10.1037/xge0001065). 
 In this case:
@@ -164,9 +164,9 @@ In this case:
   is a new display searched faster than the median.
 
 By design, splitting exactly at the median balances fast and slow responses across 
-trials. **Under deviation coding**, this balance centers the indirect decision 
+trials. **Under deviation coding**, this balance centers the influence decision 
 criterion at zero ($c \approx 0$). 
-Because of this, `hsdt()` fixes the indirect criterion to zero by default whenever 
+Because of this, `hsdt()` fixes the influence criterion to zero by default whenever 
 the mean absolute subject criterion is below 0.02 (you can override this with `fix_criteria = "none"`).
 
 ### Inspecting the prepared data
@@ -181,7 +181,7 @@ data_usdt
 Take a moment to inspect the three sections of this summary:
 
 - **Data summary:** Confirms subject overlap (e.g., all 104 participants completed both tasks) and shows how raw trials were aggregated into 4 condition-by-response cells per subject. It also reminds you of the chosen `coding`.
-- **Variable mapping:** Verifies that your column names and signal/noise assignments match your experimental expectations (including the `[Meyen split]` flag on the indirect RTs).
+- **Variable mapping:** Verifies that your column names and signal/noise assignments match your experimental expectations (including the `[Meyen split]` flag on the influence RTs).
 - **Descriptives:** Reports the median and range of hit rates (HR), false alarm rates (FAR), and descriptive $d'$ across subjects. It also warns if any participants hit floor or ceiling rates, which helps catch data issues early.
 
 ## Fitting the model
@@ -218,26 +218,26 @@ ci  <- function(term, digits = 2) {
 The summary breaks the model into two primary structural components before presenting hypothesis tests:
 
 - **Fixed effects (group-level means):** 
-  The fixed estimates describe average task performance across all participants. Here, mean sensitivity is reliably above zero in both the direct task (`d' = 0.24`, $p < .001$) and the indirect task (`d' = 0.13`, $p < .001$), indicating above-chance recognition and a significant contextual cuing effect overall. The direct criterion (`-0.04`, $p = .215$) shows no substantial group-level response bias. As determined during data preparation, the indirect criterion is fixed to zero and therefore omitted from estimation.
+  The fixed estimates describe average task performance across all participants. Here, mean sensitivity is reliably above zero in both the awareness task (`d' = 0.24`, $p < .001$) and the influence task (`d' = 0.13`, $p < .001$), indicating above-chance recognition and a significant contextual cuing effect overall. The awareness criterion (`-0.04`, $p = .215$) shows no substantial group-level response bias. As determined during data preparation, the influence criterion is fixed to zero and therefore omitted from estimation.
 - **Random effects (individual differences):** 
-  These parameters capture between-subject variability around the group means. The standard deviations (`sd(d')`) reflect individual variability in sensitivity for both tasks. The correlation parameter (`cor(d') = 0.49`) estimates the latent association between direct and indirect sensitivity across participants, though its wide confidence interval indicates considerable uncertainty around this estimate.
+  These parameters capture between-subject variability around the group means. The standard deviations (`sd(d')`) reflect individual variability in sensitivity for both tasks. The correlation parameter (`cor(d') = 0.49`) estimates the latent association between awareness and influence sensitivity across participants, though its wide confidence interval indicates considerable uncertainty around this estimate.
 
 ### Testing unconscious processing: The three hypotheses
 
 The bottom section of the model output tests three complementary questions often raised in the unconscious processing literature. You can inspect these results directly in the main summary or extract them as a standalone table with `fit_uSDT$tests`.
 
 #### H1: Group-level sensitivity difference ($\Delta d'$)
-The first hypothesis asks whether the two tasks differ in their average sensitivity. In unconscious perception paradigms, finding that indirect sensitivity clearly exceeds direct sensitivity ($\Delta d' > 0$) is sometimes taken as an indirect-task advantage—suggesting that the indirect measure picks up signal that conscious report misses. 
+The first hypothesis asks whether the two tasks differ in their average sensitivity. In unconscious perception paradigms, finding that influence sensitivity clearly exceeds awareness sensitivity ($\Delta d' > 0$) is sometimes taken as an indirect-task advantage—suggesting that the influence measure picks up signal that conscious report misses. 
 
-In our sample, the difference is negative and significantly different from zero ($\Delta d' = -0.11$, 95% CI $[-0.18, -0.04]$, $p = .002$). Direct recognition was significantly stronger than indirect contextual cuing, so we find no evidence of an indirect-task advantage.
+In our sample, the difference is negative and significantly different from zero ($\Delta d' = -0.11$, 95% CI $[-0.18, -0.04]$, $p = .002$). Awareness of the repeated patterns was significantly stronger than their influence through contextual cuing, so we find no evidence of an indirect-task advantage.
 
 #### H2: Latent correlation between tasks ($\rho$)
-The second test examines individual differences: do participants with stronger conscious recognition also display larger cuing effects? In some theoretical accounts, an indirect effect that operates independently of conscious awareness would predict a weak or near-zero correlation between both measures.
+The second test examines individual differences: do participants with stronger conscious recognition also display larger cuing effects? In some theoretical accounts, an influence that operates independently of conscious awareness would predict a weak or near-zero correlation between both measures.
 
 Here, the estimated latent correlation is positive ($\rho = 0.49$), but it comes with considerable estimation uncertainty (95% CI $[-0.67, 0.95]$, $p = .313$). Because the confidence interval is so wide, failing to reach significance here simply reflects high measurement noise around the correlation, rather than positive evidence that the two processes are dissociated. We will see this more clearly later when evaluating task-specific reliability.
 
-#### H3: Latent regression (Indirect $d'$ on Direct $d'$)
-The third test evaluates what happens at the boundary of awareness via a latent regression. Specifically, the intercept ($\beta_0$) estimates what level of indirect sensitivity we would expect when direct sensitivity is exactly zero ($d'_{\text{Direct}} = 0$). If this intercept is significantly different from zero and positive, it suggests that participants would still show a behavioral cuing effect even without any conscious awareness of the stimuli.
+#### H3: Latent regression (Influence $d'$ on Awareness $d'$)
+The third test evaluates what happens at the boundary of awareness via a latent regression. Specifically, the intercept ($\beta_0$) estimates what level of influence sensitivity we would expect when awareness sensitivity is exactly zero ($d'_{\text{Awareness}} = 0$). If this intercept is significantly different from zero and positive, it suggests that participants would still show a behavioral cuing effect even without any conscious awareness of the stimuli.
 
 In this experiment, the regression slope is positive ($\beta_1 = 0.36$, $p = .313$), and the estimated intercept is slightly above zero ($\beta_0 = 0.04$). However, its confidence interval easily covers zero ($[-0.18, 0.27]$, $p = .701$), showing no evidence of unconscious processing in the absence of awareness.
 
@@ -257,7 +257,7 @@ Each test reports the interval that decides it: for an equivalence or one-sided 
 
 Evaluating unconscious processing through individual differences is delicate because measurement error does not just add noise, it systematically biases theoretical conclusions when ignored. 
 
-It is widely know that low reliability attenuates correlations toward zero ([Spearman, 1904](https://doi.org/10.2307/1412159)), making direct and indirect tasks appear falsely independent. It also flattens the regression slope and artificially inflates the intercept, creating the illusion that indirect processing persists without awareness. In practice, measurement error actively conspires to produce evidence of unconscious processing. **Fortunately, hierarchical SDT models test these hypotheses at the latent level, naturally accounting for measurement error regardless of the specific reliability values.**
+It is widely know that low reliability attenuates correlations toward zero ([Spearman, 1904](https://doi.org/10.2307/1412159)), making awareness and influence tasks appear falsely independent. It also flattens the regression slope and artificially inflates the intercept, creating the illusion that the influence persists without awareness. In practice, measurement error actively conspires to produce evidence of unconscious processing. **Fortunately, hierarchical SDT models test these hypotheses at the latent level, naturally accounting for measurement error regardless of the specific reliability values.**
 
 Even though `hsdt()` protects the tests against this bias, estimating reliability remains useful for understanding how well individual differences were measured. [`usdt_reliability()`](../reference/usdt_reliability.html) estimates the reliability of each experimental effect treated as an individual-differences dimension:
 
@@ -266,7 +266,7 @@ Even though `hsdt()` protects the tests against this bias, estimating reliabilit
 usdt_reliability(fit_uSDT)
 ```
 
-In this sample, the group-level reliability is low for both the direct task (`.13`) and the indirect task (`.32`). Because individual differences in both measures carry substantial trial noise, the model cannot estimate between-task associations with precision. This modest reliability directly explains the wide confidence intervals we observed earlier for the latent correlation ($\rho$) and the regression intercept.
+In this sample, the group-level reliability is low for both the awareness task (`.13`) and the influence task (`.32`). Because individual differences in both measures carry substantial trial noise, the model cannot estimate between-task associations with precision. This modest reliability directly explains the wide confidence intervals we observed earlier for the latent correlation ($\rho$) and the regression intercept.
 
 In addition to the overall group summary, you can inspect subject-specific reliability estimates. The `$subjects` element returns a data frame with individual values:
 
@@ -288,7 +288,7 @@ plot(fit_uSDT)
 
 The contrast between the two panels illustrates the core problem:
 
-- **Observed estimates (left panel):** Regressing raw indirect $d'$ on raw direct $d'$ ignores measurement error. Unreliability severely flattens the slope ($b_1 = 0.043$) and artificially pushes the intercept upward ($b_0 = 0.118, p < .001$). An applied researcher relying on standard regression would mistakenly conclude that there is compelling evidence for unconscious processing at $d'_{\text{Direct}} = 0$.
+- **Observed estimates (left panel):** Regressing raw influence $d'$ on raw awareness $d'$ ignores measurement error. Unreliability severely flattens the slope ($b_1 = 0.043$) and artificially pushes the intercept upward ($b_0 = 0.118, p < .001$). An applied researcher relying on standard regression would mistakenly conclude that there is compelling evidence for unconscious processing at $d'_{\text{Awareness}} = 0$.
 - **Model-estimated sensitivities (right panel):** The hierarchical model corrects for trial-level noise. Grey segments show shrinkage from raw $d'$ to model-implied $d'$ values (green points). Accounting for unreliability steepens the latent slope ($b_1 = 0.356$) and pulls the intercept down to near zero ($b_0 = 0.044, p = .701$, marked at the vertical dotted line).
 
 ### Shrinkage
@@ -312,7 +312,7 @@ plot(fit_uSDT, type = "caterpillar")
 
 The left panels show observed $d'$ values and their 95% confidence intervals, whereas the right panels show model-implied $d'$ values and their 95% confidence intervals. Green intervals exclude zero, whereas brown intervals cross the dotted vertical line.
 
-In the raw data, noisy trial estimates leave most individual intervals crossing zero (91% in direct, 79% in indirect). Pooling information in the hierarchical model shrinks extreme point estimates toward the group mean and tightens their uncertainty, reducing the share of intervals crossing zero.
+In the raw data, noisy trial estimates leave most individual intervals crossing zero (91% in awareness, 79% in influence). Pooling information in the hierarchical model shrinks extreme point estimates toward the group mean and tightens their uncertainty, reducing the share of intervals crossing zero.
 
 ### ROC curves
 
@@ -362,7 +362,7 @@ A few practical considerations when bootstrapping:
 
 ### Long-format datasets
 
-If your direct and indirect data already reside in a single data frame with a task column, you can prepare them directly using [`usdt_data_long()`](../reference/usdt_data.html) by specifying `task_col` and `task_levels`.
+If your awareness and influence data already reside in a single data frame with a task column, you can prepare them directly using [`usdt_data_long()`](../reference/usdt_data.html) by specifying `task_col` and `task_levels`.
 
 ## References
 

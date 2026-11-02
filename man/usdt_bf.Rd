@@ -8,8 +8,8 @@
 usdt_bf(
   fit,
   hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
-  direct = "d_D",
-  indirect = "d_I",
+  awareness = "d_A",
+  influence = "d_I",
   level = NULL,
   plot = TRUE
 )
@@ -26,9 +26,9 @@ or \code{intercept} and the operator is \code{=}, \code{<} or \code{>} (\code{<=
 as \code{<} and \code{>}), or \code{"<quantity> in [a, b]"} and \code{"<quantity> out [a, b]"}
 for a region and its complement. The default tests the three point nulls.}
 
-\item{direct, indirect}{For a brms model, the population-level terms of the
-direct and indirect sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Ignored for an
-\code{hsdt} fit.}
+\item{awareness, influence}{For a brms model, the population-level terms of
+the awareness and influence sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Ignored
+for an \code{hsdt} fit.}
 
 \item{level}{Credible level of the reported intervals. Defaults to the
 level of an \code{hsdt} fit, and to 0.95 for a brms model.}
@@ -60,7 +60,7 @@ hypothesis. The prior and posterior curves are stored, so
 Tests point, directional and interval hypotheses about the quantities of
 the three uSDT hypotheses in a Bayesian \code{\link[=hsdt]{hsdt()}} fit or a custom model
 fitted with brms: the difference between mean sensitivities (\code{diff}, H1,
-reported as \eqn{\Delta d'}, indirect minus direct), their correlation
+reported as \eqn{\Delta d'}, influence minus awareness), their correlation
 (\code{rho}, H2) and the slope and intercept of the latent regression (\code{slope},
 \code{intercept}, H3).
 }
@@ -76,7 +76,7 @@ The posterior density comes from a logspline fit to the posterior draws.
 A fit is used only if its distribution function stays within 0.05 of that
 of the draws at every percentile. When neither logspline algorithm gives
 such a fit, which happens with the very heavy tails of the intercept and
-slope when the direct sensitivities barely vary across subjects, the draws
+slope when the awareness sensitivities barely vary across subjects, the draws
 are fitted on the scale
 \eqn{\mathrm{asinh}((x - m)/s)}, with \eqn{m} their median and \eqn{s}
 their median absolute deviation, and the density is mapped back.
@@ -97,18 +97,18 @@ every draw falls on one side, the draws cannot bound the Bayes factor and
 \section{The prior of each quantity}{
 \itemize{
 \item \code{rho}: the marginal of the \code{lkj} prior of \code{\link[=usdt_priors]{usdt_priors()}}, exact.
-\item \code{diff}: given the mean direct sensitivity \eqn{\mu_D}, the difference is
-the mean indirect sensitivity shifted by \eqn{\mu_D}, so its prior density
+\item \code{diff}: given the mean awareness sensitivity \eqn{\mu_A}, the difference is
+the mean influence sensitivity shifted by \eqn{\mu_A}, so its prior density
 and probabilities are those of the prior of \eqn{\mu_I} at
-\eqn{x + \mu_D}, averaged over 100,000 prior draws of \eqn{\mu_D} (a
+\eqn{x + \mu_A}, averaged over 100,000 prior draws of \eqn{\mu_A} (a
 Rao-Blackwell estimate). With normal priors on both means this is the
 normal prior of their difference.
 \item \code{intercept}: induced by the other priors. Given the slope
-\eqn{\beta_1} and \eqn{\mu_D}, the intercept is \eqn{\mu_I} shifted by
-\eqn{\beta_1 \mu_D}, so its prior is likewise averaged over 100,000 prior
-draws of the slope and of \eqn{\mu_D}. The prior has no mean or variance,
-because the slope involves \eqn{1/\sigma_D}.
-\item \code{slope}: given the ratio \eqn{\sigma_I / \sigma_D}, the slope is a
+\eqn{\beta_1} and \eqn{\mu_A}, the intercept is \eqn{\mu_I} shifted by
+\eqn{\beta_1 \mu_A}, so its prior is likewise averaged over 100,000 prior
+draws of the slope and of \eqn{\mu_A}. The prior has no mean or variance,
+because the slope involves \eqn{1/\sigma_A}.
+\item \code{slope}: given the ratio \eqn{\sigma_I / \sigma_A}, the slope is a
 rescaled correlation, so its prior is averaged over 100,000 prior draws of
 that ratio. Its density is infinite at zero, and the slope always has the
 sign of the correlation, so \code{slope = 0}, \code{slope > 0} and \code{slope < 0} are
@@ -120,13 +120,13 @@ Under the latent regression parameterization the intercept has a prior of
 its own instead of \eqn{\mu_I}, so it is exact like \code{rho}, and \code{slope} is
 as above. The difference is induced:
 \itemize{
-\item \code{diff}: \eqn{\beta_0 + (\beta_1 - 1) \mu_D}, so its prior is that of the
+\item \code{diff}: \eqn{\beta_0 + (\beta_1 - 1) \mu_A}, so its prior is that of the
 intercept, shifted and averaged over 100,000 prior draws of the slope and
-of \eqn{\mu_D}. Like the induced intercept above, it has heavy tails and
+of \eqn{\mu_A}. Like the induced intercept above, it has heavy tails and
 no mean or variance.
 }
 
-The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_D}, so under the latent
+The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_A}, so under the latent
 regression a narrow intercept prior also moves the posterior of the slope
 and of \code{rho}, even though their priors are independent of it: the Bayes
 factors of \code{rho} and \code{slope} then depend on the intercept prior as well.
@@ -169,15 +169,16 @@ strong (< 30), very strong (< 100) and extreme.
 \examples{
 \donttest{
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d, estimation = "bayesian", seed = 1)

@@ -50,10 +50,10 @@ signal distribution of each task instead of fixing it to that of the noise
 distribution. Bayesian estimation only.}
 
 \item{parameterization}{Where the Bayesian model places the prior on the
-location of the indirect sensitivity: on its mean (\code{"correlation"}, the
-default), or on the intercept of the latent regression of the indirect on
-the direct sensitivity (\code{"regression"}). Both keep the priors on the
-direct mean, the standard deviations and the correlation. Bayesian
+location of the influence sensitivity: on its mean (\code{"correlation"}, the
+default), or on the intercept of the latent regression of the influence on
+the awareness sensitivity (\code{"regression"}). Both keep the priors on the
+awareness mean, the standard deviations and the correlation. Bayesian
 estimation only.}
 
 \item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
@@ -88,12 +88,13 @@ object from brms, which every brms function accepts (e.g.
 
 A frequentist fit also contains \verb{$pars}, the parameter estimates and their
 joint covariance. A Bayesian fit also contains \verb{$priors}; its posterior
-draws are those of \verb{$fit}, where \code{b_dD_Intercept} and \code{b_dI_Intercept} are
-the mean \eqn{d'} of the direct and indirect tasks, \code{sd_subj__dD_Intercept}
-and \code{sd_subj__dI_Intercept} their SDs, \code{cor_subj__dD_Intercept__dI_Intercept}
-their correlation, \code{b_cD_Intercept} and \code{b_cI_Intercept} the mean of an
-estimated criterion (on the classical scale), and \code{b_sD_Intercept} and
-\code{b_sI_Intercept} the signal SDs under unequal variances.
+draws are those of \verb{$fit}, where \code{b_dA_Intercept} and \code{b_dI_Intercept} are
+the mean \eqn{d'} of the awareness and influence tasks,
+\code{sd_subj__dA_Intercept} and \code{sd_subj__dI_Intercept} their SDs,
+\code{cor_subj__dA_Intercept__dI_Intercept} their correlation, \code{b_cA_Intercept}
+and \code{b_cI_Intercept} the mean of an estimated criterion (on the classical
+scale), and \code{b_sA_Intercept} and \code{b_sI_Intercept} the signal SDs under
+unequal variances.
 }
 \description{
 Fits a bivariate hierarchical SDT model and evaluates the core unconscious
@@ -106,16 +107,16 @@ uses \code{\link[lme4:glmer]{lme4::glmer()}}; the Bayesian estimation uses brms,
 The model fits trial counts with a binomial probit link, directly mapping
 coefficients to standard Signal Detection Theory parameters. Fixed effects
 capture population sensitivities and criteria, while random effects estimate
-participant variation and the latent correlation between direct and indirect
-sensitivity.
+participant variation and the latent correlation between awareness and
+influence sensitivity.
 
 Hypotheses evaluated by default:
 \itemize{
 \item \strong{H1:} Mean sensitivity difference between tasks.
 \item \strong{H2:} Latent correlation of sensitivities across participants.
-\item \strong{H3:} Latent regression of indirect on direct sensitivity. Its intercept
-reflects expected indirect performance when direct awareness is zero
-(\eqn{d'_{\mathrm{Direct}} = 0}).
+\item \strong{H3:} Latent regression of influence on awareness sensitivity. Its
+intercept reflects expected influence performance when awareness
+sensitivity is zero (\eqn{d'_{\mathrm{Awareness}} = 0}).
 }
 
 When sample sizes or trial counts are low, variance components can reach
@@ -134,23 +135,23 @@ The p-value falls below \code{1 - level} exactly when zero lies outside the
 credible interval, so with the default \code{level = 0.95} a p-value below .05
 means that the 95\% credible interval excludes zero.
 
-With \code{parameterization = "regression"}, the prior of the indirect mean
+With \code{parameterization = "regression"}, the prior of the influence mean
 moves to the intercept \eqn{\beta_0} of the latent regression, and the
-indirect mean follows as
-\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D}. The
+influence mean follows as
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The
 intercept tested by H3 then has the prior you give it rather than a
 heavy-tailed one induced by the other priors, and the correlation (H2)
 keeps its own. The difference between the means (H1) has an induced,
 heavy-tailed prior instead, and because the data fix \eqn{\mu_I}, the
 intercept prior also informs the posterior of \eqn{\rho}; see
 \code{\link[=usdt_priors]{usdt_priors()}} and \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. The fit samples the same
-parameters and reports the same hypotheses either way. When the direct
+parameters and reports the same hypotheses either way. When the awareness
 sensitivity barely varies across subjects, this parameterization can leave
-a few divergent transitions where \eqn{\sigma_D} nearly vanishes: there the
+a few divergent transitions where \eqn{\sigma_A} nearly vanishes: there the
 intercept prior pins \eqn{\rho} near zero, a region too narrow for the
 sampler to follow. Raising \code{adapt_delta} does not remove them reliably; a
-prior on the direct standard deviation that vanishes at zero, such as
-\code{usdt_priors(sd_dprime = list(direct = "gamma(2, 4)", indirect = ...))},
+prior on the awareness standard deviation that vanishes at zero, such as
+\code{usdt_priors(sd_dprime = list(awareness = "gamma(2, 4)", influence = ...))},
 does.
 
 With \code{unequal_variances = TRUE}, the noise distribution of each task is
@@ -161,7 +162,7 @@ between the tasks, \eqn{d} no longer measures the same discriminability in
 both: the measure comparable with an equal-variance \eqn{d'} is
 \eqn{d_a = d \sqrt{2 / (1 + \sigma_s^2)}}, and the mean \eqn{d_a} of a task
 is its mean \eqn{d} times that factor, which can be computed from the draws
-of \code{b_dD_Intercept} and \code{b_sD_Intercept} (and their indirect counterparts)
+of \code{b_dA_Intercept} and \code{b_sA_Intercept} (and their influence counterparts)
 in \verb{$fit}. The correlation (H2) is the same on either scale.
 
 The model is a brms model of the aggregated counts, with one prior per
@@ -177,15 +178,16 @@ divergent transitions, transitions at the maximum tree depth, an R-hat above
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)
@@ -193,7 +195,7 @@ m <- hsdt(d)
 # Full summary table with SDT parameters and hypothesis tests
 summary(m)
 
-# Inspect the model formula (indirect criterion omitted by default)
+# Inspect the model formula (influence criterion omitted by default)
 m$design$formula
 
 \donttest{

@@ -8,8 +8,8 @@
 usdt_equivalence(
   fit,
   hypothesis,
-  direct = "d_D",
-  indirect = "d_I",
+  awareness = "d_A",
+  influence = "d_I",
   alpha = 0.05
 )
 
@@ -26,9 +26,9 @@ set. Each one is \code{"<quantity> <op> <value>"}, where the quantity is
 (\code{<=} and \code{>=} are read as \code{<} and \code{>}), or \code{"<quantity> in [a, b]"} and
 \code{"<quantity> out [a, b]"} for a region and its complement.}
 
-\item{direct, indirect}{For a \code{glmerMod}, the fixed effects of the direct
-and indirect sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Defaults match the
-internal naming of \code{\link[=hsdt]{hsdt()}}.}
+\item{awareness, influence}{For a \code{glmerMod}, the fixed effects of the
+awareness and influence sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Defaults match
+the internal naming of \code{\link[=hsdt]{hsdt()}}.}
 
 \item{alpha}{Significance level of every test, between 0 and 0.5 (default
 0.05).}
@@ -55,7 +55,7 @@ one report per hypothesis.
 Tests interval, one-sided and point hypotheses about the quantities of the
 three uSDT hypotheses in a frequentist \code{\link[=hsdt]{hsdt()}} fit or a custom model fitted
 with \code{\link[lme4:glmer]{lme4::glmer()}}: the difference between mean sensitivities (\code{diff}, H1,
-reported as \eqn{\Delta d'}, indirect minus direct), their correlation
+reported as \eqn{\Delta d'}, influence minus awareness), their correlation
 (\code{rho}, H2) and the slope and intercept of the latent regression (\code{slope},
 \code{intercept}, H3). The hypotheses are written as in \code{\link[=usdt_bf]{usdt_bf()}}, so a
 frequentist and a Bayesian analysis can state the same bounds.
@@ -106,7 +106,7 @@ from these.
 }
 
 \section{The intercept and the slope}{
-Both divide by the variance of the direct sensitivity. When the direct
+Both divide by the variance of the awareness sensitivity. When the awareness
 sensitivity barely varies across subjects, their standard errors are large
 and their Wald intervals inaccurate, so their equivalence tests need many
 subjects to succeed, and the bootstrap of \code{\link[=usdt_boot]{usdt_boot()}} gives more accurate
@@ -127,15 +127,16 @@ agrees with the reported interval up to that correction.
 
 \examples{
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)

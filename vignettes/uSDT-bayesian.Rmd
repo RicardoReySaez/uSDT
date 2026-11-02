@@ -44,15 +44,15 @@ We use the paired data exactly as the tutorial prepares them:
 
 ``` r
 data_usdt <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster", noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 ```
 
@@ -72,23 +72,23 @@ priors
 ── Priors ────────────────────────────────────────────────────────────────────── 
 
   Parameter    Task       Prior
-  mean d'      direct     normal(0, 1)
-  mean d'      indirect   normal(0, 1)
-  sd(d')       direct     student_t(4, 0, 0.5)
-  sd(d')       indirect   student_t(4, 0, 0.5)
+  mean d'      awareness  normal(0, 1)
+  mean d'      influence  normal(0, 1)
+  sd(d')       awareness  student_t(4, 0, 0.5)
+  sd(d')       influence  student_t(4, 0, 0.5)
   cor(d')      both       lkj(1)
-  mean c       direct     normal(0, 0.5)
-  mean c       indirect   normal(0, 0.5)
-  sd(c)        direct     student_t(4, 0, 0.5)
-  sd(c)        indirect   student_t(4, 0, 0.5)
+  mean c       awareness  normal(0, 0.5)
+  mean c       influence  normal(0, 0.5)
+  sd(c)        awareness  student_t(4, 0, 0.5)
+  sd(c)        influence  student_t(4, 0, 0.5)
   cor(c)       both       lkj(1)
-  sd(signal)   direct     lognormal(0, 0.5)
-  sd(signal)   indirect   lognormal(0, 0.5)
+  sd(signal)   awareness  lognormal(0, 0.5)
+  sd(signal)   influence  lognormal(0, 0.5)
   intercept    both       normal(0, 1)
 
   Standard deviation priors are truncated at zero. cor(c) applies when
   both criteria are estimated, and sd(signal) under unequal variances.
-  Under the latent regression, intercept replaces the indirect mean d'.
+  Under the latent regression, intercept replaces the influence mean d'.
 ```
 
 - **Means of $d'$ and of the criterion:** normal priors centred at zero,
@@ -98,7 +98,7 @@ priors
 - **Correlations:** `lkj(1)`, a uniform prior on $(-1, 1)$. Larger values of
   its argument concentrate the correlation around zero.
 - **Intercept:** used only by the latent regression parameterization, at the
-  end of this article, in place of the prior of the indirect mean.
+  end of this article, in place of the prior of the influence mean.
 
 Any Stan distribution that covers the values of its parameter works: one on
 the whole real line for a mean, such as `student_t(5, 0, 1)` or
@@ -106,8 +106,8 @@ the whole real line for a mean, such as `student_t(5, 0, 1)` or
 values, such as `gamma(2, 4)` or `lognormal(-1, 0.5)`.
 
 The model only uses the priors of the parameters it estimates. Here the
-median split fixes the indirect criterion at zero and both tasks have equal
-variances, so the indirect criterion, the criterion correlation and the signal
+median split fixes the influence criterion at zero and both tasks have equal
+variances, so the influence criterion, the criterion correlation and the signal
 standard deviations play no role.
 
 ### Checking what the priors imply
@@ -126,7 +126,7 @@ plot(priors, data = data_usdt)
 </div>
 
 - **Hit and false-alarm rates (top left):** the rates of a new subject spread
-  over the whole $(0, 1)$ range without piling up at either end. The indirect
+  over the whole $(0, 1)$ range without piling up at either end. The influence
   rates are more concentrated because the median split fixes their criterion.
 - **H1 and H2 (top right, bottom left):** the priors of $\Delta d'$, a
   normal centred at zero, and of $\rho$, uniform.
@@ -140,7 +140,7 @@ tasks or per task, and the result to `hsdt()`:
 
 ``` r
 priors_custom <- usdt_priors(
-  dprime    = list(direct = "normal(0, 1)", indirect = "normal(0, 0.5)"),
+  dprime    = list(awareness = "normal(0, 1)", influence = "normal(0, 0.5)"),
   sd_dprime = "gamma(2, 4)"
 )
 hsdt(data_usdt, estimation = "bayesian", priors = priors_custom)
@@ -156,7 +156,7 @@ the model with brms:
 fit_bayes <- hsdt(data_usdt, estimation = "bayesian", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 1m 20s.
+✔ Sampled 4 chains in 58.0s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
@@ -191,36 +191,36 @@ summary(fit_bayes)
   Subjects:       104
   Observations:   416 aggregated rows (46,592 trials)
   Family:         binomial (probit), equal variances
-  Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
+  Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
   Estimation:     brms via cmdstanr, 4 chains x 5,000 draws (warmup 1,000)
   Diagnostics:    max R-hat 1.002, min ESS 1,880, 0 divergent
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  criterion      Direct      -0.0356   0.0289  [ -0.092,  0.021]   1.000   9,191
-  d'             Direct       0.2350   0.0330  [  0.170,  0.300]   1.000  32,301
-  d'             Indirect     0.1283   0.0153  [  0.098,  0.158]   1.000  26,275
+  criterion      Awareness   -0.0356   0.0289  [ -0.092,  0.021]   1.000   9,191
+  d'             Awareness    0.2350   0.0330  [  0.170,  0.300]   1.000  32,301
+  d'             Influence    0.1283   0.0153  [  0.098,  0.158]   1.000  26,275
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  sd(criterion)  Direct       0.2513   0.0249  [  0.205,  0.303]   1.000   9,337
-  sd(d')         Direct       0.1073   0.0597  [  0.006,  0.224]   1.000   4,354
-  sd(d')         Indirect     0.0864   0.0219  [  0.039,  0.127]   1.000   5,186
+  sd(criterion)  Awareness    0.2513   0.0249  [  0.205,  0.303]   1.000   9,337
+  sd(d')         Awareness    0.1073   0.0597  [  0.006,  0.224]   1.000   4,354
+  sd(d')         Influence    0.0864   0.0219  [  0.039,  0.127]   1.000   5,186
   cor(d')        both         0.2902   0.4448  [ -0.740,  0.954]   1.002   1,880
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
-H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
   Parameter           Mean       SD  95% CrI            p-value
-  Δd' (I - D)     -0.1067   0.0358  [ -0.177, -0.036]     .002
+  Δd' (I - A)     -0.1067   0.0358  [ -0.177, -0.036]     .002
 
 H2: Correlation between sensitivities across tasks
   Parameter           Mean       SD  95% CrI            p-value
   rho               0.2902   0.4448  [ -0.740,  0.954]     .484
 
-H3: Latent regression of Indirect d' on Direct d'
+H3: Latent regression of Influence d' on Awareness d'
   Parameter           Mean       SD  95% CrI            p-value
   Intercept         0.0026   7.9765  [ -0.780,  0.761]     .512
   Slope             0.5406  34.1561  [ -2.712,  3.862]     .484
@@ -228,13 +228,13 @@ H3: Latent regression of Indirect d' on Direct d'
 ── Priors ──────────────────────────────────────────────────────────────────────
 
   Parameter    Task       Prior
-  mean d'      Direct     normal(0, 1)
-  mean d'      Indirect   normal(0, 1)
-  sd(d')       Direct     student_t(4, 0, 0.5)
-  sd(d')       Indirect   student_t(4, 0, 0.5)
+  mean d'      Awareness  normal(0, 1)
+  mean d'      Influence  normal(0, 1)
+  sd(d')       Awareness  student_t(4, 0, 0.5)
+  sd(d')       Influence  student_t(4, 0, 0.5)
   cor(d')      both       lkj(1)
-  mean c       Direct     normal(0, 0.5)
-  sd(c)        Direct     student_t(4, 0, 0.5)
+  mean c       Awareness  normal(0, 0.5)
+  sd(c)        Awareness  student_t(4, 0, 0.5)
 
 ── Notes ───────────────────────────────────────────────────────────────────────
 
@@ -248,14 +248,14 @@ Each estimate is now the **posterior mean**, with its **posterior standard
 deviation** and a 95% **credible interval** (CrI), and R-hat and effective
 sample size are reported for every parameter. The fixed and random effects
 closely match the frequentist ones: $d' = 0.24$
-in the direct task and $d' = 0.13$ in
-the indirect task.
+in the awareness task and $d' = 0.13$ in
+the influence task.
 
 ### The brms fit
 
 `fit_bayes$fit` is the `brmsfit` itself, so every brms function works on it,
 from `pp_check()` to `loo()`. The model has one non-linear parameter per
-quantity: `dD` and `dI` are the $d'$ of each task, `cD` the direct criterion
+quantity: `dA` and `dI` are the $d'$ of each task, `cA` the awareness criterion
 (on the classical scale), and each has one prior of its own, so the prior
 table of brms lists them task by task:
 
@@ -267,13 +267,13 @@ prior_table[prior_table$source == "user", ]
 
 ```
                 prior class coef  group resp dpar nlpar lb ub tag source
-       normal(0, 0.5)     b                          cD             user
-         normal(0, 1)     b                          dD             user
+       normal(0, 0.5)     b                          cA             user
+         normal(0, 1)     b                          dA             user
          normal(0, 1)     b                          dI             user
  lkj_corr_cholesky(1)     L        subj                             user
- student_t(4, 0, 0.5)    sd        subj              dD             user
+ student_t(4, 0, 0.5)    sd        subj              dA             user
  student_t(4, 0, 0.5)    sd        subj              dI             user
- student_t(4, 0, 0.5)    sd      subj_c              cD             user
+ student_t(4, 0, 0.5)    sd      subj_c              cA             user
 ```
 
 The criteria vary over `subj_c`, a copy of the subject column, so that brms
@@ -285,8 +285,9 @@ The p-value of each hypothesis is now the **two-sided posterior p-value**,
 $2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}$. It falls below .05
 exactly when the 95% credible interval excludes zero.
 
-- **H1 ($\Delta d'$):** direct recognition is again stronger than indirect
-  cuing ($\Delta d' = -0.11$, 95% CrI
+- **H1 ($\Delta d'$):** awareness of the repeated patterns is again stronger
+  than their influence on search
+  ($\Delta d' = -0.11$, 95% CrI
   $[-0.18, -0.04]$, $p = .002$), the same
   conclusion as in the tutorial.
 - **H2 ($\rho$):** the posterior of the latent correlation spans almost the
@@ -294,10 +295,10 @@ exactly when the 95% credible interval excludes zero.
 - **H3 (latent regression):** the 95% credible interval of the intercept
   covers zero ($[-0.78, 0.76]$). Its posterior mean
   ($0.00$) and standard deviation
-  ($7.98$) are dominated by heavy tails: the direct
+  ($7.98$) are dominated by heavy tails: the awareness
   sensitivity barely varies across subjects
   ($\text{sd}(d') = 0.11$),
-  so the slope $\rho \, \sigma_I / \sigma_D$ can take very large values. With
+  so the slope $\rho \, \sigma_I / \sigma_A$ can take very large values. With
   posteriors like this one, read the credible interval rather than the mean
   and standard deviation.
 
@@ -369,8 +370,8 @@ bf
   ($\log \text{BF}_{10} = -0.15$).
 - **Intercept $= 0$:** there is moderate evidence for the null
   ($\log \text{BF}_{10} = -1.91$,
-  $\text{BF}_{01} = 6.7$). The data favour no indirect
-  sensitivity in participants without direct sensitivity, which the credible
+  $\text{BF}_{01} = 6.7$). The data favour no influence
+  sensitivity in participants without awareness sensitivity, which the credible
   interval alone could not tell.
 
 In the plot, the solid curve is the posterior and the dashed curve the prior.
@@ -451,7 +452,7 @@ plot(fit_bayes)
 The left panel is unchanged. In the right panel, the latent line uses the
 posterior means, and its 95% credible band fans out away from the group means
 because the slope is so uncertain. The vertical segment at
-$d'_{\text{Direct}} = 0$ is the credible interval of the intercept.
+$d'_{\text{Awareness}} = 0$ is the credible interval of the intercept.
 
 ### Subject intervals
 
@@ -476,27 +477,27 @@ The intercept of H3 has no prior of its own above: the model places its
 priors on the means, standard deviations and correlation of the two
 sensitivities, and the intercept prior they induce has very heavy tails. Its
 Bayes factor depends on all of them. With
-`parameterization = "regression"`, the prior of the indirect mean moves to the
+`parameterization = "regression"`, the prior of the influence mean moves to the
 intercept $\beta_0$ of the latent regression, the last row of
-`usdt_priors()`. The indirect mean follows from it as
-$\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_D) \, \mu_D$, and the priors of
-the direct mean, the standard deviations and the correlation do not change.
+`usdt_priors()`. The influence mean follows from it as
+$\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A$, and the priors of
+the awareness mean, the standard deviations and the correlation do not change.
 
-The indirect mean now divides by $\sigma_D$, which matters in these data,
-where the direct sensitivity barely varies across subjects. Where $\sigma_D$
+The influence mean now divides by $\sigma_A$, which matters in these data,
+where the awareness sensitivity barely varies across subjects. Where $\sigma_A$
 nearly vanishes, the intercept prior pins $\rho$ near zero, because any other
 correlation would need an intercept far from zero, and the sampler cannot
 always follow so narrow a region: with the default half-Student-$t$ prior,
-which allows $\sigma_D$ near zero, the fit can leave a few divergent
+which allows $\sigma_A$ near zero, the fit can leave a few divergent
 transitions that a higher `adapt_delta` does not remove. A prior on
-$\sigma_D$ that vanishes at zero avoids them. We use `gamma(2, 4)`, of a scale
+$\sigma_A$ that vanishes at zero avoids them. We use `gamma(2, 4)`, of a scale
 similar to the default, and keep the default for $\sigma_I$. The prior check
 shows what changes:
 
 
 ``` r
-priors_reg <- usdt_priors(sd_dprime = list(direct   = "gamma(2, 4)",
-                                           indirect = "student_t(4, 0, 0.5)"))
+priors_reg <- usdt_priors(sd_dprime = list(awareness = "gamma(2, 4)",
+                                           influence = "student_t(4, 0, 0.5)"))
 plot(priors_reg, data = data_usdt, parameterization = "regression")
 ```
 
@@ -508,9 +509,9 @@ plot(priors_reg, data = data_usdt, parameterization = "regression")
 The intercept (H3) now has the prior you give it, by default `normal(0, 1)`,
 a weakly informative prior that leaves the estimate to the data, and the
 correlation (H2) keeps its uniform prior. The price is paid by the difference
-(H1): $\Delta d' = \beta_0 + (\rho \, \sigma_I / \sigma_D - 1) \, \mu_D$ has
+(H1): $\Delta d' = \beta_0 + (\rho \, \sigma_I / \sigma_A - 1) \, \mu_A$ has
 an induced prior, with the heavy tails the intercept had before. So does the
-indirect mean, which is why the indirect rates of a new subject now pile up
+influence mean, which is why the influence rates of a new subject now pile up
 near 0 and 1. Choose this parameterization when you have a view about the
 intercept, which is the test of unconscious processing, rather than about
 the difference between the means.
@@ -521,7 +522,7 @@ fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
                 parameterization = "regression", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 1m 38s.
+✔ Sampled 4 chains in 58.5s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
@@ -542,37 +543,37 @@ summary(fit_reg)
   Subjects:       104
   Observations:   416 aggregated rows (46,592 trials)
   Family:         binomial (probit), equal variances
-  Model:          latent regression of Indirect d' on Direct d'
-  Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
+  Model:          latent regression of Influence d' on Awareness d'
+  Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
   Estimation:     brms via cmdstanr, 4 chains x 5,000 draws (warmup 1,000)
   Diagnostics:    max R-hat 1.002, min ESS 2,578, 0 divergent
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  criterion      Direct      -0.0357   0.0294  [ -0.094,  0.021]   1.001   9,838
-  d'             Direct       0.2345   0.0343  [  0.167,  0.301]   1.000  34,365
-  d'             Indirect     0.1282   0.0154  [  0.098,  0.158]   1.001  25,396
+  criterion      Awareness   -0.0357   0.0294  [ -0.094,  0.021]   1.001   9,838
+  d'             Awareness    0.2345   0.0343  [  0.167,  0.301]   1.000  34,365
+  d'             Influence    0.1282   0.0154  [  0.098,  0.158]   1.001  25,396
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  sd(criterion)  Direct       0.2515   0.0254  [  0.205,  0.305]   1.000   8,970
-  sd(d')         Direct       0.1330   0.0529  [  0.034,  0.238]   1.001   6,784
-  sd(d')         Indirect     0.0866   0.0213  [  0.041,  0.126]   1.000   6,732
+  sd(criterion)  Awareness    0.2515   0.0254  [  0.205,  0.305]   1.000   8,970
+  sd(d')         Awareness    0.1330   0.0529  [  0.034,  0.238]   1.001   6,784
+  sd(d')         Influence    0.0866   0.0213  [  0.041,  0.126]   1.000   6,732
   cor(d')        both         0.3342   0.4010  [ -0.560,  0.954]   1.002   2,578
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
-H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
   Parameter           Mean       SD  95% CrI            p-value
-  Δd' (I - D)     -0.1062   0.0368  [ -0.178, -0.034]     .004
+  Δd' (I - A)     -0.1062   0.0368  [ -0.178, -0.034]     .004
 
 H2: Correlation between sensitivities across tasks
   Parameter           Mean       SD  95% CrI            p-value
   rho               0.3342   0.4010  [ -0.560,  0.954]     .402
 
-H3: Latent regression of Indirect d' on Direct d'
+H3: Latent regression of Influence d' on Awareness d'
   Parameter           Mean       SD  95% CrI            p-value
   Intercept         0.0653   0.1236  [ -0.204,  0.266]     .365
   Slope             0.2695   0.5224  [ -0.568,  1.421]     .402
@@ -580,12 +581,12 @@ H3: Latent regression of Indirect d' on Direct d'
 ── Priors ──────────────────────────────────────────────────────────────────────
 
   Parameter    Task       Prior
-  mean d'      Direct     normal(0, 1)
-  sd(d')       Direct     gamma(2, 4)
-  sd(d')       Indirect   student_t(4, 0, 0.5)
+  mean d'      Awareness  normal(0, 1)
+  sd(d')       Awareness  gamma(2, 4)
+  sd(d')       Influence  student_t(4, 0, 0.5)
   cor(d')      both       lkj(1)
-  mean c       Direct     normal(0, 0.5)
-  sd(c)        Direct     student_t(4, 0, 0.5)
+  mean c       Awareness  normal(0, 0.5)
+  sd(c)        Awareness  student_t(4, 0, 0.5)
   intercept    both       normal(0, 1)
 
 ── Notes ───────────────────────────────────────────────────────────────────────
@@ -597,17 +598,17 @@ H3: Latent regression of Indirect d' on Direct d'
 
 
 $\Delta d' = -0.11$ (95% CrI $[-0.18, -0.03]$)
-as before. The intercept, with a prior of its own and $\sigma_D$ kept away
+as before. The intercept, with a prior of its own and $\sigma_A$ kept away
 from zero, has the 95% credible interval $[-0.20, 0.27]$, against
 $[-0.78, 0.76]$ when its prior was induced by the others.
 
 The intercept and the correlation are independent a priori, but not a
-posteriori. The data fix the indirect mean, the sum of $\beta_0$ and
-$\rho \, (\sigma_I / \sigma_D) \, \mu_D$, so a correlation that would need an
-intercept far from zero loses weight, all the more when $\sigma_D$ is small.
+posteriori. The data fix the influence mean, the sum of $\beta_0$ and
+$\rho \, (\sigma_I / \sigma_A) \, \mu_A$, so a correlation that would need an
+intercept far from zero loses weight, all the more when $\sigma_A$ is small.
 The 95% credible interval of $\rho$ is now $[-0.56, 0.95]$, against
 $[-0.74, 0.95]$ before, a change that comes from both the intercept prior
-and the prior on $\sigma_D$; a narrower intercept prior would narrow it
+and the prior on $\sigma_A$; a narrower intercept prior would narrow it
 further. The Bayes factors of the correlation therefore depend on the
 intercept prior as well:
 
@@ -658,8 +659,8 @@ reliability
 ── Reliability summary ───────────────────────────────────────────────────────── 
 
   Task         Subjects Group mean       SD  95% CrI              By-subject mean median [min, max]
-  Direct            104       .118     .096  [  0.000,  0.331]    .119 [.110, .120]
-  Indirect          104       .311     .102  [  0.086,  0.495]    .311 [.310, .312]
+  Awareness         104       .118     .096  [  0.000,  0.331]    .119 [.110, .120]
+  Influence         104       .311     .102  [  0.086,  0.495]    .311 [.310, .312]
 
   Means, SDs and credible intervals summarise the posterior draws.
 ```
@@ -667,7 +668,7 @@ reliability
 The posterior means (.118 and
 .311) are close to the frequentist
 estimates, and the credible intervals show how uncertain they are: the
-reliability of the direct task could be anywhere between
+reliability of the awareness task could be anywhere between
 0.00 and
 .331.
 
@@ -682,13 +683,13 @@ the families of `usdt_priors()`:
 
 ``` r
 fit_brms <- brms::brm(
-  y | trials(n) ~ 0 + direct + task:size + task:cond +
-    (0 + direct | subj) + (0 + task:cond | subj),
+  y | trials(n) ~ 0 + awareness + task:size + task:cond +
+    (0 + awareness | subj) + (0 + task:cond | subj),
   data = counts, family = binomial("probit"),
   prior = brms::prior(normal(0, 1), class = b)
 )
-usdt_tests(fit_brms, direct = "taskD:cond", indirect = "taskI:cond")
-usdt_bf(fit_brms, direct = "taskD:cond", indirect = "taskI:cond")
+usdt_tests(fit_brms, awareness = "taskA:cond", influence = "taskI:cond")
+usdt_bf(fit_brms, awareness = "taskA:cond", influence = "taskI:cond")
 ```
 
 The examples of [`usdt_tests()`](../reference/usdt_hypotheses.html) build

@@ -6,15 +6,15 @@
 
 # This function gives the population the plots draw.
 plot_population <- function() {
-  usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                  sd_dprime = c(direct = 0.35, indirect = 0.30),
+  usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                  sd_dprime = c(awareness = 0.35, influence = 0.30),
                   cor_dprime = 0.3, criterion = 0.1)
 }
 
 test_that("a population plot draws the true and the measured d'", {
   pop <- plot_population()
-  figure <- plot(pop, trials = c(direct = 64, indirect = 200),
-                 dichotomize = "indirect")
+  figure <- plot(pop, trials = c(awareness = 64, influence = 200),
+                 dichotomize = "influence")
   expect_s3_class(figure, "ggplot")
   expect_setequal(unique(figure$data$kind), c("true", "measured"))
   expect_no_error(ggplot2::ggplot_build(figure))
@@ -38,17 +38,18 @@ test_that("a population plot draws the true and the measured d'", {
 test_that("a power plot puts subjects or trials on the axis", {
   pop <- plot_population()
   by_n <- plot(usdt_power(pop, subjects = c(40, 80, 120),
-                          trials = c(direct = 64, indirect = 200),
-                          dichotomize = "indirect"))
+                          trials = c(awareness = 64, influence = 200),
+                          dichotomize = "influence"))
   expect_s3_class(by_n, "ggplot")
   expect_identical(rlang::as_label(by_n$mapping$x), "subjects")
   expect_no_error(ggplot2::ggplot_build(by_n))
 
   by_t <- plot(usdt_power(pop, subjects = 80,
-                          trials = list(direct = c(32, 64, 128), indirect = 200),
-                          dichotomize = "indirect"))
+                          trials = list(awareness = c(32, 64, 128),
+                                        influence = 200),
+                          dichotomize = "influence"))
   expect_identical(rlang::as_label(by_t$mapping$x),
-                   "trials_direct")
+                   "trials_awareness")
 
   one <- plot(usdt_power(pop, subjects = 80, trials = 100, combine = "all"))
   expect_identical(rlang::as_label(one$mapping$x), "power")
@@ -71,9 +72,9 @@ test_that("a simulated power plot adds its intervals", {
 
 test_that("an MDES plot draws the curves and marks the smallest effects", {
   m <- usdt_mdes(plot_population(), subjects = 80,
-                 trials = c(direct = 64, indirect = 200),
+                 trials = c(awareness = 64, influence = 200),
                  hypothesis = c("diff = 0", "diff in [-0.4, 0.4]"),
-                 dichotomize = "indirect")
+                 dichotomize = "influence")
   figure <- plot(m)
   expect_s3_class(figure, "ggplot")
   expect_identical(levels(figure$data$panel),
@@ -85,9 +86,9 @@ test_that("an MDES plot draws the curves and marks the smallest effects", {
 test_that("a plan plot draws costs over the trials, or power along one value", {
   pop <- plot_population()
   two <- usdt_plan(pop, hypothesis = "diff = 0", subjects = c(10, 1000),
-                   trials = list(direct = c(16, 96), indirect = c(50, 300)),
-                   cost = c(subject = 600, direct = 4, indirect = 1.5),
-                   dichotomize = "indirect")
+                   trials = list(awareness = c(16, 96), influence = c(50, 300)),
+                   cost = c(subject = 600, awareness = 4, influence = 1.5),
+                   dichotomize = "influence")
   map <- plot(two)
   expect_true(all(map$data$relative >= 1))
   expect_equal(min(map$data$relative), 1)
@@ -95,28 +96,28 @@ test_that("a plan plot draws costs over the trials, or power along one value", {
   expect_no_error(ggplot2::ggplot_build(map))
 
   one <- usdt_plan(pop, hypothesis = "diff = 0", subjects = c(10, 1000),
-                   trials = list(direct = c(16, 96), indirect = 200),
-                   cost = c(subject = 600, direct = 4, indirect = 1.5),
-                   dichotomize = "indirect")
+                   trials = list(awareness = c(16, 96), influence = 200),
+                   cost = c(subject = 600, awareness = 4, influence = 1.5),
+                   dichotomize = "influence")
   line <- plot(one)
   expect_identical(rlang::as_label(line$mapping$x),
-                   "trials_direct")
+                   "trials_awareness")
   expect_no_error(ggplot2::ggplot_build(line))
 
   curve <- plot(usdt_plan(pop, hypothesis = "diff = 0",
-                          trials = c(direct = 64, indirect = 200),
-                          dichotomize = "indirect"))
+                          trials = c(awareness = 64, influence = 200),
+                          dichotomize = "influence"))
   expect_true(all(diff(curve$data$y) >= -0.01))
   expect_no_error(ggplot2::ggplot_build(curve))
 
   width <- plot(usdt_plan(pop, precision = c(diff = 0.2),
-                          trials = c(direct = 64, indirect = 200),
-                          dichotomize = "indirect"))
+                          trials = c(awareness = 64, influence = 200),
+                          dichotomize = "influence"))
   expect_true(all(diff(width$data$y) <= 0))
 
   budget <- usdt_plan(pop, hypothesis = "diff = 0", subjects = c(10, 200),
-                      trials = list(direct = c(16, 96), indirect = 200),
-                      cost = c(subject = 600, direct = 4, indirect = 1.5),
-                      budget = 50000, dichotomize = "indirect")
+                      trials = list(awareness = c(16, 96), influence = 200),
+                      cost = c(subject = 600, awareness = 4, influence = 1.5),
+                      budget = 50000, dichotomize = "influence")
   expect_error(plot(budget), "budget")
 })

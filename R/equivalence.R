@@ -11,7 +11,7 @@
 #' Tests interval, one-sided and point hypotheses about the quantities of the
 #' three uSDT hypotheses in a frequentist [hsdt()] fit or a custom model fitted
 #' with [lme4::glmer()]: the difference between mean sensitivities (`diff`, H1,
-#' reported as \eqn{\Delta d'}, indirect minus direct), their correlation
+#' reported as \eqn{\Delta d'}, influence minus awareness), their correlation
 #' (`rho`, H2) and the slope and intercept of the latent regression (`slope`,
 #' `intercept`, H3). The hypotheses are written as in [usdt_bf()], so a
 #' frequentist and a Bayesian analysis can state the same bounds.
@@ -24,9 +24,9 @@
 #'   `diff`, `rho`, `slope` or `intercept` and the operator is `=`, `<` or `>`
 #'   (`<=` and `>=` are read as `<` and `>`), or `"<quantity> in [a, b]"` and
 #'   `"<quantity> out [a, b]"` for a region and its complement.
-#' @param direct,indirect For a `glmerMod`, the fixed effects of the direct
-#'   and indirect sensitivities, as in [usdt_tests()]. Defaults match the
-#'   internal naming of [hsdt()].
+#' @param awareness,influence For a `glmerMod`, the fixed effects of the
+#'   awareness and influence sensitivities, as in [usdt_tests()]. Defaults match
+#'   the internal naming of [hsdt()].
 #' @param alpha Significance level of every test, between 0 and 0.5 (default
 #'   0.05).
 #'
@@ -87,7 +87,7 @@
 #'
 #' # The intercept and the slope
 #'
-#' Both divide by the variance of the direct sensitivity. When the direct
+#' Both divide by the variance of the awareness sensitivity. When the awareness
 #' sensitivity barely varies across subjects, their standard errors are large
 #' and their Wald intervals inaccurate, so their equivalence tests need many
 #' subjects to succeed, and the bootstrap of [usdt_boot()] gives more accurate
@@ -119,15 +119,16 @@
 #'
 #' @examples
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' m <- hsdt(d)
@@ -140,8 +141,8 @@
 #' usdt_equivalence(m, "rho in [-0.3, 0.3]")
 #'
 #' @export
-usdt_equivalence <- function(fit, hypothesis, direct = "d_D",
-                             indirect = "d_I", alpha = 0.05) {
+usdt_equivalence <- function(fit, hypothesis, awareness = "d_A",
+                             influence = "d_I", alpha = 0.05) {
   if (.is_posterior(fit)) {
     .usdt_stop("usdt_equivalence() tests maximum-likelihood fits. Test a ",
                "Bayesian fit with usdt_bf().")
@@ -168,7 +169,7 @@ usdt_equivalence <- function(fit, hypothesis, direct = "d_D",
   sampling <- if (isTRUE(boot$summary_available)) {
     .equiv_boot(boot)
   } else {
-    .equiv_wald(.pars_of(fit, direct, indirect),
+    .equiv_wald(.pars_of(fit, awareness, influence),
                 bootable = inherits(fit, "hsdt"))
   }
 

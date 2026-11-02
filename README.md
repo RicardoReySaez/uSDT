@@ -10,9 +10,9 @@
 
 `uSDT` estimates hierarchical signal detection theory (SDT) models for
 research on unconscious processing. It jointly models sensitivity in paired
-direct and indirect measures, allowing researchers to compare both
-sensitivities, estimate their latent association, and test indirect sensitivity
-when direct sensitivity is zero. The model can be fitted by maximum likelihood
+awareness and influence measures, allowing researchers to compare both
+sensitivities, estimate their latent association, and test influence sensitivity
+when awareness sensitivity is zero. The model can be fitted by maximum likelihood
 with `lme4` or in a Bayesian framework with `brms`, where Bayes factors weigh the
 evidence for and against each hypothesis. It also plans studies: the power of
 the three hypotheses for a number of subjects and of trials per task, the
@@ -68,8 +68,8 @@ CmdStan instead.
 ## Example: Vadillo et al. data
 
 The package includes the two trial-level data frames from Experiment 2 of
-Vadillo et al. (2025): `vadillo_awareness` for the direct task and
-`vadillo_cuing` for the indirect task.
+Vadillo et al. (2025): `vadillo_awareness` for the awareness task and
+`vadillo_cuing` for the influence task.
 
 ```r
 library(uSDT)
@@ -78,17 +78,17 @@ data(vadillo_awareness)
 data(vadillo_cuing)
 
 d <- usdt_data_tasks(
-  direct = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col = "subj",
   condition_col = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col = list(direct = "judged.old", indirect = "rt"),
+  response_col = list(awareness = "judged.old", influence = "rt"),
   response_levels = list(
-    direct = c(signal = 1, noise = 0),
-    indirect = c(signal = "faster", noise = "slower")
+    awareness = c(signal = 1, noise = 0),
+    influence = c(signal = "faster", noise = "slower")
   ),
-  dichotomize = list(direct = FALSE, indirect = TRUE)
+  dichotomize = list(awareness = FALSE, influence = TRUE)
 )
 
 fit <- hsdt(d)
@@ -101,7 +101,7 @@ usdt_bf(fit_bayes)
 ```
 
 Every column, level and format argument takes either one value for both tasks
-or one per task as `list(direct = ..., indirect = ...)`, so the two tasks may
+or one per task as `list(awareness = ..., influence = ...)`, so the two tasks may
 differ in the columns they use, in the values those columns take, and in the
 format they arrive in.
 

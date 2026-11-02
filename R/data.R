@@ -1,5 +1,5 @@
 # data.R
-# Prepare direct and indirect task data for uSDT models
+# Prepare awareness and influence task data for uSDT models
 # Author: Ricardo Rey-Sáez
 # Last modified: 08-09-2026
 
@@ -7,7 +7,7 @@
 
 #' Prepare data for hierarchical SDT models
 #'
-#' Formats direct and indirect task data into a standardized structure for
+#' Formats awareness and influence task data into a standardized structure for
 #' [hsdt()]. Use `usdt_data_tasks()` when tasks are stored in separate data
 #' frames, or `usdt_data_long()` when both tasks are kept in a single data frame
 #' with a column that identifies each task.
@@ -16,11 +16,12 @@
 #' same subjects appear in both tasks, and print a summary table so you can
 #' verify the column settings before fitting the model.
 #'
-#' @param direct,indirect Data frames for each task (used in `usdt_data_tasks()`).
+#' @param awareness,influence Data frames for each task (used in
+#'   `usdt_data_tasks()`).
 #' @param data A single data frame with both tasks (used in `usdt_data_long()`).
 #' @param task_col Name of the column that identifies the task in `data`.
 #' @param task_levels Named vector mapping task labels, like
-#'   `c(direct = "D", indirect = "I")`.
+#'   `c(awareness = "A", influence = "I")`.
 #' @param subject_col Name of the column that identifies participants.
 #' @param condition_col Name of the column for signal and noise conditions.
 #'   Not needed when using `sdt_cols`.
@@ -41,8 +42,8 @@
 #' @param sdt_cols Named vector for SDT table columns, like
 #'   `c(hit = "H", miss = "M", fa = "FA", cr = "CR")`.
 #' @param dichotomize Which tasks to split at the median using [meyen_split()].
-#'   Use `"none"`, `"direct"`, `"indirect"`, `"both"`, or a list like
-#'   `list(direct = FALSE, indirect = TRUE)`.
+#'   Use `"none"`, `"awareness"`, `"influence"`, `"both"`, or a list like
+#'   `list(awareness = FALSE, influence = TRUE)`.
 #' @param ties How to handle trials that fall exactly on the median.
 #'   See [meyen_split()].
 #' @param coding How condition is coded in the model: `"deviation"`
@@ -59,10 +60,11 @@
 #' tasks) or a list with separate settings for each task:
 #'
 #' ```r
-#' condition_col    = list(direct = "cond", indirect = "cue")
-#' condition_levels = list(direct   = c(signal = "old", noise = "new"),
-#'                         indirect = c(signal = "congruent", noise = "incongruent"))
-#' dichotomize      = list(direct = FALSE, indirect = TRUE)
+#' condition_col    = list(awareness = "cond", influence = "cue")
+#' condition_levels = list(awareness = c(signal = "old", noise = "new"),
+#'                         influence = c(signal = "congruent",
+#'                                       noise = "incongruent"))
+#' dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' ```
 #'
 #' This works for all column and level arguments, so you can combine trial-level
@@ -83,24 +85,25 @@
 #'
 #' @examples
 #' # 1. Tasks in separate data frames
-#' # Direct task: binary choices (old/new)
-#' # Indirect task: response times (split at the median)
+#' # Awareness task: binary choices (old/new)
+#' # Influence task: response times (split at the median)
 #' d_separate <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #' d_separate
 #'
 #' # 2. Tasks combined in a single long data frame
 #' long <- rbind(
-#'   data.frame(task      = "D",
+#'   data.frame(task      = "A",
 #'              subj      = vadillo_awareness$subj,
 #'              condition = vadillo_awareness$condition,
 #'              response  = vadillo_awareness$judged.old),
@@ -113,14 +116,15 @@
 #' d_long <- usdt_data_long(
 #'   long,
 #'   task_col         = "task",
-#'   task_levels      = c(direct = "D", indirect = "I"),
+#'   task_levels      = c(awareness = "A", influence = "I"),
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
 #'   response_col     = "response",
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #' d_long
 #'
@@ -129,24 +133,26 @@ NULL
 
 #' @rdname usdt_data
 #' @export
-usdt_data_tasks <- function(direct, indirect,
+usdt_data_tasks <- function(awareness, influence,
                             subject_col,
                             condition_col    = NULL, condition_levels = NULL,
                             response_col     = NULL, response_levels  = NULL,
                             successes_col    = NULL, trials_col       = NULL,
                             successes_type   = c("auto", "counts", "proportions"),
                             sdt_cols         = NULL,
-                            dichotomize      = c("none", "indirect", "direct", "both"),
+                            dichotomize      = c("none", "influence",
+                                                 "awareness", "both"),
                             ties             = c("noise", "random"),
                             coding           = c("deviation", "treatment"),
-                            labels           = c(direct = "Direct", indirect = "Indirect")) {
+                            labels           = c(awareness = "Awareness",
+                                                 influence = "Influence")) {
 
   # Both task inputs must contain data.
-  .check_df(direct,   "direct")
-  .check_df(indirect, "indirect")
+  .check_df(awareness, "awareness")
+  .check_df(influence, "influence")
 
   # The shared builder prepares both tasks.
-  .usdt_build(parts       = list(direct = direct, indirect = indirect),
+  .usdt_build(parts       = list(awareness = awareness, influence = influence),
               input       = "2 data frames",
               entry       = "usdt_data_tasks()",
               subject_col = subject_col,
@@ -170,7 +176,8 @@ usdt_data_long <- function(data, task_col, task_levels,
                            successes_col    = NULL, trials_col       = NULL,
                            successes_type   = c("auto", "counts", "proportions"),
                            sdt_cols         = NULL,
-                           dichotomize      = c("none", "indirect", "direct", "both"),
+                           dichotomize      = c("none", "influence",
+                                                "awareness", "both"),
                            ties             = c("noise", "random"),
                            coding           = c("deviation", "treatment"),
                            labels           = NULL) {
@@ -181,10 +188,10 @@ usdt_data_long <- function(data, task_col, task_levels,
   .check_cols(data, task_col, "task_col", "`data`")
   task_levels <- .check_task_levels(task_levels, data[[task_col]], task_col)
 
-  # The task labels separate the direct and indirect data.
+  # The task labels separate the awareness and influence data.
   tv <- as.character(data[[task_col]])
-  parts <- list(direct   = data[tv == as.character(task_levels[["direct"]]),   , drop = FALSE],
-                indirect = data[tv == as.character(task_levels[["indirect"]]), , drop = FALSE])
+  parts <- lapply(task_levels[c("awareness", "influence")], function(level)
+    data[tv == as.character(level), , drop = FALSE])
   for (k in names(parts)) {
     if (nrow(parts[[k]]) == 0L) {
       .usdt_stop("no rows of `", task_col, "` equal `", task_levels[[k]],
@@ -206,7 +213,7 @@ usdt_data_long <- function(data, task_col, task_levels,
               ties          = ties,
               coding        = match.arg(coding),
               labels        = if (is.null(labels))
-                c(direct = "Direct", indirect = "Indirect") else labels)
+                c(awareness = "Awareness", influence = "Influence") else labels)
 }
 
 # Data builder
@@ -238,7 +245,7 @@ usdt_data_long <- function(data, task_col, task_levels,
 
   # Each task becomes a table of response counts.
   cells <- list(); info <- list()
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     res <- .prepare_task(
       data      = parts[[k]],          task     = k,
       subject   = arg$subject[[k]],    condition = arg$condition[[k]],
@@ -254,29 +261,31 @@ usdt_data_long <- function(data, task_col, task_levels,
 
   # The code joins both tasks and creates the model columns.
   agg <- rbind(
-    data.frame(subj = cells$direct$subj,   task = "D", sig = cells$direct$sig,
-               y = cells$direct$y,   n = cells$direct$n,   stringsAsFactors = FALSE),
-    data.frame(subj = cells$indirect$subj, task = "I", sig = cells$indirect$sig,
-               y = cells$indirect$y, n = cells$indirect$n, stringsAsFactors = FALSE)
+    data.frame(subj = cells$awareness$subj, task = "A",
+               sig = cells$awareness$sig, y = cells$awareness$y,
+               n = cells$awareness$n, stringsAsFactors = FALSE),
+    data.frame(subj = cells$influence$subj, task = "I",
+               sig = cells$influence$sig, y = cells$influence$y,
+               n = cells$influence$n, stringsAsFactors = FALSE)
   )
-  agg$task <- factor(agg$task, levels = c("D", "I"))
+  agg$task <- factor(agg$task, levels = c("A", "I"))
   agg$cond <- if (coding == "deviation") ifelse(agg$sig, .5, -.5) else
     as.numeric(agg$sig)
-  agg$c_D <- as.integer(agg$task == "D")
+  agg$c_A <- as.integer(agg$task == "A")
   agg$c_I <- as.integer(agg$task == "I")
-  agg$d_D <- agg$cond * (agg$task == "D")
+  agg$d_A <- agg$cond * (agg$task == "A")
   agg$d_I <- agg$cond * (agg$task == "I")
   agg <- agg[order(agg$subj, agg$task, agg$sig), ]
   rownames(agg) <- NULL
 
   # The code checks which subjects completed both tasks.
-  sD <- unique(agg$subj[agg$task == "D"]); sI <- unique(agg$subj[agg$task == "I"])
-  both <- intersect(sD, sI); only <- setdiff(union(sD, sI), both)
+  sA <- unique(agg$subj[agg$task == "A"]); sI <- unique(agg$subj[agg$task == "I"])
+  both <- intersect(sA, sI); only <- setdiff(union(sA, sI), both)
   if (!length(both)) {
     .usdt_stop("no subject appears in both tasks. The latent correlation ",
-               "is not identified.\n  Direct task ids: ",
-               paste(utils::head(sD, 5L), collapse = ", "), ", ...\n",
-               "  Indirect task ids: ",
+               "is not identified.\n  Awareness task ids: ",
+               paste(utils::head(sA, 5L), collapse = ", "), ", ...\n",
+               "  Influence task ids: ",
                paste(utils::head(sI, 5L), collapse = ", "), ", ...\n",
                "  Do the two data frames use the same subject labels?")
   }
@@ -292,8 +301,8 @@ usdt_data_long <- function(data, task_col, task_levels,
 
   # The code checks the criterion left by each Meyen split.
   chk   <- .criterion_check(agg, coding)
-  czero <- stats::setNames(logical(2), c("direct", "indirect"))
-  for (k in c("direct", "indirect")) {
+  czero <- stats::setNames(logical(2), c("awareness", "influence"))
+  for (k in c("awareness", "influence")) {
     czero[[k]] <- info[[k]]$dichotomized && chk[[k]]$negligible
     if (info[[k]]$dichotomized && !chk[[k]]$negligible) {
       .usdt_msg("task ", labels[[k]], " was Meyen-split but its implied ",
@@ -310,9 +319,10 @@ usdt_data_long <- function(data, task_col, task_levels,
     agg  = agg,
     meta = list(
       input = input, entry = entry, coding = coding,
-      ties = unlist(arg$ties)[c("direct", "indirect")],
+      ties = unlist(arg$ties)[c("awareness", "influence")],
       labels = labels, tasks = info, criterion_zero = czero, criterion = chk,
-      n_subj = length(union(sD, sI)), n_both = length(both), n_only = length(only),
+      n_subj = length(union(sA, sI)), n_both = length(both),
+      n_only = length(only),
       n_trials = sum(agg$n), n_rows = nrow(agg),
       descriptives = .descriptives(agg, coding)
     )
@@ -561,8 +571,8 @@ usdt_data_long <- function(data, task_col, task_levels,
 # This function checks whether each task has a negligible criterion.
 .criterion_check <- function(agg, coding, tol = 0.02) {
   out <- list()
-  for (k in c("direct", "indirect")) {
-    crit <- .task_moments(agg, if (k == "direct") "D" else "I",
+  for (k in c("awareness", "influence")) {
+    crit <- .task_moments(agg, if (k == "awareness") "A" else "I",
                           coding)$criterion
     mean_abs <- mean(abs(crit))
     out[[k]] <- list(mean_abs = mean_abs, max_abs = max(abs(crit)),
@@ -575,7 +585,7 @@ usdt_data_long <- function(data, task_col, task_levels,
 # This function calculates simple summaries for each subject.
 .descriptives <- function(agg, coding) {
   out <- list()
-  for (k in c("D", "I")) {
+  for (k in c("A", "I")) {
     m <- .task_moments(agg, k, coding)
     out[[k]] <- list(
       trials = stats::median(agg$n[agg$task == k]),
@@ -585,18 +595,20 @@ usdt_data_long <- function(data, task_col, task_levels,
   out
 }
 
-# This function checks the direct and indirect task labels.
+# This function checks the awareness and influence task labels.
 .check_task_levels <- function(x, v, col) {
-  if (is.null(x) || length(x) != 2L || !setequal(names(x), c("direct", "indirect"))) {
+  if (is.null(x) || length(x) != 2L ||
+      !setequal(names(x), c("awareness", "influence"))) {
     u <- unique(as.character(v))
-    .usdt_stop("`task_levels` must be named `direct` and `indirect`, e.g.\n",
-               '  task_levels = c(direct = "D", indirect = "I")\n',
+    .usdt_stop("`task_levels` must be named `awareness` and `influence`, ",
+               "e.g.\n",
+               '  task_levels = c(awareness = "A", influence = "I")\n',
                "  Values found in `", col, "`: ",
                paste0("`", utils::head(u, 6L), "`", collapse = ", "))
   }
-  if (as.character(x[["direct"]]) == as.character(x[["indirect"]])) {
-    .usdt_stop("`task_levels` must use different values for the direct and ",
-               "indirect tasks.")
+  if (as.character(x[["awareness"]]) == as.character(x[["influence"]])) {
+    .usdt_stop("`task_levels` must use different values for the awareness and ",
+               "influence tasks.")
   }
   x
 }

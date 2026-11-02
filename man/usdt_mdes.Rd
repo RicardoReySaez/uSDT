@@ -13,7 +13,7 @@ usdt_mdes(
   power = 0.8,
   alpha = 0.05,
   signal = 0.5,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   vary = NULL,
   range = NULL
 )
@@ -28,9 +28,9 @@ usdt_mdes(
 
 \item{trials}{Number of trials per subject in each task, signal and noise
 trials together: one value for both tasks, or one for each as
-\code{c(direct = , indirect = )} or \code{list(direct = , indirect = )}. Several
-values give one design each; a value shared by both tasks keeps them
-equal, and values given for each task are crossed.}
+\code{c(awareness = , influence = )} or \code{list(awareness = , influence = )}.
+Several values give one design each; a value shared by both tasks keeps
+them equal, and values given for each task are crossed.}
 
 \item{hypothesis}{Character vector of hypotheses, written as in
 \code{\link[=usdt_equivalence]{usdt_equivalence()}}: \code{"<quantity> <op> <value>"} with the quantity
@@ -48,13 +48,13 @@ value for both tasks or one for each. Each task must have a whole number
 of signal and of noise trials.}
 
 \item{dichotomize}{Which tasks are split at the median, as in
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"indirect"}, \code{"direct"}, \code{"both"}, or one
-logical value for each task. The split fixes the criterion of a task at
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"influence"}, \code{"awareness"}, \code{"both"}, or
+one logical value for each task. The split fixes the criterion of a task at
 zero, so its criterion values in \code{population} are not used.}
 
 \item{vary}{Optional name of the population value to move instead of the
-tested quantity: \code{"mu_D"}, \code{"mu_I"}, \code{"sigma_D"}, \code{"sigma_I"}, \code{"rho"},
-\code{"intercept"}, \code{"criterion_D"}, \code{"criterion_I"}, \code{"sd_criterion_D"} or
+tested quantity: \code{"mu_A"}, \code{"mu_I"}, \code{"sigma_A"}, \code{"sigma_I"}, \code{"rho"},
+\code{"intercept"}, \code{"criterion_A"}, \code{"criterion_I"}, \code{"sd_criterion_A"} or
 \code{"sd_criterion_I"}. Needs \code{range}.}
 
 \item{range}{With \code{vary}, the interval of values to search, \code{c(from, to)};
@@ -69,7 +69,7 @@ the result is the value nearest to \code{from} that reaches the power.}
 \value{
 An object of class \code{usdt_mdes}: a data frame with one row per
 scenario, design and hypothesis, and the columns \code{scenario}, \code{subjects},
-\code{trials_direct}, \code{trials_indirect}, \code{hypothesis}, \code{varies} (the value
+\code{trials_awareness}, \code{trials_influence}, \code{hypothesis}, \code{varies} (the value
 moved), \code{population} (its value in the population), \code{power_population}
 (the power there) and \code{mdes} (the value at which the power is reached, or
 \code{NA} if it is not reached in the range searched). For an equivalence
@@ -87,33 +87,33 @@ that the design can establish.
 \details{
 Moving a quantity keeps the other values of the population fixed as its
 parameterization says (see \code{\link[=usdt_population]{usdt_population()}}): the difference moves the
-indirect mean with the direct mean fixed; the intercept moves the indirect
-mean with the means and SDs and the correlation fixed; the correlation
-(and the slope, through it) keeps both means under the correlation
-parameterization and the intercept under the latent regression. The search
-runs from the value of H0 (or the nearest bound) outwards, in the
+influence mean with the awareness mean fixed; the intercept moves the
+influence mean with the means and SDs and the correlation fixed; the
+correlation (and the slope, through it) keeps both means under the
+correlation parameterization and the intercept under the latent regression.
+The search runs from the value of H0 (or the nearest bound) outwards, in the
 direction of H1, and the power along the way comes from the same draws of
 the sample mean and covariance as in \code{\link[=usdt_power]{usdt_power()}}, so it can level off
 below the target when fits on the boundary are frequent; the result is
 then \code{NA}.
 }
 \examples{
-pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                       sd_dprime = c(direct = 0.35, indirect = 0.30),
+pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                       sd_dprime = c(awareness = 0.35, influence = 0.30),
                        cor_dprime = 0.3, criterion = 0.1)
 
-usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-          dichotomize = "indirect")
+usdt_mdes(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+          dichotomize = "influence")
 
 # The narrowest equivalence margin for the difference
-usdt_mdes(update(pop, dprime = c(direct = 0.15, indirect = 0.15)),
-          subjects = 80, trials = c(direct = 64, indirect = 200),
-          hypothesis = "diff in [-0.2, 0.2]", dichotomize = "indirect")
+usdt_mdes(update(pop, dprime = c(awareness = 0.15, influence = 0.15)),
+          subjects = 80, trials = c(awareness = 64, influence = 200),
+          hypothesis = "diff in [-0.2, 0.2]", dichotomize = "influence")
 
-# The SD of the direct d' the intercept test needs
-usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-          hypothesis = "intercept > 0", vary = "sigma_D",
-          range = c(0.05, 0.6), dichotomize = "indirect")
+# The SD of the awareness d' the intercept test needs
+usdt_mdes(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+          hypothesis = "intercept > 0", vary = "sigma_A",
+          range = c(0.05, 0.6), dichotomize = "influence")
 
 }
 \seealso{

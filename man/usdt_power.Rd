@@ -14,7 +14,7 @@ usdt_power(
   hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
   alpha = 0.05,
   signal = 0.5,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   combine = c("each", "all"),
   method = c("approximate", "simulation"),
   nsim = 1000,
@@ -40,9 +40,9 @@ and \code{trials} are then left out.}
 
 \item{trials}{Number of trials per subject in each task, signal and noise
 trials together: one value for both tasks, or one for each as
-\code{c(direct = , indirect = )} or \code{list(direct = , indirect = )}. Several
-values give one design each; a value shared by both tasks keeps them
-equal, and values given for each task are crossed.}
+\code{c(awareness = , influence = )} or \code{list(awareness = , influence = )}.
+Several values give one design each; a value shared by both tasks keeps
+them equal, and values given for each task are crossed.}
 
 \item{hypothesis}{Character vector of hypotheses, written as in
 \code{\link[=usdt_equivalence]{usdt_equivalence()}}: \code{"<quantity> <op> <value>"} with the quantity
@@ -58,8 +58,8 @@ value for both tasks or one for each. Each task must have a whole number
 of signal and of noise trials.}
 
 \item{dichotomize}{Which tasks are split at the median, as in
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"indirect"}, \code{"direct"}, \code{"both"}, or one
-logical value for each task. The split fixes the criterion of a task at
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"influence"}, \code{"awareness"}, \code{"both"}, or
+one logical value for each task. The split fixes the criterion of a task at
 zero, so its criterion values in \code{population} are not used.}
 
 \item{combine}{\code{"each"} reports the power of each hypothesis; \code{"all"} also
@@ -95,12 +95,12 @@ Linux and stops when the run ends. Simulation only.}
 \value{
 An object of class \code{usdt_power}: a data frame with one row per
 scenario, design and hypothesis, and the columns \code{scenario}, \code{subjects},
-\code{trials_direct}, \code{trials_indirect}, \code{hypothesis}, \code{test}, \code{H1}, \code{H0},
+\code{trials_awareness}, \code{trials_influence}, \code{hypothesis}, \code{test}, \code{H1}, \code{H0},
 \code{true} (the population value of the tested quantity), \code{se} (its expected
 standard error), \code{power}, \code{estimable} (the share of studies in which the
 analysis can estimate it), \code{in_null} (whether the population lies in H0,
-so that \code{power} is the type I error rate), and \code{reliability_direct} and
-\code{reliability_indirect}. A simulation adds \code{mc_se}, the Monte Carlo
+so that \code{power} is the type I error rate), and \code{reliability_awareness} and
+\code{reliability_influence}. A simulation adds \code{mc_se}, the Monte Carlo
 standard error of \code{power}, and \code{power.low} and \code{power.high}, its 95\%
 Wilson interval. With \code{combine = "all"}, a row per scenario and design
 whose \code{hypothesis} is \code{"all"} gives the joint power. It prints one report
@@ -125,7 +125,7 @@ measurement error. The variance of that error, \eqn{v}, is the one
 \code{\link[=usdt_reliability]{usdt_reliability()}} reports, averaged over the subjects of the population:
 it falls with the number of trials and grows with extreme rates. The
 observed \eqn{d'} of the subjects then have covariance
-\eqn{S = \Sigma + \mathrm{diag}(v_D, v_I)}, where \eqn{\Sigma} is the
+\eqn{S = \Sigma + \mathrm{diag}(v_A, v_I)}, where \eqn{\Sigma} is the
 covariance of the population, and the reliability of each task is
 \eqn{\sigma^2 / (\sigma^2 + v)}. Trials act on the tests only through
 \eqn{v}, and subjects through their number \eqn{N}.
@@ -145,9 +145,9 @@ definite (a variance of zero or a correlation of -1 or 1) is a fit on the
 boundary. There, the fitted model reports the difference but marks the
 correlation, slope and intercept as not estimable, so the draw counts as a
 failure to reject them, and \code{estimable} reports how often that happens.
-With a direct task of low reliability \eqn{R_D}, this probability is close
-to \eqn{\Phi(-R_D \sqrt{N / 2})}, and more direct trials lower it faster
-than more subjects.
+With an awareness task of low reliability \eqn{R_A}, this probability is
+close to \eqn{\Phi(-R_A \sqrt{N / 2})}, and more awareness trials lower it
+faster than more subjects.
 }
 
 \section{The tests}{
@@ -164,7 +164,7 @@ The approximation assumes the equal-variance model that \code{\link[=hsdt]{hsdt(
 every \code{sd_signal} of \code{population} must be 1, and it assumes the estimated
 standard deviations of the criteria stay away from zero. It follows the
 fitted model closely when the reliability of both tasks is moderate or
-high. When the direct task is unreliable, boundary fits are more frequent
+high. When the awareness task is unreliable, boundary fits are more frequent
 in the fitted model than here, and the power of H2 and H3 is somewhat
 optimistic.
 }
@@ -192,30 +192,32 @@ most 0.016.
 }
 
 \examples{
-pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                       sd_dprime = c(direct = 0.35, indirect = 0.30),
+pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                       sd_dprime = c(awareness = 0.35, influence = 0.30),
                        cor_dprime = 0.3, criterion = 0.1)
 
-# 80 subjects, 64 direct trials and 200 indirect trials split at the median
-usdt_power(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-           dichotomize = "indirect")
+# 80 subjects, 64 awareness trials and 200 influence trials split at the
+# median
+usdt_power(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+           dichotomize = "influence")
 
 # Several numbers of subjects, and one-sided and equivalence tests
 usdt_power(pop, subjects = c(40, 80, 160),
-           trials = c(direct = 64, indirect = 200),
+           trials = c(awareness = 64, influence = 200),
            hypothesis = c("diff > 0", "intercept > 0", "rho in [-0.1, 0.1]"),
-           dichotomize = "indirect")
+           dichotomize = "influence")
 
 # The same design under weaker correlations
 usdt_power(update(pop, cor_dprime = c(0.1, 0.2)), subjects = 80,
-           trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+           trials = c(awareness = 64,
+                      influence = 200), dichotomize = "influence")
 
 \donttest{
 # Check the design by simulating and analysing 50 studies (under a
 # minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
 sims <- usdt_power(pop, subjects = 80,
-                   trials = c(direct = 64, indirect = 200),
-                   dichotomize = "indirect", method = "simulation",
+                   trials = c(awareness = 64, influence = 200),
+                   dichotomize = "influence", method = "simulation",
                    nsim = 50, seed = 1)
 sims
 

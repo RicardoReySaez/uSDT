@@ -10,7 +10,7 @@
 #' Tests point, directional and interval hypotheses about the quantities of
 #' the three uSDT hypotheses in a Bayesian [hsdt()] fit or a custom model
 #' fitted with brms: the difference between mean sensitivities (`diff`, H1,
-#' reported as \eqn{\Delta d'}, indirect minus direct), their correlation
+#' reported as \eqn{\Delta d'}, influence minus awareness), their correlation
 #' (`rho`, H2) and the slope and intercept of the latent regression (`slope`,
 #' `intercept`, H3).
 #'
@@ -21,9 +21,9 @@
 #'   or `intercept` and the operator is `=`, `<` or `>` (`<=` and `>=` are read
 #'   as `<` and `>`), or `"<quantity> in [a, b]"` and `"<quantity> out [a, b]"`
 #'   for a region and its complement. The default tests the three point nulls.
-#' @param direct,indirect For a brms model, the population-level terms of the
-#'   direct and indirect sensitivities, as in [usdt_tests()]. Ignored for an
-#'   `hsdt` fit.
+#' @param awareness,influence For a brms model, the population-level terms of
+#'   the awareness and influence sensitivities, as in [usdt_tests()]. Ignored
+#'   for an `hsdt` fit.
 #' @param level Credible level of the reported intervals. Defaults to the
 #'   level of an `hsdt` fit, and to 0.95 for a brms model.
 #' @param plot Logical. Draw, for each hypothesis, a panel with the prior and
@@ -55,7 +55,7 @@
 #' A fit is used only if its distribution function stays within 0.05 of that
 #' of the draws at every percentile. When neither logspline algorithm gives
 #' such a fit, which happens with the very heavy tails of the intercept and
-#' slope when the direct sensitivities barely vary across subjects, the draws
+#' slope when the awareness sensitivities barely vary across subjects, the draws
 #' are fitted on the scale
 #' \eqn{\mathrm{asinh}((x - m)/s)}, with \eqn{m} their median and \eqn{s}
 #' their median absolute deviation, and the density is mapped back.
@@ -75,18 +75,18 @@
 #' # The prior of each quantity
 #'
 #' * `rho`: the marginal of the `lkj` prior of [usdt_priors()], exact.
-#' * `diff`: given the mean direct sensitivity \eqn{\mu_D}, the difference is
-#'   the mean indirect sensitivity shifted by \eqn{\mu_D}, so its prior density
+#' * `diff`: given the mean awareness sensitivity \eqn{\mu_A}, the difference is
+#'   the mean influence sensitivity shifted by \eqn{\mu_A}, so its prior density
 #'   and probabilities are those of the prior of \eqn{\mu_I} at
-#'   \eqn{x + \mu_D}, averaged over 100,000 prior draws of \eqn{\mu_D} (a
+#'   \eqn{x + \mu_A}, averaged over 100,000 prior draws of \eqn{\mu_A} (a
 #'   Rao-Blackwell estimate). With normal priors on both means this is the
 #'   normal prior of their difference.
 #' * `intercept`: induced by the other priors. Given the slope
-#'   \eqn{\beta_1} and \eqn{\mu_D}, the intercept is \eqn{\mu_I} shifted by
-#'   \eqn{\beta_1 \mu_D}, so its prior is likewise averaged over 100,000 prior
-#'   draws of the slope and of \eqn{\mu_D}. The prior has no mean or variance,
-#'   because the slope involves \eqn{1/\sigma_D}.
-#' * `slope`: given the ratio \eqn{\sigma_I / \sigma_D}, the slope is a
+#'   \eqn{\beta_1} and \eqn{\mu_A}, the intercept is \eqn{\mu_I} shifted by
+#'   \eqn{\beta_1 \mu_A}, so its prior is likewise averaged over 100,000 prior
+#'   draws of the slope and of \eqn{\mu_A}. The prior has no mean or variance,
+#'   because the slope involves \eqn{1/\sigma_A}.
+#' * `slope`: given the ratio \eqn{\sigma_I / \sigma_A}, the slope is a
 #'   rescaled correlation, so its prior is averaged over 100,000 prior draws of
 #'   that ratio. Its density is infinite at zero, and the slope always has the
 #'   sign of the correlation, so `slope = 0`, `slope > 0` and `slope < 0` are
@@ -96,12 +96,12 @@
 #' Under the latent regression parameterization the intercept has a prior of
 #' its own instead of \eqn{\mu_I}, so it is exact like `rho`, and `slope` is
 #' as above. The difference is induced:
-#' * `diff`: \eqn{\beta_0 + (\beta_1 - 1) \mu_D}, so its prior is that of the
+#' * `diff`: \eqn{\beta_0 + (\beta_1 - 1) \mu_A}, so its prior is that of the
 #'   intercept, shifted and averaged over 100,000 prior draws of the slope and
-#'   of \eqn{\mu_D}. Like the induced intercept above, it has heavy tails and
+#'   of \eqn{\mu_A}. Like the induced intercept above, it has heavy tails and
 #'   no mean or variance.
 #'
-#' The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_D}, so under the latent
+#' The data fix \eqn{\mu_I = \beta_0 + \beta_1 \mu_A}, so under the latent
 #' regression a narrow intercept prior also moves the posterior of the slope
 #' and of `rho`, even though their priors are independent of it: the Bayes
 #' factors of `rho` and `slope` then depend on the intercept prior as well.
@@ -160,15 +160,16 @@
 #' @examples
 #' \donttest{
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' m <- hsdt(d, estimation = "bayesian", seed = 1)
@@ -186,7 +187,7 @@
 #'
 #' @export
 usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
-                    direct = "d_D", indirect = "d_I", level = NULL,
+                    awareness = "d_A", influence = "d_I", level = NULL,
                     plot = TRUE) {
   if (!.is_posterior(fit)) {
     .usdt_stop("`fit` must come from hsdt(estimation = \"bayesian\") or from ",
@@ -205,10 +206,10 @@ usdt_bf <- function(fit, hypothesis = c("diff = 0", "rho = 0", "intercept = 0"),
     "correlation"
   tests <- lapply(hypothesis, .bf_parse)
   quantities <- unique(vapply(tests, `[[`, "", "quantity"))
-  draws <- .draw_quantities(.bivariate_draws(fit, direct, indirect))
+  draws <- .draw_quantities(.bivariate_draws(fit, awareness, influence))
   priors <- if (.is_bayes(fit)) fit$priors else {
-    .brms_priors(brms::prior_summary(fit), posterior::variables(fit), direct,
-                 indirect)
+    .brms_priors(brms::prior_summary(fit), posterior::variables(fit), awareness,
+                 influence)
   }
   priors <- .quantity_priors(priors, quantities, parameterization)
   results <- lapply(tests, function(h) {
@@ -292,10 +293,10 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 # parameter takes its most specific prior, as brms does: that of its
 # coefficient, then of its group, then of its class. `table` is
 # brms::prior_summary() and `variables` the names of the model's draws.
-.brms_priors <- function(table, variables, direct, indirect) {
-  found <- .brms_variables(variables, direct, indirect)
-  terms <- c(direct = direct, indirect = indirect)
-  group <- substring(found[3L], 4L, nchar(found[3L]) - nchar(direct) - 2L)
+.brms_priors <- function(table, variables, awareness, influence) {
+  found <- .brms_variables(variables, awareness, influence)
+  terms <- c(awareness = awareness, influence = influence)
+  group <- substring(found[3L], 4L, nchar(found[3L]) - nchar(awareness) - 2L)
   table <- as.data.frame(table)[c("prior", "class", "coef", "group")]
   table[is.na(table)] <- ""
 
@@ -337,7 +338,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   # A fitted model stores the LKJ prior on the Cholesky factor (class L), a
   # specified one on the correlations (class cor). One correlation of a K x K
   # LKJ(eta) block has the marginal of a 2 x 2 LKJ(eta - 1 + K/2), and the
-  # block holds every term of the group that correlates with the direct
+  # block holds every term of the group that correlates with the awareness
   # sensitivity.
   prior <- effective(c("cor", "L"), "", group)
   read <- .read_prior(prior)
@@ -348,8 +349,8 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   }
   sd_names <- variables[startsWith(variables, paste0("sd_", group, "__"))]
   members <- substring(sd_names, nchar(group) + 6L)
-  pairs <- c(paste0("cor_", group, "__", direct, "__", members),
-             paste0("cor_", group, "__", members, "__", direct))
+  pairs <- c(paste0("cor_", group, "__", awareness, "__", members),
+             paste0("cor_", group, "__", members, "__", awareness))
   K <- 1 + sum(pairs %in% variables)
   cor <- row("cor_dprime", "both", prior,
              list(family = "lkj", args = read$args - 1 + K / 2))
@@ -405,7 +406,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 # the density of x through the Jacobian 1 / (MAD * sqrt(1 + z^2)). The
 # transform is close to the identity near the centre and logarithmic in the
 # tails, so the very heavy tails that the intercept and slope have when
-# sigma_D is near 0, which defeat both logspline algorithms, reach logspline
+# sigma_A is near 0, which defeat both logspline algorithms, reach logspline
 # as light ones. Against bridge sampling it is less precise than logspline
 # when logspline converges, so it is only the last resort.
 .bf_posterior_asinh <- function(x) {
@@ -439,7 +440,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
               if (length(induced) > 1L) "s are" else " is")
     },
     if ("diff" %in% field("quantity")) {
-      " The difference is the indirect minus the direct mean sensitivity."
+      " The difference is the influence minus the awareness mean sensitivity."
     },
     vapply(strsplit(swaps, " ", fixed = TRUE), function(s) {
       sprintf(paste(" A %s compared with zero is tested on %s, which has its",
@@ -449,7 +450,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 }
 
 # This function returns the printed name of a quantity. The difference is
-# named as in summary(), Delta d' (indirect minus direct).
+# named as in summary(), Delta d' (influence minus awareness).
 .bf_name <- function(quantity) {
   if (quantity == "diff") paste0(.usdt_chars()$delta, "d'") else quantity
 }

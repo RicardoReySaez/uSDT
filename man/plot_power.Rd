@@ -12,7 +12,7 @@
   x,
   trials = NULL,
   signal = 0.5,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   ...
 )
 
@@ -46,8 +46,8 @@ plots.
 \itemize{
 \item A \code{usdt_population} shows, for each scenario, the bivariate normal
 distribution of the true \eqn{d'} across subjects (ellipses holding 50\%
-and 90\% of them) with the latent regression of indirect on direct
-\eqn{d'} and its intercept at \eqn{d'_D = 0}. With \code{trials}, a dashed
+and 90\% of them) with the latent regression of influence on awareness
+\eqn{d'} and its intercept at \eqn{d'_A = 0}. With \code{trials}, a dashed
 ellipse adds the distribution of the \eqn{d'} that those trials measure,
 wider by the measurement error, which is what attenuates the observed
 correlation.
@@ -64,22 +64,24 @@ shows the approximate power (or the expected interval width) along it.
 }
 }
 \examples{
-pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                       sd_dprime = c(direct = 0.35, indirect = 0.30),
+pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                       sd_dprime = c(awareness = 0.35, influence = 0.30),
                        cor_dprime = 0.3, criterion = 0.1)
-plot(pop, trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+plot(pop, trials = c(awareness = 64, influence = 200),
+     dichotomize = "influence")
 
 plot(usdt_power(pop, subjects = seq(20, 300, 40),
-                trials = c(direct = 64, indirect = 200),
-                dichotomize = "indirect"))
+                trials = c(awareness = 64, influence = 200),
+                dichotomize = "influence"))
 
-plot(usdt_mdes(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-               hypothesis = "intercept > 0", dichotomize = "indirect"))
+plot(usdt_mdes(pop, subjects = 80,
+               trials = c(awareness = 64, influence = 200),
+               hypothesis = "intercept > 0", dichotomize = "influence"))
 
 plot(usdt_plan(pop, hypothesis = "diff = 0", subjects = c(20, 300),
-               trials = list(direct = c(32, 96), indirect = 200),
-               cost = c(subject = 600, direct = 4, indirect = 1.5),
-               dichotomize = "indirect"))
+               trials = list(awareness = c(32, 96), influence = 200),
+               cost = c(subject = 600, awareness = 4, influence = 1.5),
+               dichotomize = "influence"))
 
 }
 \seealso{

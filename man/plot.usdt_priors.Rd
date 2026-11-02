@@ -26,7 +26,7 @@ from its prior instead of fixing it to 1.}
 \item{parameterization}{How the model describes the two sensitivities, as
 in \code{\link[=hsdt]{hsdt()}}: by their means, standard deviations and correlation
 (\code{"correlation"}, the default) or by the latent regression of the
-indirect on the direct one (\code{"regression"}).}
+influence on the awareness one (\code{"regression"}).}
 
 \item{...}{Ignored.}
 }
@@ -64,9 +64,9 @@ null.
 \examples{
 plot(usdt_priors())
 
-# A narrower prior for the mean indirect sensitivity
-plot(usdt_priors(dprime = list(direct = "normal(0, 1)",
-                               indirect = "normal(0, 0.5)")))
+# A narrower prior for the mean influence sensitivity
+plot(usdt_priors(dprime = list(awareness = "normal(0, 1)",
+                               influence = "normal(0, 0.5)")))
 
 # The latent regression, with a prior on its intercept
 plot(usdt_priors(intercept = "normal(0, 0.3)"),

@@ -21,9 +21,9 @@
 #' @param subjects Number of subjects. Several values give one design each.
 #' @param trials Number of trials per subject in each task, signal and noise
 #'   trials together: one value for both tasks, or one for each as
-#'   `c(direct = , indirect = )` or `list(direct = , indirect = )`. Several
-#'   values give one design each; a value shared by both tasks keeps them
-#'   equal, and values given for each task are crossed.
+#'   `c(awareness = , influence = )` or `list(awareness = , influence = )`.
+#'   Several values give one design each; a value shared by both tasks keeps
+#'   them equal, and values given for each task are crossed.
 #' @param hypothesis Character vector of hypotheses, written as in
 #'   [usdt_equivalence()]: `"<quantity> <op> <value>"` with the quantity
 #'   `diff`, `rho`, `slope` or `intercept` and the operator `=`, `<` or `>`, or
@@ -35,8 +35,8 @@
 #'   value for both tasks or one for each. Each task must have a whole number
 #'   of signal and of noise trials.
 #' @param dichotomize Which tasks are split at the median, as in
-#'   [usdt_data_tasks()]: `"none"`, `"indirect"`, `"direct"`, `"both"`, or one
-#'   logical value for each task. The split fixes the criterion of a task at
+#'   [usdt_data_tasks()]: `"none"`, `"influence"`, `"awareness"`, `"both"`, or
+#'   one logical value for each task. The split fixes the criterion of a task at
 #'   zero, so its criterion values in `population` are not used.
 #' @param combine `"each"` reports the power of each hypothesis; `"all"` also
 #'   reports the probability that every one of them rejects H0 in the same
@@ -57,12 +57,12 @@
 #'
 #' @return An object of class `usdt_power`: a data frame with one row per
 #'   scenario, design and hypothesis, and the columns `scenario`, `subjects`,
-#'   `trials_direct`, `trials_indirect`, `hypothesis`, `test`, `H1`, `H0`,
+#'   `trials_awareness`, `trials_influence`, `hypothesis`, `test`, `H1`, `H0`,
 #'   `true` (the population value of the tested quantity), `se` (its expected
 #'   standard error), `power`, `estimable` (the share of studies in which the
 #'   analysis can estimate it), `in_null` (whether the population lies in H0,
-#'   so that `power` is the type I error rate), and `reliability_direct` and
-#'   `reliability_indirect`. A simulation adds `mc_se`, the Monte Carlo
+#'   so that `power` is the type I error rate), and `reliability_awareness` and
+#'   `reliability_influence`. A simulation adds `mc_se`, the Monte Carlo
 #'   standard error of `power`, and `power.low` and `power.high`, its 95%
 #'   Wilson interval. With `combine = "all"`, a row per scenario and design
 #'   whose `hypothesis` is `"all"` gives the joint power. It prints one report
@@ -82,7 +82,7 @@
 #' [usdt_reliability()] reports, averaged over the subjects of the population:
 #' it falls with the number of trials and grows with extreme rates. The
 #' observed \eqn{d'} of the subjects then have covariance
-#' \eqn{S = \Sigma + \mathrm{diag}(v_D, v_I)}, where \eqn{\Sigma} is the
+#' \eqn{S = \Sigma + \mathrm{diag}(v_A, v_I)}, where \eqn{\Sigma} is the
 #' covariance of the population, and the reliability of each task is
 #' \eqn{\sigma^2 / (\sigma^2 + v)}. Trials act on the tests only through
 #' \eqn{v}, and subjects through their number \eqn{N}.
@@ -102,9 +102,9 @@
 #' boundary. There, the fitted model reports the difference but marks the
 #' correlation, slope and intercept as not estimable, so the draw counts as a
 #' failure to reject them, and `estimable` reports how often that happens.
-#' With a direct task of low reliability \eqn{R_D}, this probability is close
-#' to \eqn{\Phi(-R_D \sqrt{N / 2})}, and more direct trials lower it faster
-#' than more subjects.
+#' With an awareness task of low reliability \eqn{R_A}, this probability is
+#' close to \eqn{\Phi(-R_A \sqrt{N / 2})}, and more awareness trials lower it
+#' faster than more subjects.
 #'
 #' # The tests
 #'
@@ -121,7 +121,7 @@
 #' every `sd_signal` of `population` must be 1, and it assumes the estimated
 #' standard deviations of the criteria stay away from zero. It follows the
 #' fitted model closely when the reliability of both tasks is moderate or
-#' high. When the direct task is unreliable, boundary fits are more frequent
+#' high. When the awareness task is unreliable, boundary fits are more frequent
 #' in the fitted model than here, and the power of H2 and H3 is somewhat
 #' optimistic.
 #'
@@ -151,30 +151,32 @@
 #'   [usdt_reliability()]
 #'
 #' @examples
-#' pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-#'                        sd_dprime = c(direct = 0.35, indirect = 0.30),
+#' pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+#'                        sd_dprime = c(awareness = 0.35, influence = 0.30),
 #'                        cor_dprime = 0.3, criterion = 0.1)
 #'
-#' # 80 subjects, 64 direct trials and 200 indirect trials split at the median
-#' usdt_power(pop, subjects = 80, trials = c(direct = 64, indirect = 200),
-#'            dichotomize = "indirect")
+#' # 80 subjects, 64 awareness trials and 200 influence trials split at the
+#' # median
+#' usdt_power(pop, subjects = 80, trials = c(awareness = 64, influence = 200),
+#'            dichotomize = "influence")
 #'
 #' # Several numbers of subjects, and one-sided and equivalence tests
 #' usdt_power(pop, subjects = c(40, 80, 160),
-#'            trials = c(direct = 64, indirect = 200),
+#'            trials = c(awareness = 64, influence = 200),
 #'            hypothesis = c("diff > 0", "intercept > 0", "rho in [-0.1, 0.1]"),
-#'            dichotomize = "indirect")
+#'            dichotomize = "influence")
 #'
 #' # The same design under weaker correlations
 #' usdt_power(update(pop, cor_dprime = c(0.1, 0.2)), subjects = 80,
-#'            trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+#'            trials = c(awareness = 64,
+#'                       influence = 200), dichotomize = "influence")
 #'
 #' \donttest{
 #' # Check the design by simulating and analysing 50 studies (under a
 #' # minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
 #' sims <- usdt_power(pop, subjects = 80,
-#'                    trials = c(direct = 64, indirect = 200),
-#'                    dichotomize = "indirect", method = "simulation",
+#'                    trials = c(awareness = 64, influence = 200),
+#'                    dichotomize = "influence", method = "simulation",
 #'                    nsim = 50, seed = 1)
 #' sims
 #'
@@ -187,7 +189,8 @@ usdt_power <- function(population, subjects, trials,
                        hypothesis  = c("diff = 0", "rho = 0", "intercept = 0"),
                        alpha       = 0.05,
                        signal      = 0.5,
-                       dichotomize = c("none", "indirect", "direct", "both"),
+                       dichotomize = c("none", "influence", "awareness",
+                                       "both"),
                        combine     = c("each", "all"),
                        method      = c("approximate", "simulation"),
                        nsim        = 1000,
@@ -211,7 +214,7 @@ usdt_power <- function(population, subjects, trials,
                class(population)[1L], ".")
   }
   method <- match.arg(method)
-  equal <- all(c(population$sd_signal_D, population$sd_signal_I) == 1)
+  equal <- all(c(population$sd_signal_A, population$sd_signal_I) == 1)
   if (method == "approximate" && !equal) {
     .usdt_stop("the power approximation assumes the equal-variance model ",
                "that hsdt() fits, so `sd_signal` must be 1. Simulate the ",
@@ -283,8 +286,8 @@ usdt_power <- function(population, subjects, trials,
                     noise = unlist(design$noise[t, ]))
       v <- if (equal) .error_variance(pop, cells, split)
       reliability <- if (equal) {
-        unname(c(pop$sigma_D^2, pop$sigma_I^2) /
-                 (c(pop$sigma_D^2, pop$sigma_I^2) + v))
+        unname(c(pop$sigma_A^2, pop$sigma_I^2) /
+                 (c(pop$sigma_A^2, pop$sigma_I^2) + v))
       } else {
         c(NA_real_, NA_real_)
       }
@@ -304,8 +307,8 @@ usdt_power <- function(population, subjects, trials,
         trials_t <- unlist(design$trials[t, ])
         keys[[length(keys) + 1L]] <- data.frame(
           scenario = pop$scenario, subjects = subjects[i],
-          trials_direct = trials_t[["direct"]],
-          trials_indirect = trials_t[["indirect"]])
+          trials_awareness = trials_t[["awareness"]],
+          trials_influence = trials_t[["influence"]])
         rows[[length(rows) + 1L]] <- .power_rows(
           res, tests, combine, scenario = pop$scenario, subjects = subjects[i],
           trials = trials_t, reliability = reliability)
@@ -335,8 +338,8 @@ print.usdt_power <- function(x, digits = 3L, ...) {
   labels <- attr(x, "labels")
   chars <- .usdt_chars()
   each <- x[x$hypothesis != "all", , drop = FALSE]
-  designs <- unique(each[c("scenario", "subjects", "trials_direct",
-                           "trials_indirect")])
+  designs <- unique(each[c("scenario", "subjects", "trials_awareness",
+                           "trials_influence")])
   n_scenarios <- length(unique(each$scenario))
   right <- paste0(attr(x, "method"),
                   if (n_scenarios > 1L) paste0(" ", chars$dot, " ",
@@ -362,8 +365,8 @@ print.usdt_power <- function(x, digits = 3L, ...) {
         "boundary);\n    see the `estimable` column.\n")
   }
   if (identical(attr(x, "method"), "simulation")) {
-    failed <- sum(unique(x[c("scenario", "subjects", "trials_direct",
-                             "trials_indirect", "failures")])$failures)
+    failed <- sum(unique(x[c("scenario", "subjects", "trials_awareness",
+                             "trials_influence", "failures")])$failures)
     if (failed > 0) {
       cat("  ", .fmt_int(failed), " simulated studies did not converge; they ",
           "count as failures to reject.\n", sep = "")
@@ -426,8 +429,8 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
                                 " simulated studies per design")), "\n")
   names_q <- c(diff = paste0(.usdt_chars()$delta, "d'"), rho = "rho",
                intercept = "intercept", slope = "slope")
-  keys <- unique(x[c("scenario", "subjects", "trials_direct",
-                     "trials_indirect")])
+  keys <- unique(x[c("scenario", "subjects", "trials_awareness",
+                     "trials_influence")])
   number <- function(v) {
     ifelse(is.na(v), "NA", formatC(v, format = "f", digits = digits))
   }
@@ -435,11 +438,11 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
     k <- keys[i, ]
     cat("\n  ", if (length(unique(x$scenario)) > 1L)
           paste0("Scenario ", k$scenario, ": "), k$subjects, " subjects; ",
-        k$trials_direct, " ", labels[["direct"]], " and ", k$trials_indirect,
-        " ", labels[["indirect"]], " trials\n\n", sep = "")
+        k$trials_awareness, " ", labels[["awareness"]], " and ",
+        k$trials_influence, " ", labels[["influence"]], " trials\n\n", sep = "")
     r <- x[x$scenario == k$scenario & x$subjects == k$subjects &
-             x$trials_direct == k$trials_direct &
-             x$trials_indirect == k$trials_indirect, ]
+             x$trials_awareness == k$trials_awareness &
+             x$trials_influence == k$trials_influence, ]
     table <- rbind(c("Quantity", "True", "Mean", "Bias", "Emp. SE", "Mean SE",
                      "Width", "Coverage", "Estimated"),
                    cbind(names_q[r$quantity], number(r$true), number(r$mean),
@@ -480,14 +483,15 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
   st <- plan$settings
   d <- plan$design[!is.na(plan$design$subjects), , drop = FALSE]
   if (!nrow(d)) .usdt_stop("no design of the plan reaches its target.")
-  d <- unique(d[c("scenario", "subjects", "trials_direct", "trials_indirect")])
+  d <- unique(d[c("scenario", "subjects", "trials_awareness",
+                  "trials_influence")])
   hypothesis <- hypothesis %||% st$hypothesis %||%
     c("diff = 0", "rho = 0", "intercept = 0")
   parts <- lapply(seq_len(nrow(d)), function(i) {
     usdt_power(.population_rows(st$population, d$scenario[i]),
                subjects = d$subjects[i],
-               trials = c(direct = d$trials_direct[i],
-                          indirect = d$trials_indirect[i]),
+               trials = c(awareness = d$trials_awareness[i],
+                          influence = d$trials_influence[i]),
                hypothesis = hypothesis, alpha = st$alpha, signal = st$signal,
                dichotomize = st$split, combine = combine, method = method,
                nsim = nsim, seed = seed, ncores = ncores, progress = progress)
@@ -520,16 +524,16 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
   }
   grid <- if (is.null(names(trials))) {
     v <- whole(trials, "trials")
-    data.frame(direct = v, indirect = v)
+    data.frame(awareness = v, influence = v)
   } else {
     t <- .per_task(trials, "trials")
-    expand.grid(direct = whole(t$direct, "trials$direct"),
-                indirect = whole(t$indirect, "trials$indirect"),
+    expand.grid(awareness = whole(t$awareness, "trials$awareness"),
+                influence = whole(t$influence, "trials$influence"),
                 KEEP.OUT.ATTRS = FALSE)
   }
 
   proportion <- .per_task(signal, "signal")
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     p <- proportion[[k]]
     if (!is.numeric(p) || length(p) != 1L || is.na(p) || p <= 0 || p >= 1) {
       .usdt_stop("`signal` must be one proportion inside (0, 1) for each ",
@@ -586,11 +590,11 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
                                     stringsAsFactors = FALSE))
   }
   out <- cbind(data.frame(scenario = scenario, subjects = subjects,
-                          trials_direct = trials[["direct"]],
-                          trials_indirect = trials[["indirect"]]),
+                          trials_awareness = trials[["awareness"]],
+                          trials_influence = trials[["influence"]]),
                out,
-               reliability_direct = reliability[1L],
-               reliability_indirect = reliability[2L])
+               reliability_awareness = reliability[1L],
+               reliability_influence = reliability[2L])
 
   # A simulation counts the studies whose fit failed.
   if (!is.null(res$failures)) out$failures <- res$failures
@@ -617,10 +621,10 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
            if (split[[k]]) " (split at the median)")
   }
   cat("  Design       ", first$subjects, " subjects; trials per subject: ",
-      task("direct"), ", ", task("indirect"), "\n", sep = "")
-  cat("  Reliability  ", labels[["direct"]], " ", number(first$reliability_direct),
-      ", ", labels[["indirect"]], " ", number(first$reliability_indirect), "\n\n",
-      sep = "")
+      task("awareness"), ", ", task("influence"), "\n", sep = "")
+  cat("  Reliability  ", labels[["awareness"]], " ",
+      number(first$reliability_awareness), ", ", labels[["influence"]], " ",
+      number(first$reliability_influence), "\n\n", sep = "")
 
   # A mark after the power keeps its own column, so the numbers stay aligned.
   marked <- any(x$in_null)
@@ -677,21 +681,21 @@ print.summary.usdt_power <- function(x, digits = 3L, ...) {
   width <- max(nchar(marks))
 
   scenarios <- length(unique(designs$scenario)) > 1L
-  head <- c(if (scenarios) "Scenario", "Subjects", labels[["direct"]],
-            labels[["indirect"]],
+  head <- c(if (scenarios) "Scenario", "Subjects", labels[["awareness"]],
+            labels[["influence"]],
             paste0(hypotheses, strrep(" ", width)))
   cells <- lapply(seq_len(nrow(designs)), function(i) {
     d <- designs[i, ]
     at <- which(x$scenario == d$scenario & x$subjects == d$subjects &
-                  x$trials_direct == d$trials_direct &
-                  x$trials_indirect == d$trials_indirect)
+                  x$trials_awareness == d$trials_awareness &
+                  x$trials_influence == d$trials_influence)
     power <- vapply(hypotheses, function(h) {
       j <- at[x$hypothesis[at] == h]
       paste0(formatC(x$power[j], format = "f", digits = digits),
              formatC(marks[j], width = -width))
     }, "")
     c(if (scenarios) as.character(d$scenario), as.character(d$subjects),
-      as.character(d$trials_direct), as.character(d$trials_indirect), power)
+      as.character(d$trials_awareness), as.character(d$trials_influence), power)
   })
   table <- rbind(head, do.call(rbind, cells))
   widths <- apply(table, 2L, function(column) max(nchar(column)))

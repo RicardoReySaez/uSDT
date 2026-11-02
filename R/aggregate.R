@@ -27,7 +27,7 @@
 #' @seealso [usdt_hypotheses]
 #'
 #' @examples
-#' # Direct task of Vadillo et al. (2025): "old" judgements by subject,
+#' # Awareness task of Vadillo et al. (2025): "old" judgements by subject,
 #' # condition and set size
 #' counts <- usdt_aggregate(vadillo_awareness, response = "judged.old",
 #'                          by = c("subj", "condition", "set.size"))

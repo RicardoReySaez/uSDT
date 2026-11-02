@@ -9,7 +9,7 @@ boot_model <- function() {
   set.seed(21)
   trials <- make_trials(n_subj = 30L, n_trials = 80L)
   d <- usdt_data_long(trials, task_col = "task",
-                      task_levels      = c(direct = "D", indirect = "I"),
+                      task_levels      = c(awareness = "A", influence = "I"),
                       subject_col      = "subj",
                       condition_col    = "cond",
                       condition_levels = c(signal = 1, noise = 0),
@@ -116,7 +116,7 @@ test_that("the bootstrap rejects invalid arguments before refitting", {
 
 test_that("the bootstrap fills the hypothesis table from the replicates", {
   tests <- rbind(
-    .row("d'(indirect) - d'(direct)", 1, se = 0.3, statistic = 3.3,
+    .row("d'(influence) - d'(awareness)", 1, se = 0.3, statistic = 3.3,
          ci_method = "Wald"),
     .row("correlation", 0.6, ci_method = "Fisher-z"),
     .row_na("intercept", 5, "the intercept standard error is invalid"),

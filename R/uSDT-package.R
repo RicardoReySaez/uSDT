@@ -5,8 +5,8 @@
 
 #' uSDT: Hierarchical Signal Detection Theory for Unconscious Processing
 #'
-#' Fits hierarchical signal detection theory models to paired direct and
-#' indirect measures. This is the design used to test whether a stimulus is
+#' Fits hierarchical signal detection theory models to paired awareness and
+#' influence measures. This is the design used to test whether a stimulus is
 #' processed without awareness.
 #'
 #' @section The workflow:
@@ -29,9 +29,9 @@
 #'   \item{H1}{The difference between the average sensitivities of the two
 #'     tasks.}
 #'   \item{H2}{The correlation between the two sensitivities across subjects.}
-#'   \item{H3}{The regression of the indirect sensitivity on the direct one.
-#'     Its intercept is the sensitivity expected in the indirect task from a
-#'     subject whose direct sensitivity is zero, which is the test for
+#'   \item{H3}{The regression of the influence sensitivity on the awareness one.
+#'     Its intercept is the sensitivity expected in the influence task from a
+#'     subject whose awareness sensitivity is zero, which is the test for
 #'     unconscious processing.}
 #' }
 #'

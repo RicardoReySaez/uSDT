@@ -168,11 +168,11 @@
                           parameterization) {
   free_c <- if (fix_criteria == "none") c(1L, 1L) else {
     check <- .criterion_check(data$agg, "deviation")
-    as.integer(!vapply(c("direct", "indirect"), function(k) {
+    as.integer(!vapply(c("awareness", "influence"), function(k) {
       data$meta$tasks[[k]]$dichotomized && check[[k]]$negligible
     }, TRUE))
   }
-  list(criteria = c("c_D", "c_I")[free_c == 1L], free_c = free_c,
+  list(criteria = c("c_A", "c_I")[free_c == 1L], free_c = free_c,
        unequal_variances = unequal_variances,
        parameterization = parameterization)
 }
@@ -269,7 +269,7 @@
 
 # The names given to the bivariate normal of the sensitivities, whatever model
 # the draws come from.
-.bivariate_names <- c("mu_D", "mu_I", "sigma_D", "sigma_I", "rho")
+.bivariate_names <- c("mu_A", "mu_I", "sigma_A", "sigma_I", "rho")
 
 # This function selects the bivariate normal of the sensitivities from draws,
 # given the names of its five variables in that order, and gives them the
@@ -291,13 +291,13 @@
 }
 
 # This function returns the draws of one subject-level variable of a Bayesian
-# fit, `d` or `c`, in one task (1 direct, 2 indirect): one column per subject,
-# in the order of `subjects`. A subject's value is the population coefficient
-# plus the subject's effect. A criterion fixed by the Meyen split makes
-# HR + FAR = 1, which is 0 under equal variances.
+# fit, `d` or `c`, in one task (1 awareness, 2 influence): one column per
+# subject, in the order of `subjects`. A subject's value is the population
+# coefficient plus the subject's effect. A criterion fixed by the Meyen split
+# makes HR + FAR = 1, which is 0 under equal variances.
 .subject_draws <- function(object, variable, task, subjects = object$subjects) {
   design <- object$design
-  k <- c("D", "I")[task]
+  k <- c("A", "I")[task]
   read <- function(variables) {
     unclass(posterior::as_draws_matrix(object$fit, variable = variables))
   }
@@ -340,7 +340,7 @@
   Q <- .draw_quantities(bivariate)
   shape <- c(posterior::niterations(bivariate), posterior::nchains(bivariate))
   a <- (1 - level) / 2
-  terms <- c(diff = "d'(indirect) - d'(direct)", rho = "correlation",
+  terms <- c(diff = "d'(influence) - d'(awareness)", rho = "correlation",
              intercept = "intercept", slope = "slope")
   hypotheses <- c(diff = "H1", rho = "H2", intercept = "H3", slope = "H3")
   rows <- lapply(names(terms), function(q) {

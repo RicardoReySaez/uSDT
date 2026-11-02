@@ -62,15 +62,16 @@
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' m <- hsdt(d)
@@ -117,7 +118,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   max_attempts <- as.integer(max_attempts)
 
   # Each refitted model returns the reported and task-specific estimates.
-  stat <- .boot_statistic(object$fit, "d_D", "d_I")
+  stat <- .boot_statistic(object$fit, "d_A", "d_I")
   layout <- attr(stat, "layout")
   t0 <- stat(object$fit)
 
@@ -241,14 +242,14 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 }
 
 # This function creates the calculation used by each bootstrap sample.
-.boot_statistic <- function(fit, direct, indirect) {
-  blk <- .locate_block(fit, direct, indirect)
+.boot_statistic <- function(fit, awareness, influence) {
+  blk <- .locate_block(fit, awareness, influence)
   fixed <- names(lme4::fixef(fit))
   subjects <- rownames(lme4::ranef(fit, condVar = FALSE)[["subj"]])
-  parameters <- c("c_D", "c_I", direct, indirect)
+  parameters <- c("c_A", "c_I", awareness, influence)
   summary_names <- c("diff", "rho", "intercept", "slope",
                      "converged", "singular", "boundary")
-  variance_names <- c("s2_D", "s2_I")
+  variance_names <- c("s2_A", "s2_I")
   variance_output_names <- paste0("variance.", variance_names)
   population_names <- paste0("population.", parameters)
   subject_names <- unlist(lapply(seq_along(parameters), function(j) {
@@ -256,8 +257,8 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   }), use.names = FALSE)
   output_names <- c(summary_names, variance_output_names,
                     population_names, subject_names)
-  stat <- function(f, block_index, block_size, direct_random,
-                   indirect_random, direct_fixed, indirect_fixed,
+  stat <- function(f, block_index, block_size, awareness_random,
+                   influence_random, awareness_fixed, influence_fixed,
                    subjects, parameters, output_names,
                    quantities, task_effects, convergence) {
     theta <- lme4::getME(f, "theta")
@@ -266,11 +267,11 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     L[lower.tri(L, diag = TRUE)] <- theta[block_index]
     S <- tcrossprod(L)
 
-    primitives <- c(gamma_D = unname(beta[direct_fixed]),
-                    gamma_I = unname(beta[indirect_fixed]),
-                    s2_D = S[direct_random, direct_random],
-                    s2_I = S[indirect_random, indirect_random],
-                    s_DI = S[direct_random, indirect_random])
+    primitives <- c(gamma_A = unname(beta[awareness_fixed]),
+                    gamma_I = unname(beta[influence_fixed]),
+                    s2_A = S[awareness_random, awareness_random],
+                    s2_I = S[influence_random, influence_random],
+                    s_AI = S[awareness_random, influence_random])
     q <- quantities(primitives)
     effects <- task_effects(f, subjects, parameters)
 
@@ -279,14 +280,14 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     boundary <- TRUE
     if (finite) {
       values <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
-      boundary <- min(primitives[c("s2_D", "s2_I")]) < 1e-8 ||
+      boundary <- min(primitives[c("s2_A", "s2_I")]) < 1e-8 ||
         min(values) < 1e-8 || abs(q[, "rho"]) > 1 - 1e-6
     }
 
     stats::setNames(
       c(q, as.numeric(convergence(f)$ok),
         as.numeric(lme4::isSingular(f, tol = 1e-4)),
-        as.numeric(boundary), primitives[c("s2_D", "s2_I")],
+        as.numeric(boundary), primitives[c("s2_A", "s2_I")],
         effects$population, as.vector(effects$subjects)),
       output_names
     )
@@ -304,10 +305,10 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   args$convergence <- in_base(.fit_convergence)
   args$block_index <- blk$idx
   args$block_size <- blk$q
-  args$direct_random <- blk$iD
-  args$indirect_random <- blk$iI
-  args$direct_fixed <- match(direct, fixed)
-  args$indirect_fixed <- match(indirect, fixed)
+  args$awareness_random <- blk$iA
+  args$influence_random <- blk$iI
+  args$awareness_fixed <- match(awareness, fixed)
+  args$influence_fixed <- match(influence, fixed)
   args$subjects <- subjects
   args$parameters <- parameters
   args$output_names <- output_names
@@ -383,7 +384,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 
 # This function adds bootstrap results to the hypothesis table.
 .boot_tests <- function(tests, t, level, type) {
-  map <- c("d'(indirect) - d'(direct)" = "diff", correlation = "rho",
+  map <- c("d'(influence) - d'(awareness)" = "diff", correlation = "rho",
            intercept = "intercept", slope = "slope")
 
   for (i in seq_len(nrow(tests))) {

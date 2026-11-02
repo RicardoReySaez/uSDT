@@ -1,5 +1,20 @@
 # uSDT (development version)
 
+## Breaking changes
+
+* The two tasks are now called awareness and influence instead of direct and
+  indirect, everywhere in the package. `usdt_data_tasks()` takes the data
+  frames as `awareness` and `influence`, and `usdt_tests()`,
+  `sensitivity_diff()`, `latent_cor()` and `latent_regression()` take the
+  sensitivity terms by those names. Values given per task are named the same
+  way (`list(awareness = ..., influence = ...)`, also in `task_levels` and
+  `labels`), `dichotomize` takes `"awareness"` and `"influence"`, and the
+  default task labels are "Awareness" and "Influence". The abbreviation D
+  becomes A: the model terms are `d_A`, `c_A`, `d_I` and `c_I`, the task codes
+  in the aggregated data are `"A"` and `"I"`, and the columns of the planning
+  results are `trials_awareness`, `trials_influence`, `reliability_awareness`
+  and `reliability_influence`. The old names are no longer accepted.
+
 ## Bayesian estimation
 
 * `hsdt(estimation = "bayesian")` fits the hierarchical model with brms on
@@ -16,9 +31,9 @@
   `brms.backend` option. brms, posterior, logspline, callr and cli are now
   imported, so the Bayesian estimation needs no optional package apart from
   `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
-* `hsdt(parameterization = "regression")` moves the prior of the indirect
-  mean sensitivity to the intercept of the latent regression of the indirect
-  on the direct one, so that both the intercept tested by H3 and the
+* `hsdt(parameterization = "regression")` moves the prior of the influence
+  mean sensitivity to the intercept of the latent regression of the influence
+  on the awareness one, so that both the intercept tested by H3 and the
   correlation tested by H2 have the priors you give them. The difference
   tested by H1 then has an induced, heavy-tailed prior, and the intercept
   prior also informs the posterior of the correlation. It samples the same
@@ -78,7 +93,7 @@
   the means, standard deviations and correlation of the two sensitivities and
   the distribution of the criteria, with the argument names of
   `usdt_priors()`. The intercept of the latent regression can replace the
-  indirect mean, as in `hsdt(parameterization = "regression")`, and the
+  influence mean, as in `hsdt(parameterization = "regression")`, and the
   values can come from a frequentist `hsdt()` fit of a pilot study. Several
   values in an argument give one scenario each, and `update()` changes them.
   It is the first piece of the power analysis.
@@ -116,7 +131,7 @@
   power for each hypothesis, moving the tested quantity with the rest of the
   population fixed as its parameterization says, or the narrowest
   equivalence region it can establish; `vary` moves another population
-  value instead, such as the SD of the direct d'.
+  value instead, such as the SD of the awareness d'.
 * `plot()` draws each of them: a population as the ellipses of the true d'
   with the latent regression and its intercept, and, given trials, the wider
   ellipse of the d' they measure; power against subjects or trials, with the

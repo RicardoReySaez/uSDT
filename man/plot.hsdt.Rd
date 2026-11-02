@@ -54,10 +54,10 @@ participant-level caterpillar intervals, and model-implied ROC curves.
 \section{Regression plot (\code{type = "regression"})}{
 Compares observed and latent associations across two panels sharing axes.
 The left panel shows observed \eqn{d'} values and an ordinary least-squares
-line. When direct task reliability is low, trial-level sampling noise
+line. When awareness task reliability is low, trial-level sampling noise
 attenuates this observed slope toward zero. The right panel plots the latent
-regression line (\eqn{d'_I} on \eqn{d'_D}) from H3, correcting for
-measurement error. The value of each line at \eqn{d'_D = 0} marks the
+regression line (\eqn{d'_I} on \eqn{d'_A}) from H3, correcting for
+measurement error. The value of each line at \eqn{d'_A = 0} marks the
 intercept testing for unconscious processing, and both panels display it the
 same way: an open circle at the point estimate with a vertical line spanning
 its confidence interval. The observed marker is the least-squares intercept
@@ -99,15 +99,16 @@ the signal standard deviation of each draw.
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 fit <- hsdt(d)

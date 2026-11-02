@@ -45,8 +45,8 @@ print.usdt_data <- function(x, ...) {
       "\n\n", sep = "")
   cat(sprintf("  %-10s %11s   %17s   %17s   %s\n",
               "Task", "Trials/cell", "HR", "FAR", "d' (method-of-moments)"))
-  for (k in c("direct", "indirect")) {
-    s <- m$descriptives[[if (k == "direct") "D" else "I"]]
+  for (k in c("awareness", "influence")) {
+    s <- m$descriptives[[if (k == "awareness") "A" else "I"]]
     cat(sprintf("  %-10s %11.0f   %17s   %17s   %s\n", lab[[k]], s$trials,
                 .fmt_rate_rng(s$hr), .fmt_rate_rng(s$far), .fmt_num_rng(s$dprime)))
   }
@@ -65,12 +65,12 @@ print.usdt_data <- function(x, ...) {
 .print_var_rows <- function(what, m, col_field, lev_field) {
 
   # Each task keeps its own row, so different mappings are always visible.
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     ti  <- m$tasks[[k]]
     lev <- if (is.null(lev_field)) NULL else ti[[lev_field]]
     tag <- if (ti$dichotomized && what == "response") "  [Meyen split]" else ""
     cat(sprintf("  %-14s %-10s %-15s %-13s %s%s\n",
-                if (k == "direct") what else "", m$labels[[k]],
+                if (k == "awareness") what else "", m$labels[[k]],
                 ti[[col_field]] %||% "-",
                 if (is.null(lev)) "-" else as.character(lev[["signal"]]),
                 if (is.null(lev)) "-" else as.character(lev[["noise"]]),
@@ -81,7 +81,7 @@ print.usdt_data <- function(x, ...) {
 
 # This function notes an uneven median split.
 .print_split_note <- function(m) {
-  for (k in c("direct", "indirect")) {
+  for (k in c("awareness", "influence")) {
     ti <- m$tasks[[k]]
     if (!ti$dichotomized || ti$dic$odd == 0L) next
     cat(sprintf(paste0("\n  ! %d of %d `%s` have an odd number of trials, so the median split\n",
@@ -96,8 +96,8 @@ print.usdt_data <- function(x, ...) {
 # is set to.
 .criteria_line <- function(check, criteria, lab, fixed = "fixed to 0") {
   parts <- character(0)
-  for (k in c("direct", "indirect")) {
-    nm <- if (k == "direct") "c_D" else "c_I"
+  for (k in c("awareness", "influence")) {
+    nm <- if (k == "awareness") "c_A" else "c_I"
     parts <- c(parts, if (nm %in% criteria)
       paste0(lab[[k]], " estimated") else
       sprintf("%s %s (Meyen split, mean |c| = %.4f)",
@@ -169,7 +169,7 @@ summary.hsdt <- function(object, ...) {
   se <- sqrt(diag(as.matrix(stats::vcov(object$fit))))
   for (nm in names(fx)) {
     p <- .term_parts(nm, lab)
-    estimate <- fx[[nm]] * if (nm %in% c("c_D", "c_I")) -1 else 1
+    estimate <- fx[[nm]] * if (nm %in% c("c_A", "c_I")) -1 else 1
     st <- estimate / se[[nm]]
     cat(.par_row(p[1L], p[2L], estimate, se[[nm]],
                  estimate - z * se[[nm]], estimate + z * se[[nm]],
@@ -180,7 +180,7 @@ summary.hsdt <- function(object, ...) {
   cat("\n", .rule("Random effects"), "\n\n", sep = "")
   cat(.par_header(test = FALSE, level = object$level), sep = "")
   re <- object$pars$re
-  blocks <- list(criteria = c("c_D", "c_I"), sensitivity = c("d_D", "d_I"))
+  blocks <- list(criteria = c("c_A", "c_I"), sensitivity = c("d_A", "d_I"))
   for (block in names(blocks)) {
     selected <- which(re$term %in% blocks[[block]])
     for (i in selected) {
@@ -236,20 +236,20 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 # This function separates a parameter name from its task.
 .term_parts <- function(nm, lab) {
   switch(nm,
-         c_D = c("criterion", lab[["direct"]]),
-         c_I = c("criterion", lab[["indirect"]]),
-         d_D = c("d'",        lab[["direct"]]),
-         d_I = c("d'",        lab[["indirect"]]),
+         c_A = c("criterion", lab[["awareness"]]),
+         c_I = c("criterion", lab[["influence"]]),
+         d_A = c("d'",        lab[["awareness"]]),
+         d_I = c("d'",        lab[["influence"]]),
          c(nm, "-"))
 }
 
 # This function names estimates from the random-effects distribution.
 .random_term_parts <- function(nm, lab) {
   switch(nm,
-         c_D = c("sd(criterion)", lab[["direct"]]),
-         c_I = c("sd(criterion)", lab[["indirect"]]),
-         d_D = c("sd(d')",        lab[["direct"]]),
-         d_I = c("sd(d')",        lab[["indirect"]]),
+         c_A = c("sd(criterion)", lab[["awareness"]]),
+         c_I = c("sd(criterion)", lab[["influence"]]),
+         d_A = c("sd(d')",        lab[["awareness"]]),
+         d_I = c("sd(d')",        lab[["influence"]]),
          c(nm, "-"))
 }
 
@@ -286,13 +286,13 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
   delta <- .usdt_chars()$delta
   titles <- c(
     H1 = sprintf("Group-level sensitivity difference (%sd' = %s d' - %s d')",
-                 delta, lab[["indirect"]], lab[["direct"]]),
+                 delta, lab[["influence"]], lab[["awareness"]]),
     H2 = "Correlation between sensitivities across tasks",
     H3 = sprintf("Latent regression of %s d' on %s d'",
-                 lab[["indirect"]], lab[["direct"]])
+                 lab[["influence"]], lab[["awareness"]])
   )
   names <- c(correlation = "rho", intercept = "Intercept", slope = "Slope")
-  names[["d'(indirect) - d'(direct)"]] <- paste0(delta, "d' (I - D)")
+  names[["d'(influence) - d'(awareness)"]] <- paste0(delta, "d' (I - A)")
   style <- .hypothesis_style(object)
 
   for (hypothesis in c("H1", "H2", "H3")) {
@@ -380,7 +380,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
               if (uv) "unequal" else "equal"))
   if (design$parameterization == "regression") {
     cat(sprintf("  Model:          latent regression of %s d' on %s d'\n",
-                lab[["indirect"]], lab[["direct"]]))
+                lab[["influence"]], lab[["awareness"]]))
   }
   cat(sprintf("  Criteria:       %s\n", .criteria_line(
     .criterion_check(object$data$agg, "deviation"), design$criteria, lab,
@@ -436,7 +436,7 @@ print.hsdt <- function(x, ...) summary.hsdt(x, ...)
 # order of the frequentist tables.
 .bayes_parameters <- function(object) {
   lab <- object$data$meta$labels
-  tasks <- unname(lab[c("direct", "indirect")])
+  tasks <- unname(lab[c("awareness", "influence")])
   free <- tasks[object$design$free_c == 1L]
   spec <- rbind(
     data.frame(variable = paste0("mu_c[", seq_along(free), "]"),

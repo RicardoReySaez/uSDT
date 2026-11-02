@@ -63,9 +63,9 @@ navbar:
 home:
   title: uSDT • Hierarchical SDT models for unconscious processing
   description: >
-    Fit hierarchical signal detection theory models to paired direct and
-    indirect measures, and test whether the indirect measure retains
-    sensitivity where the direct one has none.
+    Fit hierarchical signal detection theory models to paired awareness and
+    influence measures, and test whether the influence measure retains
+    sensitivity where the awareness one has none.
 
 articles:
 - title: Tutorials

@@ -17,7 +17,7 @@ usdt_plan(
   combine = c("each", "all"),
   alpha = 0.05,
   signal = 0.5,
-  dichotomize = c("none", "indirect", "direct", "both")
+  dichotomize = c("none", "influence", "awareness", "both")
 )
 
 \method{print}{usdt_plan}(x, digits = 3L, ...)
@@ -40,16 +40,16 @@ the three point nulls that \code{\link[=hsdt]{hsdt()}} reports.}
 \item{trials}{Number of trials per subject in each task, signal and noise
 trials together: one number fixes it, and a range \code{c(min, max)} lets the
 plan choose it. One value or range for both tasks, which keeps them equal,
-or one for each as \code{c(direct = , indirect = )} or
-\code{list(direct = , indirect = )}.}
+or one for each as \code{c(awareness = , influence = )} or
+\code{list(awareness = , influence = )}.}
 
 \item{cost}{Cost of a design, which the plan minimises: a named vector with
-the cost of each \code{subject} (a session, recruitment) and of each \code{direct}
-and \code{indirect} trial, in any unit (missing names cost 0), so that a design
-costs \code{subjects * (subject + direct * trials_direct + indirect * trials_indirect)}; or a function of \code{subjects}, \code{direct} and \code{indirect}
-that returns the cost of each design. Needed when more than one of the
-subjects and the trials is free; with only one free, the plan minimises
-it.}
+the cost of each \code{subject} (a session, recruitment) and of each
+\code{awareness} and \code{influence} trial, in any unit (missing names cost 0), so
+that a design costs \code{subjects * (subject + awareness * trials_awareness + influence * trials_influence)}; or a function of \code{subjects}, \code{awareness}
+and \code{influence} that returns the cost of each design. Needed when more
+than one of the subjects and the trials is free; with only one free, the
+plan minimises it.}
 
 \item{budget}{Largest cost allowed. With a budget, the plan finds the
 design with the highest power that costs no more, and \code{power} is not
@@ -73,8 +73,8 @@ value for both tasks or one for each. Each task must have a whole number
 of signal and of noise trials.}
 
 \item{dichotomize}{Which tasks are split at the median, as in
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"indirect"}, \code{"direct"}, \code{"both"}, or one
-logical value for each task. The split fixes the criterion of a task at
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}: \code{"none"}, \code{"influence"}, \code{"awareness"}, \code{"both"}, or
+one logical value for each task. The split fixes the criterion of a task at
 zero, so its criterion values in \code{population} are not used.}
 
 \item{x}{A \code{usdt_plan} object.}
@@ -87,7 +87,7 @@ zero, so its criterion values in \code{population} are not used.}
 An object of class \code{usdt_plan}: a list with \verb{$design}, a data frame
 with one row per scenario and hypothesis (or quantity, for a precision
 target) and the columns \code{scenario}, \code{hypothesis}, \code{subjects},
-\code{trials_direct}, \code{trials_indirect}, \code{power} (approximate, as in
+\code{trials_awareness}, \code{trials_influence}, \code{power} (approximate, as in
 \code{\link[=usdt_power]{usdt_power()}}), \code{estimable}, \code{width} (for a precision target), \code{cost}
 and \code{limit} (the free argument whose limit the design reaches, if any);
 \verb{$frontier}, the smallest number of subjects that reaches the target
@@ -118,7 +118,7 @@ within 2\% of it, is marked: the range may be too narrow.
 
 The design chosen this way rests on the approximation. Simulate it with
 \code{usdt_power(plan, method = "simulation")} before relying on it, as the
-approximation is somewhat optimistic for H2 and H3 when the direct task is
+approximation is somewhat optimistic for H2 and H3 when the awareness task is
 unreliable.
 }
 
@@ -134,39 +134,42 @@ across subjects, whatever the power.
 }
 
 \examples{
-pop <- usdt_population(dprime    = c(direct = 0.15, indirect = 0.30),
-                       sd_dprime = c(direct = 0.35, indirect = 0.30),
+pop <- usdt_population(dprime    = c(awareness = 0.15, influence = 0.30),
+                       sd_dprime = c(awareness = 0.35, influence = 0.30),
                        cor_dprime = 0.3, criterion = 0.1)
 
 # Subjects for given trials
 usdt_plan(pop, hypothesis = "diff = 0",
-          trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+          trials = c(awareness = 64, influence = 200),
+          dichotomize = "influence")
 
 # Subjects and trials together, with the session time of each in seconds
 plan <- usdt_plan(pop, hypothesis = "diff = 0", power = 0.9,
                   subjects = c(20, 300),
-                  trials = list(direct = c(32, 160), indirect = c(100, 300)),
-                  cost = c(subject = 600, direct = 4, indirect = 1.5),
-                  dichotomize = "indirect")
+                  trials = list(awareness = c(32, 160),
+                                influence = c(100, 300)),
+                  cost = c(subject = 600, awareness = 4, influence = 1.5),
+                  dichotomize = "influence")
 plan
 
 # The most powerful design within 30 hours of sessions
 usdt_plan(pop, hypothesis = "rho = 0", subjects = c(20, 400),
-          trials = list(direct = c(32, 256), indirect = c(100, 800)),
-          cost = c(subject = 600, direct = 4, indirect = 1.5),
-          budget = 30 * 3600, dichotomize = "indirect")
+          trials = list(awareness = c(32, 256), influence = c(100, 800)),
+          cost = c(subject = 600, awareness = 4, influence = 1.5),
+          budget = 30 * 3600, dichotomize = "influence")
 
 # The intercept within an interval 0.2 wide
 usdt_plan(pop, precision = c(intercept = 0.2),
-          trials = c(direct = 64, indirect = 200), dichotomize = "indirect")
+          trials = c(awareness = 64, influence = 200),
+          dichotomize = "influence")
 
 \donttest{
 # The intercept, whose search checks more designs (several seconds)
 usdt_plan(pop, hypothesis = "intercept > 0", power = 0.9,
           subjects = c(20, 300),
-          trials = list(direct = c(32, 160), indirect = c(100, 300)),
-          cost = c(subject = 600, direct = 4, indirect = 1.5),
-          dichotomize = "indirect")
+          trials = list(awareness = c(32, 160), influence = c(100, 300)),
+          cost = c(subject = 600, awareness = 4, influence = 1.5),
+          dichotomize = "influence")
 
 # Check the chosen design by simulation
 usdt_power(plan, method = "simulation", nsim = 50, seed = 1)

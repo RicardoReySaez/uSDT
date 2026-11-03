@@ -156,11 +156,11 @@ the model with brms:
 fit_bayes <- hsdt(data_usdt, estimation = "bayesian", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 59.2s.
+✔ Sampled 4 chains in 1m 20s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
-✔ Smallest effective sample size 1880, above 400.
+✔ Smallest effective sample size 1524, above 400.
 ```
 
 By default, four chains keep 5,000 draws each after 1,000 warmup iterations,
@@ -193,37 +193,37 @@ summary(fit_bayes)
   Family:         binomial (probit), equal variances
   Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
   Estimation:     brms via cmdstanr, 4 chains x 5,000 draws (warmup 1,000)
-  Diagnostics:    max R-hat 1.002, min ESS 1,880, 0 divergent
+  Diagnostics:    max R-hat 1.002, min ESS 1,524, 0 divergent
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  criterion      Awareness   -0.0356   0.0289  [ -0.092,  0.021]   1.000   9,191
-  d'             Awareness    0.2350   0.0330  [  0.170,  0.300]   1.000  32,301
-  d'             Influence    0.1283   0.0153  [  0.098,  0.158]   1.000  26,275
+  criterion      Awareness   -0.0354   0.0290  [ -0.093,  0.022]   1.000   7,953
+  d'             Awareness    0.2345   0.0334  [  0.168,  0.300]   1.000  30,581
+  d'             Influence    0.1282   0.0154  [  0.098,  0.158]   1.000  21,980
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  sd(criterion)  Awareness    0.2513   0.0249  [  0.205,  0.303]   1.000   9,337
-  sd(d')         Awareness    0.1073   0.0597  [  0.006,  0.224]   1.000   4,354
-  sd(d')         Influence    0.0864   0.0219  [  0.039,  0.127]   1.000   5,186
-  cor(d')        both         0.2902   0.4448  [ -0.740,  0.954]   1.002   1,880
+  sd(criterion)  Awareness    0.2516   0.0252  [  0.205,  0.304]   1.000   8,365
+  sd(d')         Awareness    0.1071   0.0599  [  0.006,  0.225]   1.000   3,561
+  sd(d')         Influence    0.0871   0.0216  [  0.040,  0.127]   1.000   4,593
+  cor(d')        both         0.2964   0.4533  [ -0.770,  0.958]   1.002   1,524
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
 H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
   Parameter           Mean       SD  95% CrI            p-value
-  Δd' (I - A)     -0.1067   0.0358  [ -0.177, -0.036]     .002
+  Δd' (I - A)     -0.1063   0.0360  [ -0.177, -0.036]     .003
 
 H2: Correlation between sensitivities across tasks
   Parameter           Mean       SD  95% CrI            p-value
-  rho               0.2902   0.4448  [ -0.740,  0.954]     .484
+  rho               0.2964   0.4533  [ -0.770,  0.958]     .482
 
 H3: Latent regression of Influence d' on Awareness d'
   Parameter           Mean       SD  95% CrI            p-value
-  Intercept         0.0026   7.9765  [ -0.780,  0.761]     .512
-  Slope             0.5406  34.1561  [ -2.712,  3.862]     .484
+  Intercept         0.1320   5.8276  [ -0.868,  0.860]     .533
+  Slope             0.0460  23.4570  [ -3.149,  4.185]     .482
 
 ── Priors ──────────────────────────────────────────────────────────────────────
 
@@ -247,7 +247,7 @@ H3: Latent regression of Influence d' on Awareness d'
 Each estimate is now the **posterior mean**, with its **posterior standard
 deviation** and a 95% **credible interval** (CrI), and R-hat and effective
 sample size are reported for every parameter. The fixed and random effects
-closely match the frequentist ones: $d' = 0.24$
+closely match the frequentist ones: $d' = 0.23$
 in the awareness task and $d' = 0.13$ in
 the influence task.
 
@@ -288,14 +288,14 @@ exactly when the 95% credible interval excludes zero.
 - **H1 ($\Delta d'$):** awareness of the repeated patterns is again stronger
   than their influence on search
   ($\Delta d' = -0.11$, 95% CrI
-  $[-0.18, -0.04]$, $p = .002$), the same
+  $[-0.18, -0.04]$, $p = .003$), the same
   conclusion as in the tutorial.
 - **H2 ($\rho$):** the posterior of the latent correlation spans almost the
-  whole range (95% CrI $[-0.74, 0.95]$). The data say little about it.
+  whole range (95% CrI $[-0.77, 0.96]$). The data say little about it.
 - **H3 (latent regression):** the 95% credible interval of the intercept
-  covers zero ($[-0.78, 0.76]$). Its posterior mean
-  ($0.00$) and standard deviation
-  ($7.98$) are dominated by heavy tails: the awareness
+  covers zero ($[-0.87, 0.86]$). Its posterior mean
+  ($0.13$) and standard deviation
+  ($5.83$) are dominated by heavy tails: the awareness
   sensitivity barely varies across subjects
   ($\text{sd}(d') = 0.11$),
   so the slope $\rho \, \sigma_I / \sigma_A$ can take very large values. With
@@ -330,10 +330,11 @@ bf
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : Δd' != 0
   Hypothesis (H0)             : Δd' = 0
-  Posterior mean              : -0.107
+  Posterior mean              : -0.106
   Posterior SD                : 0.036
   95% CrI                     : [-0.177, -0.036]
-  log BF10                    : 0.809
+  log BF10                    : 0.748
+  log BF01                    : -0.748
   Evidence                    : anecdotal for H1
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -341,10 +342,11 @@ bf
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : rho != 0
   Hypothesis (H0)             : rho = 0
-  Posterior mean              : 0.290
-  Posterior SD                : 0.445
-  95% CrI                     : [-0.740, 0.954]
-  log BF10                    : -0.151
+  Posterior mean              : 0.296
+  Posterior SD                : 0.453
+  95% CrI                     : [-0.770, 0.958]
+  log BF10                    : -0.091
+  log BF01                    : 0.091
   Evidence                    : anecdotal for H0
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -352,31 +354,41 @@ bf
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : intercept != 0
   Hypothesis (H0)             : intercept = 0
-  Posterior mean              : 0.003
-  Posterior SD                : 7.976
-  95% CrI                     : [-0.780, 0.761]
-  log BF10                    : -1.909
+  Posterior mean              : 0.132
+  Posterior SD                : 5.828
+  95% CrI                     : [-0.868, 0.860]
+  log BF10                    : -1.949
+  log BF01                    : 1.949
   Evidence                    : moderate for H0
 ────────────────────────────────────────────────────────────────────────────────
 ```
 
+A point statement such as `"rho = 0"` is the null hypothesis H0, against the
+alternative $\rho \neq 0$; an inequality or a region, as further below, is the
+alternative H1, against its complement. Each report gives both
+$\log \text{BF}_{10}$ and $\log \text{BF}_{01}$, and each panel of the plot
+gives the Bayes factor of the hypothesis in its title, here
+$\text{BF}_{01}$, so a positive value favours the null:
+
 - **$\Delta d' = 0$:** the evidence for a difference is anecdotal
-  ($\log \text{BF}_{10} = 0.81$,
-  $\text{BF}_{10} = 2.2$), even though the credible
+  ($\log \text{BF}_{01} = -0.75$,
+  $\text{BF}_{10} = 2.1$), even though the credible
   interval excludes zero. The Bayes factor compares the posterior with the
   whole prior, and a $\text{normal}(0, 1)$ prior on each mean expects much
   larger differences than $-0.11$.
 - **$\rho = 0$:** the evidence is anecdotal
-  ($\log \text{BF}_{10} = -0.15$).
-- **Intercept $= 0$:** there is moderate evidence for the null
-  ($\log \text{BF}_{10} = -1.91$,
-  $\text{BF}_{01} = 6.7$). The data favour no influence
+  ($\log \text{BF}_{01} = 0.09$).
+- **Intercept $\beta_0 = 0$:** there is moderate evidence for the
+  null ($\log \text{BF}_{01} = 1.95$,
+  $\text{BF}_{01} = 7.0$). The data favour no influence
   sensitivity in participants without awareness sensitivity, which the credible
   interval alone could not tell.
 
 In the plot, the solid curve is the posterior and the dashed curve the prior.
-For a point null, the Bayes factor is the ratio between the two marked
-heights at the dotted line.
+For a point null, $\text{BF}_{01}$ is the ratio of the posterior to the prior
+height at the dotted line. Each panel names its quantity on the x axis, with
+the intercept and slope of the latent regression as $\beta_0$ and $\beta_1$.
+The y axis has no values, because each panel has a density scale of its own.
 
 You can also test directional hypotheses and regions, such as a region of
 practical equivalence around zero:
@@ -394,11 +406,12 @@ bf_other
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : intercept > 0
   Hypothesis (H0)             : intercept <= 0
-  Posterior mean              : 0.003
-  Posterior SD                : 7.976
-  95% CrI                     : [-0.780, 0.761]
-  Posterior probability (H1)  : 0.744
-  log BF10                    : 1.067
+  Posterior mean              : 0.132
+  Posterior SD                : 5.828
+  95% CrI                     : [-0.868, 0.860]
+  Posterior probability (H1)  : 0.734
+  log BF10                    : 1.014
+  log BF01                    : -1.014
   Evidence                    : anecdotal for H1
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -406,11 +419,12 @@ bf_other
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : Δd' in [-0.1, 0.1]
   Hypothesis (H0)             : Δd' out [-0.1, 0.1]
-  Posterior mean              : -0.107
+  Posterior mean              : -0.106
   Posterior SD                : 0.036
   95% CrI                     : [-0.177, -0.036]
-  Posterior probability (H1)  : 0.421
-  log BF10                    : 2.503
+  Posterior probability (H1)  : 0.429
+  log BF10                    : 2.534
+  log BF01                    : -2.534
   Evidence                    : strong for H1
 ────────────────────────────────────────────────────────────────────────────────
 ```
@@ -419,12 +433,12 @@ bf_other
 
 These Bayes factors compare the posterior odds of H1, the share of posterior
 draws inside it, with its prior odds. A positive intercept has a posterior
-probability of .744 against
+probability of .734 against
 .500 a priori, which is anecdotal evidence.
-The region $[-0.1, 0.1]$ holds 42% of the
+The region $[-0.1, 0.1]$ holds 43% of the
 posterior but only about 6% of the prior, so the
 Bayes factor is strong
-($\log \text{BF}_{10} = 2.50$) even though the
+($\log \text{BF}_{10} = 2.53$) even though the
 posterior mean lies just outside it. Read interval Bayes factors together
 with the posterior probability.
 
@@ -522,11 +536,11 @@ fit_reg <- hsdt(data_usdt, estimation = "bayesian", priors = priors_reg,
                 latent = "regression", seed = 2026)
 ── Fitting the Bayesian hierarchical SDT model ───────────────────── cmdstanr ──
 ℹ 4 chains of 5000 draws after 1000 warmup iterations, 4 at a time.
-✔ Sampled 4 chains in 51.7s.
+✔ Sampled 4 chains in 1m 37s.
 ✔ No divergent transitions.
 ✔ No transition reached the maximum tree depth (10).
 ✔ Largest R-hat 1.002, below 1.01.
-✔ Smallest effective sample size 2578, above 400.
+✔ Smallest effective sample size 2703, above 400.
 ```
 
 The model samples the same parameters as before, so the fit reports the same
@@ -546,37 +560,37 @@ summary(fit_reg)
   Model:          latent regression of Influence d' on Awareness d'
   Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
   Estimation:     brms via cmdstanr, 4 chains x 5,000 draws (warmup 1,000)
-  Diagnostics:    max R-hat 1.002, min ESS 2,578, 0 divergent
+  Diagnostics:    max R-hat 1.002, min ESS 2,703, 0 divergent
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  criterion      Awareness   -0.0357   0.0294  [ -0.094,  0.021]   1.001   9,838
-  d'             Awareness    0.2345   0.0343  [  0.167,  0.301]   1.000  34,365
-  d'             Influence    0.1282   0.0154  [  0.098,  0.158]   1.001  25,396
+  criterion      Awareness   -0.0360   0.0294  [ -0.093,  0.022]   1.000  11,132
+  d'             Awareness    0.2346   0.0341  [  0.168,  0.301]   1.000  33,934
+  d'             Influence    0.1282   0.0155  [  0.097,  0.159]   1.000  25,416
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-  sd(criterion)  Awareness    0.2515   0.0254  [  0.205,  0.305]   1.000   8,970
-  sd(d')         Awareness    0.1330   0.0529  [  0.034,  0.238]   1.001   6,784
-  sd(d')         Influence    0.0866   0.0213  [  0.041,  0.126]   1.000   6,732
-  cor(d')        both         0.3342   0.4010  [ -0.560,  0.954]   1.002   2,578
+  sd(criterion)  Awareness    0.2516   0.0255  [  0.204,  0.305]   1.001   9,069
+  sd(d')         Awareness    0.1318   0.0528  [  0.033,  0.236]   1.001   7,018
+  sd(d')         Influence    0.0866   0.0216  [  0.040,  0.126]   1.000   6,206
+  cor(d')        both         0.3276   0.3959  [ -0.563,  0.947]   1.002   2,703
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
 H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
   Parameter           Mean       SD  95% CrI            p-value
-  Δd' (I - A)     -0.1062   0.0368  [ -0.178, -0.034]     .004
+  Δd' (I - A)     -0.1065   0.0365  [ -0.178, -0.034]     .003
 
 H2: Correlation between sensitivities across tasks
   Parameter           Mean       SD  95% CrI            p-value
-  rho               0.3342   0.4010  [ -0.560,  0.954]     .402
+  rho               0.3276   0.3959  [ -0.563,  0.947]     .401
 
 H3: Latent regression of Influence d' on Awareness d'
   Parameter           Mean       SD  95% CrI            p-value
-  Intercept         0.0653   0.1236  [ -0.204,  0.266]     .365
-  Slope             0.2695   0.5224  [ -0.568,  1.421]     .402
+  Intercept         0.0674   0.1294  [ -0.204,  0.272]     .355
+  Slope             0.2590   0.5451  [ -0.624,  1.371]     .401
 
 ── Priors ──────────────────────────────────────────────────────────────────────
 
@@ -600,14 +614,14 @@ H3: Latent regression of Influence d' on Awareness d'
 $\Delta d' = -0.11$ (95% CrI $[-0.18, -0.03]$)
 as before. The intercept, with a prior of its own and $\sigma_A$ kept away
 from zero, has the 95% credible interval $[-0.20, 0.27]$, against
-$[-0.78, 0.76]$ when its prior was induced by the others.
+$[-0.87, 0.86]$ when its prior was induced by the others.
 
 The intercept and the correlation are independent a priori, but not a
 posteriori. The data fix the influence mean, the sum of $\beta_0$ and
 $\rho \, (\sigma_I / \sigma_A) \, \mu_A$, so a correlation that would need an
 intercept far from zero loses weight, all the more when $\sigma_A$ is small.
 The 95% credible interval of $\rho$ is now $[-0.56, 0.95]$, against
-$[-0.74, 0.95]$ before, a change that comes from both the intercept prior
+$[-0.77, 0.96]$ before, a change that comes from both the intercept prior
 and the prior on $\sigma_A$; a narrower intercept prior would narrow it
 further. The Bayes factors of the correlation therefore depend on the
 intercept prior as well:
@@ -623,10 +637,11 @@ usdt_bf(fit_reg, c("intercept = 0", "rho = 0"), plot = FALSE)
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : intercept != 0
   Hypothesis (H0)             : intercept = 0
-  Posterior mean              : 0.065
-  Posterior SD                : 0.124
-  95% CrI                     : [-0.204, 0.266]
-  log BF10                    : -1.752
+  Posterior mean              : 0.067
+  Posterior SD                : 0.129
+  95% CrI                     : [-0.204, 0.272]
+  log BF10                    : -1.741
+  log BF01                    : 1.741
   Evidence                    : moderate for H0
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -634,10 +649,11 @@ usdt_bf(fit_reg, c("intercept = 0", "rho = 0"), plot = FALSE)
 ════════════════════════════════════════════════════════════════════════════════
   Hypothesis (H1)             : rho != 0
   Hypothesis (H0)             : rho = 0
-  Posterior mean              : 0.334
-  Posterior SD                : 0.401
-  95% CrI                     : [-0.560, 0.954]
-  log BF10                    : -0.185
+  Posterior mean              : 0.328
+  Posterior SD                : 0.396
+  95% CrI                     : [-0.563, 0.947]
+  log BF10                    : -0.212
+  log BF01                    : 0.212
   Evidence                    : anecdotal for H0
 ────────────────────────────────────────────────────────────────────────────────
 ```
@@ -659,18 +675,18 @@ reliability
 ── Reliability summary ───────────────────────────────────────────────────────── 
 
   Task         Subjects Group mean       SD  95% CrI              By-subject mean median [min, max]
-  Awareness         104       .118     .096  [  0.000,  0.331]    .119 [.110, .120]
-  Influence         104       .311     .102  [  0.086,  0.495]    .311 [.310, .312]
+  Awareness         104       .118     .096  [  0.000,  0.332]    .119 [.110, .120]
+  Influence         104       .315     .101  [  0.090,  0.495]    .315 [.314, .315]
 
   Means, SDs and credible intervals summarise the posterior draws.
 ```
 
 The posterior means (.118 and
-.311) are close to the frequentist
+.315) are close to the frequentist
 estimates, and the credible intervals show how uncertain they are: the
 reliability of the awareness task could be anywhere between
 0.00 and
-.331.
+.332.
 
 ### Custom models fitted with brms
 

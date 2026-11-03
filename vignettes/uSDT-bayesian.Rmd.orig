@@ -258,23 +258,32 @@ bf <- usdt_bf(fit_bayes)
 bf
 ```
 
+A point statement such as `"rho = 0"` is the null hypothesis H0, against the
+alternative $\rho \neq 0$; an inequality or a region, as further below, is the
+alternative H1, against its complement. Each report gives both
+$\log \text{BF}_{10}$ and $\log \text{BF}_{01}$, and each panel of the plot
+gives the Bayes factor of the hypothesis in its title, here
+$\text{BF}_{01}$, so a positive value favours the null:
+
 - **$\Delta d' = 0$:** the evidence for a difference is `r bf$evidence[1]`
-  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[1])`$,
+  ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[1])`$,
   $\text{BF}_{10} = `r fmt(bf$BF10[1], 1)`$), even though the credible
   interval excludes zero. The Bayes factor compares the posterior with the
   whole prior, and a $\text{normal}(0, 1)$ prior on each mean expects much
   larger differences than $`r fmt(tests$estimate[1])`$.
 - **$\rho = 0$:** the evidence is `r bf$evidence[2]`
-  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[2])`$).
-- **Intercept $= 0$:** there is `r bf$evidence[3]` evidence for the null
-  ($\log \text{BF}_{10} = `r fmt(bf$log_BF10[3])`$,
+  ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[2])`$).
+- **Intercept $\beta_0 = 0$:** there is `r bf$evidence[3]` evidence for the
+  null ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[3])`$,
   $\text{BF}_{01} = `r fmt(bf$BF01[3], 1)`$). The data favour no influence
   sensitivity in participants without awareness sensitivity, which the credible
   interval alone could not tell.
 
 In the plot, the solid curve is the posterior and the dashed curve the prior.
-For a point null, the Bayes factor is the ratio between the two marked
-heights at the dotted line.
+For a point null, $\text{BF}_{01}$ is the ratio of the posterior to the prior
+height at the dotted line. Each panel names its quantity on the x axis, with
+the intercept and slope of the latent regression as $\beta_0$ and $\beta_1$.
+The y axis has no values, because each panel has a density scale of its own.
 
 You can also test directional hypotheses and regions, such as a region of
 practical equivalence around zero:

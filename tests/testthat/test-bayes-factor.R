@@ -67,14 +67,47 @@ test_that("each hypothesis prints as a report; a row subset plots its own", {
   expect_length(grep("Savage-Dickey density ratio test", out, fixed = TRUE), 1L)
   expect_length(grep("Posterior probability (H1)", out, fixed = TRUE), 1L)
   expect_length(grep("95% CrI", out, fixed = TRUE), 2L)
+  expect_length(grep("log BF10", out, fixed = TRUE), 2L)
+  expect_length(grep("log BF01", out, fixed = TRUE), 2L)
   expect_output(print(b[, c("hypothesis", "log_BF10")]), "d' > 0",
                 fixed = TRUE)
 
-  # Panel titles are plotmath, so each one must parse.
-  panel <- levels(plot(b[2, ])$data$panel)
-  expect_identical(panel, "\"Hypothesis:\" ~ Delta*d*\"'\" > \"0\"")
-  expect_no_error(parse(text = panel))
+  # Panel titles are plotmath, so each one must parse. A point names H0 and
+  # reports BF01; an inequality names H1 and reports BF10.
+  panels <- levels(plot(b)$data$panel)
+  expect_identical(panels, c("\"Hypothesis (H0):\" ~ Delta*d*\"'\" == \"0\"",
+                             "\"Hypothesis (H1):\" ~ Delta*d*\"'\" > \"0\""))
+  expect_no_error(parse(text = panels))
+  expect_identical(levels(plot(b[2, ])$data$panel), panels[2L])
+  expect_identical(.bf_math(.bf_parse("intercept = 0")),
+                   "\"Hypothesis (H0):\" ~ beta[0] == \"0\"")
+  expect_identical(.bf_math(.bf_parse("slope > 0.2")),
+                   "\"Hypothesis (H1):\" ~ beta[1] > \"0.2\"")
+  labels <- Find(function(l) is.data.frame(l$data) && "bf" %in% names(l$data),
+                 plot(b)$layers)$data
+  expect_match(labels$bf[1L], "BF[\"01\"]", fixed = TRUE)
+  expect_match(labels$bf[2L], "BF[\"10\"]", fixed = TRUE)
   expect_error(plot(b[, 1:3]), "lost")
+
+  # The panels share one y axis without values, drawn on the first of a row.
+  p <- plot(b)
+  expect_identical(ggplot2::get_labs(p)$y, "Density")
+  axis <- Filter(function(l) is.data.frame(l$data) && any(l$data$x == -Inf),
+                 p$layers)
+  expect_length(axis, 1L)
+  expect_identical(as.character(axis[[1L]]$data$panel),
+                   levels(p$data$panel)[1L])
+
+  # Each panel names its quantity under its x axis, in a row of its own.
+  expect_identical(vapply(p$facet$titles, function(e) deparse(e[[1L]]), ""),
+                   rep("Delta * d * \"'\"", 2L))
+  grDevices::pdf(NULL)
+  on.exit(grDevices::dev.off(), add = TRUE)
+  layout <- ggplot2::ggplotGrob(p)$layout
+  titles <- layout[startsWith(layout$name, "usdt-xlab-"), ]
+  axes <- layout[startsWith(layout$name, "axis-b-"), ]
+  expect_identical(nrow(titles), 2L)
+  expect_identical(titles$t, axes$b[match(titles$l, axes$l)] + 1L)
 
   # The curve labels are placed when the plot is drawn.
   grDevices::pdf(NULL)

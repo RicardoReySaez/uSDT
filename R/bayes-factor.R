@@ -20,7 +20,9 @@
 #'   `"<quantity> <op> <value>"`, where the quantity is `diff`, `rho`, `slope`
 #'   or `intercept` and the operator is `=`, `<` or `>` (`<=` and `>=` are read
 #'   as `<` and `>`), or `"<quantity> in [a, b]"` and `"<quantity> out [a, b]"`
-#'   for a region and its complement. The default tests the three point nulls.
+#'   for a region and its complement. A point statement is the null hypothesis
+#'   H0, and H1 its negation; an inequality or a region is the alternative H1,
+#'   and H0 its complement. The default tests the three point nulls.
 #' @param awareness,influence For a brms model, the population-level terms of
 #'   the awareness and influence sensitivities, as in [usdt_tests()]. Ignored
 #'   for an `hsdt` fit.
@@ -38,7 +40,8 @@
 #'   `conf.high` (central credible interval), `post.prob` (posterior
 #'   probability of H1 for a directional or interval test), `log_BF10`,
 #'   `BF10`, `BF01`, `evidence` and `favours`. It prints one report per
-#'   hypothesis. The prior and posterior curves are stored, so
+#'   hypothesis, with both log Bayes factors. The prior and posterior curves
+#'   are stored, so
 #'   [plot.usdt_bf()] can draw the figure again.
 #'
 #' @details
@@ -266,6 +269,7 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
       row("Posterior probability (H1)", number(x$post.prob[[i]]))
     }
     row("log BF10", number(x$log_BF10[[i]]))
+    row("log BF01", number(-x$log_BF10[[i]]))
     row("Evidence", paste(x$evidence[[i]], "for", x$favours[[i]]))
     cat(strrep(chars$h, width), "\n", sep = "")
   }
@@ -443,9 +447,9 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
       " The difference is the influence minus the awareness mean sensitivity."
     },
     vapply(strsplit(swaps, " ", fixed = TRUE), function(s) {
-      sprintf(paste(" A %s compared with zero is tested on %s, which has its",
-                    "sign and a prior of its own, so that panel shows %s."),
-              s[1L], s[2L], s[2L])
+      sprintf(paste(" A %s compared with zero is tested on the %s, which has",
+                    "its sign and a prior of its own, so that panel shows the",
+                    "%s."), labels[[s[1L]]], labels[[s[2L]]], labels[[s[2L]]])
     }, "")), collapse = "")
 }
 
@@ -465,18 +469,28 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
   }
 }
 
+# This function writes the symbol of a quantity in plotmath: the intercept
+# and the slope of the latent regression are beta_0 and beta_1.
+.bf_symbol <- function(quantity) {
+  switch(quantity, diff = "Delta*d*\"'\"", rho = "rho", intercept = "beta[0]",
+         slope = "beta[1]")
+}
+
 # This function writes the panel title as a plotmath expression, so the Greek
-# letters and the set symbols are drawn on every graphics device. The caption
-# says when a panel shows another quantity than the one its title names.
+# letters and the set symbols are drawn on every graphics device. The title
+# says whether the statement is the null or the alternative: a point names H0,
+# an inequality or a region H1. The x axis and the caption say when a panel
+# shows another quantity than the one its title names.
 .bf_math <- function(h) {
-  symbol <- switch(h$summary, diff = "Delta*d*\"'\"", h$summary)
+  symbol <- .bf_symbol(h$summary)
   statement <- switch(h$op,
     "=" = sprintf("%s == \"%s\"", symbol, format(h$value)),
     "<" = , ">" = sprintf("%s %s \"%s\"", symbol, h$op, format(h$value)),
     sprintf("%s %s \"[%s, %s]\"", symbol,
             if (h$op == "in") "%in%" else "%notin%",
             format(h$value[1L]), format(h$value[2L])))
-  sprintf("\"Hypothesis:\" ~ %s", statement)
+  sprintf("\"Hypothesis (%s):\" ~ %s", if (h$op == "=") "H0" else "H1",
+          statement)
 }
 
 # This function evaluates one hypothesis on the draws of the tested quantity,
@@ -549,10 +563,19 @@ print.usdt_bf <- function(x, digits = 3L, width = 80L, ...) {
 #' Plot the prior and posterior of tested quantities
 #'
 #' Draws, for each hypothesis of a [usdt_bf()] result, the posterior density
-#' (solid) and the prior density (dashed) of the tested quantity. For a point
-#' hypothesis, a dotted line marks the tested value and two points mark the
-#' heights whose ratio is the Savage-Dickey Bayes factor. For a directional
-#' or interval hypothesis, the shaded area is the posterior probability of H1.
+#' (solid) and the prior density (dashed) of the tested quantity, which names
+#' the x axis of its panel: \eqn{\Delta d'}, \eqn{\rho}, or \eqn{\beta_0} and
+#' \eqn{\beta_1} for the intercept and slope of the latent regression. The
+#' panel title says whether the hypothesis is the
+#' null (H0), as a point is, or the alternative (H1), as an inequality or a
+#' region is, and the panel reports the Bayes factor of that hypothesis
+#' against the other: \eqn{\mathrm{BF}_{01}} for a point,
+#' \eqn{\mathrm{BF}_{10}} otherwise. For a point hypothesis, a dotted line
+#' marks the tested value and two points mark the heights whose ratio is the
+#' Savage-Dickey Bayes factor. For a directional or interval hypothesis, the
+#' shaded area is the posterior probability of H1. Each panel has a density
+#' scale of its own, so the panels share one y axis, labelled Density, drawn
+#' on the first panel of each row and without values.
 #'
 #' [usdt_bf()] draws this figure by default. Call `plot()` to draw it again,
 #' or to draw some of its rows, e.g. `plot(b[3, ])`.
@@ -626,11 +649,17 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
                                      levels = c("Posterior", "Prior")))
   }))
   # Each line of the label is a layer of its own, so that all of them align
-  # on the right: the first is plotmath, for the subscript of BF10.
+  # on the right: the first is plotmath, for the subscript of the Bayes
+  # factor. It weighs the hypothesis in the title against the other: BF01 for
+  # a point null, BF10 for an inequality or a region.
   labels <- do.call(rbind, lapply(seq_along(curves), function(i) {
     cv <- curves[[i]]
     data.frame(panel = panel(i, 1L), x = Inf, y = Inf,
-               bf = sprintf("log~BF[10] == \"%.2f\"", cv$log_bf10),
+               bf = if (cv$op == "=") {
+                 sprintf("log~BF[\"01\"] == \"%.2f\"", -cv$log_bf10)
+               } else {
+                 sprintf("log~BF[\"10\"] == \"%.2f\"", cv$log_bf10)
+               },
                evidence = sprintf("%s, favours %s", cv$evidence, cv$favours),
                prob = if (is.na(cv$prob)) NA_character_ else
                  sprintf("P(H1 | data) = %.3f", cv$prob))
@@ -648,7 +677,19 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
       inherit.aes = FALSE, fill = colours[["Posterior"]], alpha = 0.2
     )
   }
+  # The densities of different quantities have scales of their own, so the
+  # panels share the name of the y axis but none of its values, and only the
+  # first panel of each row draws its line. The panel clips the outer half of
+  # that line, so it is twice as wide as the axis lines of the theme.
+  firsts <- levels(densities$panel)[
+    seq(1L, nlevels(densities$panel), by = columns)]
+  axes <- data.frame(panel = factor(firsts, levels = levels(densities$panel)),
+                     x = -Inf)
   plot <- plot +
+    ggplot2::geom_vline(
+      data = axes, ggplot2::aes(xintercept = .data[["x"]]),
+      colour = "#292D30", linewidth = 1.3
+    ) +
     ggplot2::geom_vline(
       data = values, ggplot2::aes(xintercept = .data[["x"]]),
       colour = "#697076", linetype = "dotted", linewidth = 0.5
@@ -677,7 +718,8 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
     list(nulls = values$x[values$panel == level],
          marks = data.frame(x = marks$x, y = marks$density),
          bf = unlist(labels[match(level, labels$panel),
-                            c("bf", "evidence", "prob")]))
+                            c("bf", "evidence", "prob")]),
+         axis = level %in% firsts)
   })
   plot <- plot + ggplot2::layer(
     geom = GeomBfLabels, stat = "identity", position = "identity",
@@ -703,8 +745,9 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
     label_line("bf", 1.2) +
     label_line("evidence", 3) +
     label_line("prob", 4.55, !is.na(labels$prob)) +
-    ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), scales = "free",
-                        ncol = columns, labeller = ggplot2::label_parsed) +
+    .bf_facet(columns, lapply(curves[match(levels, panels)], function(cv) {
+      parse(text = .bf_symbol(cv$tested))
+    })) +
     ggplot2::scale_colour_manual(values = colours, name = NULL) +
     ggplot2::scale_linetype_manual(
       values = c(Posterior = "solid", Prior = "dashed"), name = NULL
@@ -716,13 +759,14 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
         vapply(curves, `[[`, 0, "prob")))) 0.4 else 0.3))
     ) +
     ggplot2::labs(
-      x = NULL, y = NULL,
+      x = NULL, y = "Density",
       caption = paste0(
         "Posterior (solid) and prior (dashed) densities of each tested ",
-        "quantity. For a point hypothesis the Bayes factor is the ratio of ",
-        "the two marked heights at the dotted line (Savage-Dickey); for a ",
-        "directional or interval hypothesis the shaded area is the posterior ",
-        "probability of H1.", .bf_caption(curves)
+        "quantity. A point hypothesis is the null (H0), and BF01 is the ",
+        "ratio of the posterior to the prior height at the dotted line ",
+        "(Savage-Dickey); a directional or interval hypothesis is the ",
+        "alternative (H1), and the shaded area is its posterior probability.",
+        .bf_caption(curves)
       )
     ) +
     .panel_theme() +
@@ -730,11 +774,55 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
     .hide_caption(caption)
 }
 
+# This function facets the Bayes factor plot, one panel per hypothesis in
+# `columns` columns, and names under each panel the quantity on its x axis:
+# the panels show different quantities, which one x axis title cannot name.
+# `titles` holds one plotmath expression per panel.
+.bf_facet <- function(columns, titles) {
+  facet <- ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]),
+                               scales = "free", ncol = columns,
+                               labeller = ggplot2::label_parsed)
+  ggplot2::ggproto(NULL, FacetBf, shrink = facet$shrink,
+                   params = facet$params, titles = titles)
+}
+
+# The panels of the Bayes factor plot, drawn as by facet_wrap(), with the
+# title of each x axis in a row of its own under the axes of each row of
+# panels, in the style of the plot's x axis title.
+FacetBf <- ggplot2::ggproto("FacetBf", ggplot2::FacetWrap,
+  draw_panels = function(self, panels, layout, x_scales, y_scales, ranges,
+                         coord, data, theme, params) {
+    table <- ggplot2::ggproto_parent(ggplot2::FacetWrap, self)$draw_panels(
+      panels, layout, x_scales, y_scales, ranges, coord, data, theme, params)
+    axes <- match(sprintf("axis-b-%d-%d", layout$COL, layout$ROW),
+                  table$layout$name)
+    if (anyNA(axes)) return(table)
+    titles <- lapply(self$titles[as.integer(layout$PANEL)], function(label) {
+      ggplot2::element_render(theme, "axis.title.x.bottom", label = label,
+                              margin_y = TRUE)
+    })
+
+    # From the bottom up, so the rows still to fill keep their place.
+    rows <- table$layout$b[axes]
+    for (row in sort(unique(rows), decreasing = TRUE)) {
+      here <- which(rows == row)
+      heights <- do.call(grid::unit.c, lapply(titles[here], grid::grobHeight))
+      table <- gtable::gtable_add_rows(table, max(heights), pos = row)
+      table <- gtable::gtable_add_grob(
+        table, titles[here], t = row + 1L, l = table$layout$l[axes[here]],
+        clip = "off",
+        name = sprintf("usdt-xlab-%d-%d", layout$COL[here], layout$ROW[here]))
+    }
+    table
+  }
+)
+
 # The labels of the curves of the Bayes factor plot. Where they fit depends
 # on the size of the panels, which is only known when they are drawn, so the
 # geom hands every panel the curves and obstacles of all of them, in npc, and
 # the grob places the labels then. `obstacles` holds, per panel, the tested
-# values, the marked heights and the lines of the Bayes factor label.
+# values, the marked heights, the lines of the Bayes factor label and whether
+# the panel draws the y axis.
 GeomBfLabels <- ggplot2::ggproto("GeomBfLabels", ggplot2::Geom,
   required_aes = c("x", "y", "label"),
   extra_params = c("na.rm", "obstacles"),
@@ -750,7 +838,7 @@ GeomBfLabels <- ggplot2::ggproto("GeomBfLabels", ggplot2::Geom,
       d <- coord$transform(d, layout$panel_params[[i]])
       list(curves = split(d[c("x", "y")], as.character(d$label)),
            nulls = npc(p$nulls, 0 * p$nulls)$x,
-           marks = npc(p$marks$x, p$marks$y), bf = p$bf)
+           marks = npc(p$marks$x, p$marks$y), bf = p$bf, axis = p$axis)
     })
     lapply(seq_along(panels), function(i) {
       if (is.null(panels[[i]])) return(ggplot2::zeroGrob())
@@ -798,11 +886,14 @@ makeContent.usdt_curve_labels <- function(x) {
 # This function describes the room in one panel of W by H inches. It returns
 # the panel's curves in inches, filled in every 0.02 inches, and a function
 # that tells whether a label of size `s` with its bottom left corner at
-# `corner` is free: inside the panel and clear of both curves, the dotted
-# lines, the marked heights, the Bayes factor label and the boxes in `also`.
-# Boxes are c(left, bottom, right, top), and the obstacles keep a margin.
+# `corner` is free: inside the panel and clear of both curves, the y axis, the
+# dotted lines, the marked heights, the Bayes factor label and the boxes in
+# `also`. Boxes are c(left, bottom, right, top), and the obstacles keep a
+# margin. `left` is where the panel is free of the y axis, which covers 0.65
+# mm of the panels that draw it.
 .label_space <- function(p, W, H) {
   pt <- 1 / 72
+  left <- if (isTRUE(p$axis)) 0.65 / 25.4 else 0
   inches <- function(d) list(x = d$x * W, y = d$y * H)
   curves <- lapply(p$curves, inches)
   dense <- function(curve) {
@@ -816,7 +907,7 @@ makeContent.usdt_curve_labels <- function(x) {
   }
   lines <- Reduce(function(a, b) Map(c, a, b), lapply(curves, dense))
 
-  blocked <- list()
+  blocked <- if (left > 0) list(axis = c(0, 0, left, H)) else list()
   bf <- p$bf[!is.na(p$bf)]
   if (length(bf)) {
     text <- lapply(seq_along(bf), function(i) {
@@ -842,7 +933,7 @@ makeContent.usdt_curve_labels <- function(x) {
       b[1L] < o[3L] && o[1L] < b[3L] && b[2L] < o[4L] && o[2L] < b[4L]
     }, TRUE))
   }
-  list(curves = curves, free = free, W = W, H = H)
+  list(curves = curves, free = free, W = W, H = H, left = left)
 }
 
 # This function places the labels of the two curves of one panel, or returns
@@ -860,7 +951,8 @@ makeContent.usdt_curve_labels <- function(x) {
   # Places just over (or under) a curve along the panel, ordered by `key` of
   # their centres.
   along <- function(curve, s, key, under = FALSE) {
-    lefts <- seq(2 * pt, space$W - 2 * pt - s[1L], length.out = 25L)
+    lefts <- seq(space$left + 2 * pt, space$W - 2 * pt - s[1L],
+                 length.out = 25L)
     lefts <- lefts[order(key(lefts + s[1L] / 2))]
     lapply(lefts, function(l) {
       span <- curve$x >= l & curve$x <= l + s[1L]

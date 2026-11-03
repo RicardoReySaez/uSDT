@@ -24,7 +24,9 @@ or a \code{brmsfit} whose priors meet the conditions in Details.}
 \code{"<quantity> <op> <value>"}, where the quantity is \code{diff}, \code{rho}, \code{slope}
 or \code{intercept} and the operator is \code{=}, \code{<} or \code{>} (\code{<=} and \code{>=} are read
 as \code{<} and \code{>}), or \code{"<quantity> in [a, b]"} and \code{"<quantity> out [a, b]"}
-for a region and its complement. The default tests the three point nulls.}
+for a region and its complement. A point statement is the null hypothesis
+H0, and H1 its negation; an inequality or a region is the alternative H1,
+and H0 its complement. The default tests the three point nulls.}
 
 \item{awareness, influence}{For a brms model, the population-level terms of
 the awareness and influence sensitivities, as in \code{\link[=usdt_tests]{usdt_tests()}}. Ignored
@@ -53,7 +55,8 @@ hypothesis and the columns \code{hypothesis}, \code{test} (\code{"Savage-Dickey 
 \code{conf.high} (central credible interval), \code{post.prob} (posterior
 probability of H1 for a directional or interval test), \code{log_BF10},
 \code{BF10}, \code{BF01}, \code{evidence} and \code{favours}. It prints one report per
-hypothesis. The prior and posterior curves are stored, so
+hypothesis, with both log Bayes factors. The prior and posterior curves
+are stored, so
 \code{\link[=plot.usdt_bf]{plot.usdt_bf()}} can draw the figure again.
 }
 \description{

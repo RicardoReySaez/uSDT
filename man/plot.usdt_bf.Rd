@@ -19,10 +19,19 @@ A \code{ggplot} object. Its underlying data frame is stored in \verb{$data}.
 }
 \description{
 Draws, for each hypothesis of a \code{\link[=usdt_bf]{usdt_bf()}} result, the posterior density
-(solid) and the prior density (dashed) of the tested quantity. For a point
-hypothesis, a dotted line marks the tested value and two points mark the
-heights whose ratio is the Savage-Dickey Bayes factor. For a directional
-or interval hypothesis, the shaded area is the posterior probability of H1.
+(solid) and the prior density (dashed) of the tested quantity, which names
+the x axis of its panel: \eqn{\Delta d'}, \eqn{\rho}, or \eqn{\beta_0} and
+\eqn{\beta_1} for the intercept and slope of the latent regression. The
+panel title says whether the hypothesis is the
+null (H0), as a point is, or the alternative (H1), as an inequality or a
+region is, and the panel reports the Bayes factor of that hypothesis
+against the other: \eqn{\mathrm{BF}_{01}} for a point,
+\eqn{\mathrm{BF}_{10}} otherwise. For a point hypothesis, a dotted line
+marks the tested value and two points mark the heights whose ratio is the
+Savage-Dickey Bayes factor. For a directional or interval hypothesis, the
+shaded area is the posterior probability of H1. Each panel has a density
+scale of its own, so the panels share one y axis, labelled Density, drawn
+on the first panel of each row and without values.
 }
 \details{
 \code{\link[=usdt_bf]{usdt_bf()}} draws this figure by default. Call \code{plot()} to draw it again,

@@ -60,13 +60,18 @@
   hypotheses read the posterior density from a logspline fit to the draws,
   used only if it stays close to the draws; directional and
   interval ones read the posterior probability as the share of draws in H1.
-  Each hypothesis
-  prints as a report, and `usdt_bf()` draws each prior against its posterior,
-  in one row for up to three hypotheses, unless `plot = FALSE`. It also takes
-  custom brms models, whose priors it reads from `prior_summary()`: proper
-  priors from the families of `usdt_priors()` on the sensitivities and an
-  LKJ prior on their correlation give the same priors as a Bayesian `hsdt()`
-  fit.
+  Each hypothesis prints as a report with both log Bayes factors, BF10 and
+  BF01, and `usdt_bf()` draws each prior against its posterior, in one row
+  for up to three hypotheses, unless `plot = FALSE`. A point statement is the
+  null (H0) and an inequality or a region the alternative (H1); each panel
+  title says which, and the panel reports the Bayes factor of that hypothesis
+  against the other, BF01 or BF10. Each panel names its quantity on the x
+  axis, with the intercept and slope as beta_0 and beta_1, and the panels
+  share one unnumbered Density axis, since each has a scale of its own. It
+  also takes custom brms models, whose priors it reads from
+  `prior_summary()`: proper priors from the families of `usdt_priors()` on
+  the sensitivities and an LKJ prior on their correlation give the same
+  priors as a Bayesian `hsdt()` fit.
 * `plot()` draws the four plots of a Bayesian fit with posterior means and
   credible intervals, and `usdt_reliability()` gives the posterior of each
   task's reliability.

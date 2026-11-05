@@ -5,12 +5,10 @@
 
 url: https://ricardoreysaez.github.io/uSDT/
 
-# The version number decides where the site goes. A release version such as
-# 0.1.0 builds the main site, which documents what CRAN users install. A
-# development version such as 0.1.0.9000 builds a separate site under /dev/
-# and leaves the main one untouched.
+# Publish the current main branch at the primary URL, including development
+# versions. The displayed version still comes from DESCRIPTION.
 development:
-  mode: auto
+  mode: release
 
 template:
   math-rendering: katex

@@ -35,7 +35,7 @@
 * Bayes factor plots label the tested hypothesis and quantity. A point-null
   panel reports BF01. A directional or interval panel reports BF10.
 * `plot()` and `usdt_reliability()` support Bayesian fits.
-* The [Bayesian tutorial](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html) covers priors,
+* The [Bayesian tutorial](https://ricardoreysaez.github.io/uSDT/articles/uSDT-bayesian.html) covers priors,
   posterior summaries, Bayes factors and the latent regression prior.
 
 ## Equivalence and one-sided tests
@@ -68,7 +68,7 @@
 * `usdt_mdes()` finds detectable effects or equivalence regions. `vary`
   selects another population parameter to vary.
 * `plot()` supports populations, power curves, plans and detectable effects.
-  The [planning tutorial](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html) illustrates the workflow.
+  The [planning tutorial](https://ricardoreysaez.github.io/uSDT/articles/uSDT-power.html) illustrates the workflow.
 
 ## Data preparation and plots
 

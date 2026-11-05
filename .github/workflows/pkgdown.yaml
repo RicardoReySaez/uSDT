@@ -21,6 +21,7 @@ jobs:
     # one deploying run may be in flight at a time.
     concurrency:
       group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+      cancel-in-progress: true
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}

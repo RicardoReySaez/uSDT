@@ -11,31 +11,26 @@
 `uSDT` fits hierarchical signal detection theory models to paired awareness
 and influence measures. It compares mean sensitivities, estimates their latent
 association and tests influence sensitivity at zero awareness sensitivity.
-Development features include Bayesian estimation with brms and Bayes factors,
-and study planning for power, precision, cost and detectable effects.
+It supports maximum likelihood and Bayesian estimation, Bayes factors and
+study planning for power, precision, cost and detectable effects.
 
 ## Documentation
 
-The package website is at
-**<https://ricardoreysaez.github.io/uSDT/>** and documents the version on
-CRAN. It contains:
+Visit the [documentation](https://ricardoreysaez.github.io/uSDT/) for the
+current GitHub version:
 
 - [Getting started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
-  a tutorial that walks through the whole workflow with real data, from two
-  trial-level data frames to the three hypotheses.
+  from trial-level data to the three hypotheses.
+- [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/articles/uSDT-bayesian.html),
+  priors, posterior summaries and Bayes factors.
+- [Planning a study](https://ricardoreysaez.github.io/uSDT/articles/uSDT-power.html),
+  power analysis and the choice of subjects and trials.
 - [Reference](https://ricardoreysaez.github.io/uSDT/reference/index.html), the
   help page of every function.
 - [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html), the
   changes in each release.
 
-The development version from GitHub has its own website at
-**<https://ricardoreysaez.github.io/uSDT/dev/>**, with two additional tutorials:
-
-- [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html),
-  the same analysis with priors, posterior summaries and Bayes factors.
-- [Planning a uSDT study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html),
-  power analysis and the choice of subjects and trials, with the tutorial data
-  as a pilot study.
+The [CRAN release](https://CRAN.R-project.org/package=uSDT) may have an older API.
 
 ## Installation
 

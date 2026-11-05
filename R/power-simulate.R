@@ -118,10 +118,7 @@
 # decision on each hypothesis, as usdt_tests() decides a point null at zero
 # and usdt_equivalence() any other statement.
 .power_replicate <- function(seed, pop, N, cells, split, labels, tests,
-                             alpha) {
-  withr::local_seed(seed, .rng_kind = "L'Ecuyer-CMRG",
-                    .rng_normal_kind = "Inversion", .rng_sample_kind = "Rejection")
-
+                             alpha) .with_seed(seed, {
   q <- .replicate_quantities
   out <- c(fitted = 0, estimable = 0,
            stats::setNames(rep(NA_real_, 4L * length(q)),
@@ -160,7 +157,7 @@
     out[[paste0("reject_", j)]] <- as.numeric(reject)
   }
   out
-}
+}, kind = "L'Ecuyer-CMRG")
 
 # This function gives one random number stream per replicate, so a run gives
 # the same studies whatever the number of cores. The streams follow from

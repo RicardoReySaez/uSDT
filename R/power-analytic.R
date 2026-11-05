@@ -23,9 +23,14 @@
 # This function runs `code` with a fixed seed and restores the random number
 # stream of the session afterwards, so the approximate power is reproducible
 # without changing the user's simulations.
-.with_seed <- function(seed, code) {
-  withr::with_seed(seed, code, .rng_kind = "Mersenne-Twister",
-                   .rng_normal_kind = "Inversion", .rng_sample_kind = "Rejection")
+.with_seed <- function(seed, code, kind = "Mersenne-Twister") {
+  old <- RNGkind()
+  withr::local_seed(seed, .rng_kind = kind,
+                    .rng_normal_kind = "Inversion", .rng_sample_kind = "Rejection")
+  # Restore the generator before withr removes a previously absent seed.
+  on.exit(suppressWarnings(do.call(RNGkind, as.list(old))),
+          add = TRUE, after = FALSE)
+  code
 }
 
 # This function gives the nodes and weights of Gauss-Hermite quadrature for an

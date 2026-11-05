@@ -45,7 +45,7 @@ Imports:
     logspline,
     callr,
     cli,
-    withr (>= 2.5.0)
+    withr (>= 3.0.3)
 Suggests:
     testthat (>= 3.1.7),
     knitr,

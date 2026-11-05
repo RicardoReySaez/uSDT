@@ -191,9 +191,25 @@ test_that("scoped seeds restore RNG settings even when a calculation fails", {
   set.seed(41)
   before <- .Random.seed
   kind <- RNGkind()
-  expect_error(.with_seed(7, stop("calculation failed")), "calculation failed")
+  expect_error(.with_seed(7, stop("calculation failed"), kind = "L'Ecuyer-CMRG"),
+               "calculation failed")
   expect_identical(.Random.seed, before)
   expect_identical(RNGkind(), kind)
+})
+
+test_that("scoped seeds leave a fresh session without a seed or a new generator", {
+  scope <- .with_seed
+  environment(scope) <- baseenv()
+  result <- callr::r(function(scope) {
+    stopifnot(!exists(".Random.seed", globalenv(), inherits = FALSE))
+    before <- ls(globalenv(), all.names = TRUE)
+    kind <- RNGkind()
+    scope(7, stats::runif(2), kind = "L'Ecuyer-CMRG")
+    c(objects = identical(ls(globalenv(), all.names = TRUE), before),
+      generator = identical(RNGkind(), kind))
+  }, args = list(scope = scope))
+  expect_true(result[["objects"]])
+  expect_true(result[["generator"]])
 })
 
 test_that("scenarios, subjects and trials make a grid", {

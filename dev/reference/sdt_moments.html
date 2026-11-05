@@ -25,6 +25,8 @@ calculate sampling variances, standard errors, and expected values for
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/uSDT-tutorial.html">Fitting a hierarchical SDT model</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-bayesian.html">Bayesian estimation with uSDT</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-power.html">Planning a uSDT study</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -129,8 +131,7 @@ present when <code>variances = TRUE</code>.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Edge corrections apply only to participants with extreme rates (0 or 1)
-rather than the whole sample, leaving well-defined rates unchanged.</p>
+    <p>Edge corrections apply only to participants with extreme rates (0 or 1).</p>
 <p>When requested, the sampling variance of \(d'\) is estimated using the
 asymptotic approximation of Gourevitch and Galanter (1967) and the
 binomial-distribution approach of Miller (1996). See Suero et al. (2017)
@@ -159,32 +160,33 @@ variance of some indices of the signal detection theory: A simulation study.
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># 1. From a prepared usdt_data object (both tasks at once)</span></span></span>
 <span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="usdt_data.html">usdt_data_tasks</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  direct   <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span></span>
-<span class="r-in"><span>  indirect <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span></span>
+<span class="r-in"><span>  awareness <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span></span>
+<span class="r-in"><span>  influence <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span></span>
 <span class="r-in"><span>  subject_col      <span class="op">=</span> <span class="st">"subj"</span>,</span></span>
 <span class="r-in"><span>  condition_col    <span class="op">=</span> <span class="st">"condition"</span>,</span></span>
 <span class="r-in"><span>  condition_levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"old"</span>, noise <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  response_col     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="st">"judged.old"</span>, indirect <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  response_levels  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                          indirect <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  dichotomize      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="cn">FALSE</span>, indirect <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  response_col     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="st">"judged.old"</span>, influence <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  response_levels  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                          influence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>,</span></span>
+<span class="r-in"><span>                                        noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  dichotomize      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="cn">FALSE</span>, influence <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">sdt_moments</span><span class="op">(</span><span class="va">d</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     task subj hit miss fa cr      hr     far        zhr        zfar      dprime</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 Direct 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241  0.31561452</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 Direct 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007  0.27223968</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 Direct 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211  0.08143725</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 Direct 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641  0.97755282</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 Direct 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216 -0.50071975</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 Direct 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936 -0.24022695</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     criterion corrected</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.07939485     FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 -0.53836991     FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 -0.27792074     FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  0.00000000     FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.32877229     FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.19852589     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        task subj hit miss fa cr      hr     far        zhr        zfar</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 Awareness 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 Awareness 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 Awareness 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 Awareness 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 Awareness 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 Awareness 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        dprime   criterion corrected</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.31561452 -0.07939485     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  0.27223968 -0.53836991     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  0.08143725 -0.27792074     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  0.97755282  0.00000000     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.50071975 -0.32877229     FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -0.24022695 -0.19852589     FALSE</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># 2. From raw trials with sampling variances and standard errors</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu">sdt_moments</span><span class="op">(</span><span class="va">vadillo_awareness</span>,</span></span>

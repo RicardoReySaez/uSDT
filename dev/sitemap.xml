@@ -1,5 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/articles/index.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-tutorial.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/authors.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/index.html</loc></url>
@@ -8,11 +10,22 @@
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/index.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/meyen_split.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/plot.hsdt.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/plot.usdt_bf.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/plot.usdt_priors.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/plot_power.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/sdt_moments.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/uSDT-package.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_aggregate.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_bf.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_boot.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_equivalence.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_mdes.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_plan.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_population.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_power.html</loc></url>
+<url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_priors.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/vadillo_awareness.html</loc></url>
 <url><loc>https://ricardoreysaez.github.io/uSDT/dev/reference/vadillo_cuing.html</loc></url>

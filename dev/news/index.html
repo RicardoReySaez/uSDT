@@ -19,6 +19,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/uSDT-tutorial.html">Fitting a hierarchical SDT model</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-bayesian.html">Bayesian estimation with uSDT</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-power.html">Planning a uSDT study</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -43,6 +45,58 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="usdt-development-version">uSDT (development version)<a class="anchor" aria-label="anchor" href="#usdt-development-version"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<ul><li>Tasks are now named <strong>awareness</strong> and <strong>influence</strong> throughout the API. Use these names in <code><a href="../reference/usdt_data.html">usdt_data_tasks()</a></code>, task-specific lists, <code>task_levels</code>, <code>labels</code>, <code>dichotomize</code> and sensitivity-term arguments. The old names are no longer accepted.</li>
+<li>The awareness code is <code>"A"</code>, with model terms <code>d_A</code> and <code>c_A</code>. Planning columns use <code>trials_awareness</code>, <code>trials_influence</code>, <code>reliability_awareness</code> and <code>reliability_influence</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bayesian-estimation-development-version">Bayesian estimation<a class="anchor" aria-label="anchor" href="#bayesian-estimation-development-version"></a></h3>
+<ul><li>
+<code>hsdt(estimation = "bayesian")</code> fits with brms and Stan and returns the <code>brmsfit</code> in <code>$fit</code>. Both rstan and cmdstanr are supported. Compiled models are cached. Defaults are four chains with 1,000 warmup iterations and 5,000 kept draws per chain. Sampling reports divergences, tree depth, R-hat and effective sample sizes.</li>
+<li>
+<code><a href="../reference/usdt_priors.html">usdt_priors()</a></code> specifies priors for task means, SDs and correlations. <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> checks their predictive and hypothesis implications.</li>
+<li>
+<code>hsdt(latent = "regression")</code> places the influence-location prior on the latent intercept instead of the mean. This changes the induced prior of the mean difference. The intercept prior also affects inference on the correlation.</li>
+<li>
+<code>unequal_variances = TRUE</code> estimates signal SDs for Bayesian fits.</li>
+<li>
+<code><a href="../reference/usdt_hypotheses.html">usdt_tests()</a></code> and the individual hypothesis functions accept Bayesian <code>hsdt</code> and custom brms fits. They report posterior means, SDs, central credible intervals and two-sided posterior sign p-values.</li>
+<li>
+<code><a href="../reference/usdt_bf.html">usdt_bf()</a></code> tests point, directional and interval hypotheses about <code>diff</code>, <code>rho</code>, <code>intercept</code> and <code>slope</code>. Point nulls use Savage-Dickey density ratios. Directions and regions compare posterior with prior odds. Reports give both log Bayes factors. By default, prior/posterior plots accompany them. Use <code>plot = FALSE</code> to suppress drawing and <code>plot(bf)</code> to draw later.</li>
+<li>Bayes factor plots label the tested hypothesis and quantity. A point-null panel reports BF01. A directional or interval panel reports BF10.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> and <code><a href="../reference/usdt_reliability.html">usdt_reliability()</a></code> support Bayesian fits.</li>
+<li>The <a href="https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html">Bayesian tutorial</a> covers priors, posterior summaries, Bayes factors and the latent regression prior.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="equivalence-and-one-sided-tests-development-version">Equivalence and one-sided tests<a class="anchor" aria-label="anchor" href="#equivalence-and-one-sided-tests-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/usdt_equivalence.html">usdt_equivalence()</a></code> accepts frequentist <code>hsdt</code> and custom glmer fits. Hypotheses use the syntax of <code><a href="../reference/usdt_bf.html">usdt_bf()</a></code>, with explicit bounds for equivalence (TOST), non-inferiority, one-sided and minimal-effect tests. Reports include the interval used for the decision. Bootstrap replicates are used when available. Unsupported inference is marked not estimable.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="study-planning-development-version">Study planning<a class="anchor" aria-label="anchor" href="#study-planning-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/usdt_population.html">usdt_population()</a></code> defines population parameters, optionally from a frequentist pilot fit. Multiple values create scenarios. <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> changes them. A latent intercept can replace the influence mean.</li>
+<li>
+<code><a href="../reference/usdt_power.html">usdt_power()</a></code> evaluates designs or grids using a sampling-distribution approximation. It supports the hypotheses of <code><a href="../reference/usdt_equivalence.html">usdt_equivalence()</a></code>. <code>combine = "all"</code> adds joint rejection power. Non-estimable outcomes count as failures to reject, and populations in H0 are flagged.</li>
+<li>
+<code>usdt_power(method = "simulation")</code> simulates and fits whole studies, repeating the median split for dichotomized tasks. It reports Monte Carlo error, Wilson intervals and fitting failures. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> adds bias, standard errors, interval widths and coverage. Results are reproducible across core counts. Unequal-variance populations can be simulated and analysed with the equal-variance model.</li>
+<li>
+<code><a href="../reference/usdt_plan.html">usdt_plan()</a></code> selects subjects, trials or both to meet a power or precision target at minimum cost, or maximize power within a budget. Ranges identify free values. Single numbers fix them. Check a chosen plan with <code>usdt_power(plan, method = "simulation")</code>.</li>
+<li>
+<code><a href="../reference/usdt_mdes.html">usdt_mdes()</a></code> finds detectable effects or equivalence regions. <code>vary</code> selects another population parameter to vary.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> supports populations, power curves, plans and detectable effects. The <a href="https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html">planning tutorial</a> illustrates the workflow.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="data-preparation-and-plots-development-version">Data preparation and plots<a class="anchor" aria-label="anchor" href="#data-preparation-and-plots-development-version"></a></h3>
+<ul><li>
+<code><a href="../reference/usdt_aggregate.html">usdt_aggregate()</a></code> counts binary trials by grouping columns for custom binomial models with covariates.</li>
+<li>Plots share panel styling and captions that wrap to the figure width. Plot methods accept <code>caption = FALSE</code>.</li>
+<li>Regression plots accept <code>nrow = 2</code> to stack the observed and latent panels.</li>
+<li>ROC legends show sensitivity and AUC inside the panel.</li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="usdt-010">uSDT 0.1.0<a class="anchor" aria-label="anchor" href="#usdt-010"></a></h2><p class="text-muted">CRAN release: 2026-09-29</p>

@@ -1,8 +1,8 @@
 # Cuing data from a probabilistic cuing experiment
 
-Trial-level indirect-task data from Experiment 2 of Vadillo et al.
+Trial-level influence-task data from Experiment 2 of Vadillo et al.
 (2025). The object reproduces the source CSV file without filtering or
-recoding and can be used as the `indirect` input to
+recoding and can be used as the `influence` input to
 [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md).
 
 ## Usage

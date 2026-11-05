@@ -20,9 +20,9 @@
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="uSDT • Hierarchical SDT models for unconscious processing">
-<meta name="description" content="Fit hierarchical signal detection theory models to paired direct and indirect measures, and test whether the indirect measure retains sensitivity where the direct one has none.
+<meta name="description" content="Fit hierarchical signal detection theory models to paired awareness and influence measures, and test whether the influence measure retains sensitivity where the awareness one has none.
 ">
-<meta property="og:description" content="Fit hierarchical signal detection theory models to paired direct and indirect measures, and test whether the indirect measure retains sensitivity where the direct one has none.
+<meta property="og:description" content="Fit hierarchical signal detection theory models to paired awareness and influence measures, and test whether the influence measure retains sensitivity where the awareness one has none.
 ">
 <meta property="og:image" content="https://ricardoreysaez.github.io/uSDT/logo.png">
 <meta name="robots" content="noindex">
@@ -49,6 +49,8 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="articles/uSDT-tutorial.html">Fitting a hierarchical SDT model</a></li>
+    <li><a class="dropdown-item" href="articles/uSDT-bayesian.html">Bayesian estimation with uSDT</a></li>
+    <li><a class="dropdown-item" href="articles/uSDT-power.html">Planning a uSDT study</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
@@ -80,11 +82,11 @@
 </div>
 <!-- badges: start -->
 
-<p><code>uSDT</code> estimates hierarchical signal detection theory (SDT) models for research on unconscious processing. It jointly models sensitivity in paired direct and indirect measures, allowing researchers to compare both sensitivities, estimate their latent association, and test indirect sensitivity when direct sensitivity is zero.</p>
+<p><code>uSDT</code> fits hierarchical signal detection theory models to paired awareness and influence measures. It compares mean sensitivities, estimates their latent association and tests influence sensitivity at zero awareness sensitivity. Development features include Bayesian estimation with brms and Bayes factors, and study planning for power, precision, cost and detectable effects.</p>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
-<p>The package website is at <strong><a href="https://ricardoreysaez.github.io/uSDT/" class="uri">https://ricardoreysaez.github.io/uSDT/</a></strong>. It contains:</p>
+<p>The package website is at <strong><a href="https://ricardoreysaez.github.io/uSDT/" class="uri">https://ricardoreysaez.github.io/uSDT/</a></strong> and documents the version on CRAN. It contains:</p>
 <ul>
 <li>
 <a href="https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html">Getting started</a>, a tutorial that walks through the whole workflow with real data, from two trial-level data frames to the three hypotheses.</li>
@@ -92,6 +94,13 @@
 <a href="https://ricardoreysaez.github.io/uSDT/reference/index.html">Reference</a>, the help page of every function.</li>
 <li>
 <a href="https://ricardoreysaez.github.io/uSDT/news/index.html">Changelog</a>, the changes in each release.</li>
+</ul>
+<p>The development version from GitHub has its own website at <strong><a href="https://ricardoreysaez.github.io/uSDT/dev/" class="uri">https://ricardoreysaez.github.io/uSDT/dev/</a></strong>, with two additional tutorials:</p>
+<ul>
+<li>
+<a href="https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html">Bayesian estimation</a>, the same analysis with priors, posterior summaries and Bayes factors.</li>
+<li>
+<a href="https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html">Planning a uSDT study</a>, power analysis and the choice of subjects and trials, with the tutorial data as a pilot study.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -103,12 +112,14 @@
 <p>Or install the development version from GitHub:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"RicardoReySaez/uSDT"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"RicardoReySaez/uSDT@dev"</span><span class="op">)</span></span></code></pre></div>
+<p>The development version installs <code>brms</code>. Bayesian fitting also needs a C++ toolchain and either rstan with <code>BH</code> and <code>RcppEigen</code>, or cmdstanr with CmdStan.</p>
 </div>
 <div class="section level2">
 <h2 id="example-vadillo-et-al-data">Example: Vadillo et al. data<a class="anchor" aria-label="anchor" href="#example-vadillo-et-al-data"></a>
 </h2>
-<p>The package includes the two trial-level data frames from Experiment 2 of Vadillo et al. (2025): <code>vadillo_awareness</code> for the direct task and <code>vadillo_cuing</code> for the indirect task.</p>
+<p>The examples below use the development API.</p>
+<p>The package includes the two trial-level data frames from Experiment 2 of Vadillo et al. (2025): <code>vadillo_awareness</code> for the awareness task and <code>vadillo_cuing</code> for the influence task.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/RicardoReySaez/uSDT" class="external-link">uSDT</a></span><span class="op">)</span></span>
 <span></span>
@@ -116,22 +127,27 @@
 <span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">vadillo_cuing</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/usdt_data.html">usdt_data_tasks</a></span><span class="op">(</span></span>
-<span>  direct <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span>
-<span>  indirect <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span>
+<span>  awareness <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span>
+<span>  influence <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span>
 <span>  subject_col <span class="op">=</span> <span class="st">"subj"</span>,</span>
 <span>  condition_col <span class="op">=</span> <span class="st">"condition"</span>,</span>
 <span>  condition_levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"old"</span>, noise <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span>,</span>
-<span>  response_col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="st">"judged.old"</span>, indirect <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span>
+<span>  response_col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="st">"judged.old"</span>, influence <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span>
 <span>  response_levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    direct <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>    indirect <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span></span>
+<span>    awareness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>    influence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span>  dichotomize <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="cn">FALSE</span>, indirect <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  dichotomize <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="cn">FALSE</span>, influence <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">d</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
-<p>Every column, level and format argument takes either one value for both tasks or one per task as <code>list(direct = ..., indirect = ...)</code>, so the two tasks may differ in the columns they use, in the values those columns take, and in the format they arrive in.</p>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># The same model with brms, and Bayes factors for the three hypotheses</span></span>
+<span><span class="va">fit_bayes</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">d</span>, estimation <span class="op">=</span> <span class="st">"bayesian"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_bayes</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/usdt_bf.html">usdt_bf</a></span><span class="op">(</span><span class="va">fit_bayes</span><span class="op">)</span></span></code></pre></div>
+<p>Column, level and format arguments take a shared value or task-specific values as <code>list(awareness = ..., influence = ...)</code>.</p>
 <p>The source data are from Vadillo, Malejka, and Shanks (2025), <em>Mapping the reliability multiverse of contextual cuing</em>, <a href="https://doi.org/10.1037/xlm0001410" class="external-link">doi:10.1037/xlm0001410</a>.</p>
 </div>
 </div>

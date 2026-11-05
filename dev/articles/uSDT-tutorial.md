@@ -7,44 +7,26 @@ library(uSDT)
 
 ## What is uSDT for?
 
-In many cognitive experiments, we want to know whether a stimulus or
-pattern influences behavior even when participants are not aware of it.
-To test this, researchers often collect two paired measures from the
-same participants: a **direct task** (asking directly whether they
-noticed the masked stimulus or statistical regularity) and an **indirect
-task** (measuring its behavioral effect, such as priming or faster
-response times). The `uSDT` package brings these paired data together
-into a hierarchical Signal Detection Theory (SDT) framework, helping you
-test key hypotheses about unconscious processing within a single unified
-model.
+uSDT models paired **awareness** and **influence** measures from the
+same participants. It estimates their mean sensitivities,
+between-subject variation and latent association. The latent regression
+estimates influence sensitivity at zero awareness sensitivity.
+Interpreting this as unconscious processing requires a suitable model
+and an adequate awareness measure.
 
-In this tutorial, you will walk through three straightforward steps:
-
-1.  **Prepare your data:** Use
-    [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
-    or
-    [`usdt_data_long()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
-    to get your paired measures ready for modeling.
-2.  **Fit the model:** Run
-    [`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
-    to fit the hierarchical SDT model. This model estimates overall task
-    sensitivities, subject-specific sensitivity values, and tests three
-    key hypotheses about unconscious processing.
-3.  **Inspect the results:** Visualize key model estimates with
-    [`plot()`](https://rdrr.io/r/graphics/plot.default.html), quantify
-    reliability at both the group and subject-specific levels with
-    [`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md),
-    or add parametric bootstrap inference with
-    [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_boot.md)
-    if needed.
+Prepare the data with
+[`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md),
+fit with
+[`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md),
+then inspect the tests, plots and reliability.
 
 ## The data
 
-To illustrate the workflow, `uSDT` includes trial-level data from a
-contextual cuing experiment (Experiment 2 in [Vadillo, Malejka, &
-Shanks, 2025](https://doi.org/10.1037/xlm0001410)). The direct task
-(`vadillo_awareness`) is an explicit recognition test where participants
-judged whether a search display was repeated (`old`) or novel (`new`):
+The package includes Experiment 2 of [Vadillo, Malejka, and Shanks
+(2025)](https://doi.org/10.1037/xlm0001410). `vadillo_awareness`
+contains old/new recognition judgements. `vadillo_cuing` contains search
+response times. Contextual cuing predicts faster responses to repeated
+(`old`) displays.
 
 ``` r
 
@@ -66,10 +48,6 @@ head(vadillo_awareness)
     5 color set size 8
     6   b/w set size 8
 
-The indirect task (`vadillo_cuing`) measures the visual search itself
-through response times. Contextual cuing occurs if participants find
-targets faster in repeated (`old`) displays than in `new` ones:
-
 ``` r
 
 head(vadillo_cuing)
@@ -90,91 +68,59 @@ head(vadillo_cuing)
     5       old no offset color  set size 8
     6       old    offset   b/w  set size 8
 
-Both datasets share the subject identifier column (`subj`) and condition
-labels (`old` / `new`). In your own data, the column names and condition
-labels do not need to match between tasks, but **participants must share
-the same subject IDs across both datasets**.
+Subject IDs link participants across tasks. Individual trials need not
+be paired. Column names and condition labels may differ between tasks.
+
+This example uses all supplied trials, including search errors, across
+blocks and display conditions. It demonstrates the package workflow
+using the source data. Define exclusions and select the relevant trials
+before dichotomizing. The package does not remove errors or RT outliers
+automatically.
 
 ## Preparing the data
 
 [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
-combines the two tasks into a single paired dataset. You specify the
-subject, condition, and response columns, and map their levels to signal
-and noise roles.
-
-Whenever an argument is shared across both tasks, you can pass **a
-single value** (like `subject_col = "subj"`). When tasks differ, provide
-**a list per task** using `list(direct = ..., indirect = ...)`:
+takes one data frame per task. Give shared arguments once and
+task-specific arguments as `list(awareness = ..., influence = ...)`.
 
 ``` r
 
 data_usdt <- usdt_data_tasks(
-  # One data frame per task
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
-
-  # Shared subject column
-  subject_col = "subj",
-
-  # Condition mapping (shared column name and labels here)
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
+  subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-
-  # Response columns differ: judgements vs continuous response times
-  response_col = list(direct = "judged.old", indirect = "rt"),
-
-  # How responses map to signal vs noise
-  response_levels = list(
-    direct   = c(signal = 1, noise = 0),
-    indirect = c(signal = "faster", noise = "slower")
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(
+    awareness = c(signal = 1, noise = 0),
+    influence = c(signal = "faster", noise = "slower")
   ),
-
-  # Dichotomize continuous response times using a median split
-  dichotomize = list(direct = FALSE, indirect = TRUE),
-  
-  # Contrast coding scheme across conditions (deviation by-default)
-  coding = "deviation"
+  dichotomize = list(awareness = FALSE, influence = TRUE)
 )
 ```
 
-### Condition coding: deviation vs treatment
+The median split is computed **within subject, pooling conditions**
+(Meyen et al., 2022). RTs below the median become signal responses. Ties
+become noise responses by default. A hit is an old display searched
+faster than the median. A false alarm is a new display searched faster
+than the median. The resulting d' measures discrimination by this binary
+classifier.
 
-The `coding` argument only affects what the response criterion (also
-called “bias parameter”) represents in the model. Task sensitivity (d')
-remains identical under both schemes:
-
-- **`"deviation"` (default):** Codes signal as +0.5 and noise as -0.5.
-  The intercept reflects the overall response bias centered between both
-  stimulus distributions.
-- **`"treatment"`:** Codes noise as 0 and signal as 1. The intercept
-  reflects the criterion relative only to the baseline (noise)
-  condition.
-
-By default, `uSDT` uses deviation coding.
-
-### How the median split works
-
-Setting `dichotomize = list(direct = FALSE, indirect = TRUE)` converts
-continuous RTs into binary responses via a median split computed within
-each subject across all trials, following the approach proposed by
-[Meyen et al. (2022)](https://doi.org/10.1037/xge0001065). In this case:
-
-- RTs below the subject’s median count as `"faster"` (signal responses).
-- A `"hit"` is an old display searched faster than the median, while a
-  `"false alarm"` is a new display searched faster than the median.
-
-By design, splitting exactly at the median balances fast and slow
-responses across trials. **Under deviation coding**, this balance
-centers the indirect decision criterion at zero (c \approx 0). Because
-of this,
+With balanced signal/noise trials and an exact half split, the classical
+criterion is zero under the default deviation coding. Ties, odd trial
+counts or unequal condition counts can change this.
 [`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
-fixes the indirect criterion to zero by default whenever the mean
-absolute subject criterion is below 0.02 (you can override this with
-`fix_criteria = "none"`).
+fixes a dichotomized task’s criterion to zero when its mean absolute
+subject criterion is below 0.02. `fix_criteria = "none"` estimates all
+criteria.
 
-### Inspecting the prepared data
-
-Printing the object gives a quick sanity check before fitting the model:
+`coding = "deviation"` codes signal/noise as +0.5/-0.5, so the probit
+intercept is -c. Treatment coding uses 1/0, giving the intercept
+z(FAR)=-\lambda, where \lambda=c+d'/2. Both define sensitivity as
+d'=z(HR)-z(FAR). They specify different random-effects models when
+criteria and sensitivities are constrained to independent blocks, so
+fitted sensitivities need not be identical.
 
 ``` r
 
@@ -192,52 +138,39 @@ data_usdt
     ── Variable mapping ────────────────────────────────────────────────────────────
 
       Variable       Task       Column          Signal        Noise
-      subject        Direct     subj            -             -
-                     Indirect   subj            -             -
-      condition      Direct     condition       old           new
-                     Indirect   condition       old           new
-      response       Direct     judged.old      1             0
-                     Indirect   rt              faster        slower  [Meyen split]
+      subject        Awareness  subj            -             -
+                     Influence  subj            -             -
+      condition      Awareness  condition       old           new
+                     Influence  condition       old           new
+      response       Awareness  judged.old      1             0
+                     Influence  rt              faster        slower  [Meyen split]
 
     ── Descriptives: median [min, max] across subjects ─────────────────────────────
 
       Task       Trials/cell                  HR                 FAR   d' (method-of-moments)
-      Direct              32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
-      Indirect           192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
+      Awareness           32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
+      Influence          192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
 
       No cells at floor or ceiling.
 
-Take a moment to inspect the three sections of this summary:
+Check subject overlap, role mappings, trial counts and extreme rates.
+The model uses two binomial rows per task and subject (signal and
+noise), four rows per subject here. Extreme rates are fitted directly.
+Descriptive d' values use the Hautus correction where needed.
 
-- **Data summary:** Confirms subject overlap (e.g., all 104 participants
-  completed both tasks) and shows how raw trials were aggregated into 4
-  condition-by-response cells per subject. It also reminds you of the
-  chosen `coding`.
-- **Variable mapping:** Verifies that your column names and signal/noise
-  assignments match your experimental expectations (including the
-  `[Meyen split]` flag on the indirect RTs).
-- **Descriptives:** Reports the median and range of hit rates (HR),
-  false alarm rates (FAR), and descriptive d' across subjects. It also
-  warns if any participants hit floor or ceiling rates, which helps
-  catch data issues early.
+For a single long-format frame, use
+[`usdt_data_long()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
+with `task_col` and `task_levels = c(awareness = "A", influence = "I")`.
 
 ## Fitting the model
 
-Once the data are prepared,
 [`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
-fits the hierarchical SDT model via a binomial probit generalized linear
-mixed model (implemented with `lme4`). The model estimates the average
-sensitivity (d') for each task along with between-subjects individual
-differences. You can inspect the parameter estimates, random-effects,
-and hypothesis tests using
-[`summary()`](https://rdrr.io/r/base/summary.html):
+fits a binomial probit mixed model by maximum likelihood with the
+Laplace approximation in lme4.
 
 ``` r
 
-# Fit hierarchical SDT model
 fit_uSDT <- hsdt(data_usdt)
-
-# Check model results
 summary(fit_uSDT)
 ```
 
@@ -247,185 +180,182 @@ summary(fit_uSDT)
       Observations:   416 aggregated rows (46,592 trials)
       Family:         binomial (probit)
       Coding:         deviation
-      Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
-      Estimation:     lme4::glmer (bobyqa)
+      Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
+      Estimation:     lme4::glmer (Nelder_Mead), tried bobyqa -> Nelder_Mead
       Convergence:    TRUE
 
     ── Fixed effects ───────────────────────────────────────────────────────────────
 
       Parameter      Task       Estimate       SE  95% CI                   z   p-value
-      criterion      Direct      -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
-      d'             Direct       0.2354   0.0335  [  0.170,  0.301]     7.03     <.001
-      d'             Indirect     0.1283   0.0153  [  0.098,  0.158]     8.41     <.001
+      criterion      Awareness   -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
+      d'             Awareness    0.2354   0.0335  [  0.170,  0.301]     7.03     <.001
+      d'             Influence    0.1283   0.0153  [  0.098,  0.158]     8.41     <.001
 
     ── Random effects ──────────────────────────────────────────────────────────────
 
       Parameter      Task       Estimate       SE  95% CI            
-      sd(criterion)  Direct       0.2473   0.0246  [  0.203,  0.301]
-      sd(d')         Direct       0.1219   0.0666  [  0.042,  0.356]
-      sd(d')         Indirect     0.0883   0.0190  [  0.058,  0.135]
-      cor(d')        both         0.4912   0.5190  [ -0.666,  0.954]
+      sd(criterion)  Awareness    0.2473   0.0246  [  0.204,  0.301]
+      sd(d')         Awareness    0.1219   0.0666  [  0.042,  0.356]
+      sd(d')         Influence    0.0883   0.0190  [  0.058,  0.135]
+      cor(d')        both         0.4910   0.5188  [ -0.665,  0.954]
 
     ── Hypotheses ──────────────────────────────────────────────────────────────────
 
-    H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+    H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
       Parameter       Estimate       SE  95% CI                   z   p-value
-      Δd' (I - D)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
+      Δd' (I - A)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
 
     H2: Correlation between sensitivities across tasks
       Parameter       Estimate       SE  95% CI                   z   p-value
-      rho               0.4912   0.5190  [ -0.666,  0.954]     1.01      .313
+      rho               0.4910   0.5188  [ -0.665,  0.954]     1.01      .313
 
-    H3: Latent regression of Indirect d' on Direct d'
+    H3: Latent regression of Influence d' on Awareness d'
       Parameter       Estimate       SE  95% CI                   z   p-value
-      Intercept         0.0445   0.1160  [ -0.183,  0.272]     0.38      .701
-      Slope             0.3561   0.4870  [ -0.599,  1.311]     1.01      .313
+      Intercept         0.0445   0.1159  [ -0.183,  0.272]     0.38      .701
+      Slope             0.3558   0.4865  [ -0.598,  1.309]     1.01      .313
 
     ── Notes ───────────────────────────────────────────────────────────────────────
 
       Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.
 
-### Understanding fixed and random effects
+Fixed sensitivity effects are task means. Random effects describe
+subject departures. `sd(d')` measures between-subject variation and
+`cor(d')` the latent correlation. Subject estimates combine the fixed
+effects with conditional random-effect modes. Inspect convergence and
+singularity before interpreting the tests.
 
-The summary breaks the model into two primary structural components
-before presenting hypothesis tests:
+### The three hypotheses
 
-- **Fixed effects (group-level means):** The fixed estimates describe
-  average task performance across all participants. Here, mean
-  sensitivity is reliably above zero in both the direct task
-  (`d' = 0.24`, p \< .001) and the indirect task (`d' = 0.13`, p \<
-  .001), indicating above-chance recognition and a significant
-  contextual cuing effect overall. The direct criterion (`-0.04`, p =
-  .215) shows no substantial group-level response bias. As determined
-  during data preparation, the indirect criterion is fixed to zero and
-  therefore omitted from estimation.
-- **Random effects (individual differences):** These parameters capture
-  between-subject variability around the group means. The standard
-  deviations (`sd(d')`) reflect individual variability in sensitivity
-  for both tasks. The correlation parameter (`cor(d') = 0.49`) estimates
-  the latent association between direct and indirect sensitivity across
-  participants, though its wide confidence interval indicates
-  considerable uncertainty around this estimate.
+The default tests are two-sided against zero, without multiplicity
+adjustment.
 
-### Testing unconscious processing: The three hypotheses
+- **H1, mean difference:** \Delta d'=\mu_I-\mu_A (influence minus
+  awareness). Here it is -0.11, 95% CI \[-0.18, -0.04\]. The interval is
+  below zero, favouring awareness sensitivity. An influence advantage
+  would require a positive difference. Its interpretation also depends
+  on how the tasks measure conscious information.
+- **H2, latent correlation:** \rho= 0.49, 95% CI \[-0.67, 0.95\]. This
+  describes the association between latent subject sensitivities. The
+  wide interval provides little precision. A nonsignificant test does
+  not establish independence.
+- **H3, latent regression:** the slope is 0.36 and the intercept is
+  0.04, 95% CI \[-0.18, 0.27\]. The intercept is expected influence
+  sensitivity at **latent awareness sensitivity zero**, not the mean of
+  participants selected for low observed scores. Its interval includes
+  zero, leaving both zero and positive influence sensitivity compatible
+  with these data.
 
-The bottom section of the model output tests three complementary
-questions often raised in the unconscious processing literature. You can
-inspect these results directly in the main summary or extract them as a
-standalone table with `fit_uSDT$tests`.
+Writing the awareness variance as \tau_A^2 and the covariance as
+\tau\_{AI},
 
-#### H1: Group-level sensitivity difference (\Delta d')
+E(d'\_I\mid d'\_A=x)=\beta_0+\beta_1 x,\qquad
+\beta_1=\tau\_{AI}/\tau_A^2,\qquad \beta_0=\mu_I-\beta_1\mu_A.
 
-The first hypothesis asks whether the two tasks differ in their average
-sensitivity. In unconscious perception paradigms, finding that indirect
-sensitivity clearly exceeds direct sensitivity (\Delta d' \> 0) is
-sometimes taken as an indirect-task advantage—suggesting that the
-indirect measure picks up signal that conscious report misses.
+A positive intercept requires an adequate awareness measure and a
+suitable latent model to support an unconscious-processing
+interpretation. It may involve extrapolation to zero. The analytical
+tests of H2 and the H3 slope share a covariance test, so they provide
+the same test of association.
 
-In our sample, the difference is negative and significantly different
-from zero (\Delta d' = -0.11, 95% CI \[-0.18, -0.04\], p = .002). Direct
-recognition was significantly stronger than indirect contextual cuing,
-so we find no evidence of an indirect-task advantage.
+### Equivalence and one-sided tests
 
-#### H2: Latent correlation between tasks (\rho)
-
-The second test examines individual differences: do participants with
-stronger conscious recognition also display larger cuing effects? In
-some theoretical accounts, an indirect effect that operates
-independently of conscious awareness would predict a weak or near-zero
-correlation between both measures.
-
-Here, the estimated latent correlation is positive (\rho = 0.49), but it
-comes with considerable estimation uncertainty (95% CI \[-0.67, 0.95\],
-p = .313). Because the confidence interval is so wide, failing to reach
-significance here simply reflects high measurement noise around the
-correlation, rather than positive evidence that the two processes are
-dissociated. We will see this more clearly later when evaluating
-task-specific reliability.
-
-#### H3: Latent regression (Indirect d' on Direct d')
-
-The third test evaluates what happens at the boundary of awareness via a
-latent regression. Specifically, the intercept (\beta_0) estimates what
-level of indirect sensitivity we would expect when direct sensitivity is
-exactly zero (d'\_{\text{Direct}} = 0). If this intercept is
-significantly different from zero and positive, it suggests that
-participants would still show a behavioral cuing effect even without any
-conscious awareness of the stimuli.
-
-In this experiment, the regression slope is positive (\beta_1 = 0.36, p
-= .313), and the estimated intercept is slightly above zero (\beta_0 =
-0.04). However, its confidence interval easily covers zero (\[-0.18,
-0.27\], p = .701), showing no evidence of unconscious processing in the
-absence of awareness.
-
-## Reliability of individual differences
-
-Evaluating unconscious processing through individual differences is
-delicate because measurement error does not just add noise, it
-systematically biases theoretical conclusions when ignored.
-
-It is widely know that low reliability attenuates correlations toward
-zero ([Spearman, 1904](https://doi.org/10.2307/1412159)), making direct
-and indirect tasks appear falsely independent. It also flattens the
-regression slope and artificially inflates the intercept, creating the
-illusion that indirect processing persists without awareness. In
-practice, measurement error actively conspires to produce evidence of
-unconscious processing. **Fortunately, hierarchical SDT models test
-these hypotheses at the latent level, naturally accounting for
-measurement error regardless of the specific reliability values.**
-
-Even though
-[`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
-protects the tests against this bias, estimating reliability remains
-useful for understanding how well individual differences were measured.
-[`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md)
-estimates the reliability of each experimental effect treated as an
-individual-differences dimension:
+[`usdt_equivalence()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_equivalence.md)
+tests specified bounds. Choose them from theory or previous studies.
+These only illustrate the syntax.
 
 ``` r
 
-usdt_reliability(fit_uSDT)
+usdt_equivalence(fit_uSDT, c("diff in [-0.2, 0.2]", "intercept < 0.2",
+                            "rho in [-0.3, 0.3]"))
+```
+
+     uSDT hypothesis ─ Equivalence test (TOST)
+    ════════════════════════════════════════════════════════════════════════════════
+      Hypothesis (H1)             : Δd' in [-0.2, 0.2]
+      Hypothesis (H0)             : Δd' out [-0.2, 0.2]
+      Estimate                    : -0.107
+      Standard error              : 0.035
+      90% CI, Wald                : [-0.165, -0.049]
+      p-value, lower bound        : .004
+      p-value, upper bound        : <.001
+      p-value                     : .004
+      Decision (alpha = 0.05)     : H0 rejected, in favour of H1
+    ────────────────────────────────────────────────────────────────────────────────
+
+     uSDT hypothesis ─ One-sided test
+    ════════════════════════════════════════════════════════════════════════════════
+      Hypothesis (H1)             : intercept < 0.2
+      Hypothesis (H0)             : intercept >= 0.2
+      Estimate                    : 0.045
+      Standard error              : 0.116
+      90% CI, Wald                : [-0.146, 0.235]
+      p-value                     : .090
+      Decision (alpha = 0.05)     : H0 not rejected
+    ────────────────────────────────────────────────────────────────────────────────
+
+     uSDT hypothesis ─ Equivalence test (TOST)
+    ════════════════════════════════════════════════════════════════════════════════
+      Hypothesis (H1)             : rho in [-0.3, 0.3]
+      Hypothesis (H0)             : rho out [-0.3, 0.3]
+      Estimate                    : 0.491
+      Standard error              : 0.519
+      90% CI, Fisher-z            : [-0.528, 0.930]
+      p-value, lower bound        : .108
+      p-value, upper bound        : .631
+      p-value                     : .631
+      Decision (alpha = 0.05)     : H0 not rejected
+    ────────────────────────────────────────────────────────────────────────────────
+
+At \alpha=.05, equivalence and one-sided tests report 90% intervals.
+Here the sensitivity difference is equivalent within \pm0.2 despite
+being different from zero. The intercept and correlation tests do not
+establish their proposed bounds. Correlation tests use the Fisher-z
+scale, so their p-values can differ from the covariance test in
+[`usdt_tests()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.md).
+
+## Reliability of individual differences
+
+[`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md)
+estimates \tau^2/(\tau^2+\overline v) for each task: between-subject
+sensitivity variance divided by total variance, with measurement
+variance \overline v from binomial-probit information at the fitted
+probabilities.
+
+``` r
+
+reliability <- usdt_reliability(fit_uSDT)
+reliability
 ```
 
     ── Reliability summary ───────────────────────────────────────────────────────── 
 
       Task         Subjects Group-level estimate   By-subject estimate median [min, max]
-      Direct            104                 .129   .130 [.119, .131]
-      Indirect          104                 .323   .323 [.322, .323]
+      Awareness         104                 .129   .130 [.119, .131]
+      Influence         104                 .323   .323 [.322, .323]
 
-In this sample, the group-level reliability is low for both the direct
-task (`.13`) and the indirect task (`.32`). Because individual
-differences in both measures carry substantial trial noise, the model
-cannot estimate between-task associations with precision. This modest
-reliability directly explains the wide confidence intervals we observed
-earlier for the latent correlation (\rho) and the regression intercept.
-
-In addition to the overall group summary, you can inspect
-subject-specific reliability estimates. The `$subjects` element returns
-a data frame with individual values:
+Reliability is about .13 for awareness and .32 for influence. Low
+reliability can reflect little between-subject variation, substantial
+trial noise, or both. It limits precision for individual differences
+even when the mean effect is clear. The latent model accounts for trial
+noise under its assumptions. It does not guarantee unbiased or precise
+estimates in every sample.
 
 ``` r
 
-print(head(usdt_reliability(fit_uSDT)$subjects), digits = 3)
+head(reliability$subjects)
 ```
 
-        task subj dprime variance reliability
-    1 Direct 2001  0.271   0.0990       0.130
-    2 Direct 2002  0.249   0.1043       0.125
-    3 Direct 2003  0.217   0.1002       0.129
-    4 Direct 2004  0.318   0.0991       0.130
-    5 Direct 2005  0.144   0.1004       0.129
-    6 Direct 2006  0.173   0.0993       0.130
+           task subj    dprime   variance reliability
+    1 Awareness 2001 0.2707158 0.09899329   0.1305303
+    2 Awareness 2002 0.2485344 0.10427183   0.1247468
+    3 Awareness 2003 0.2172227 0.10017561   0.1291888
+    4 Awareness 2004 0.3175901 0.09908306   0.1304275
+    5 Awareness 2005 0.1444059 0.10037191   0.1289687
+    6 Awareness 2006 0.1733233 0.09926175   0.1302232
 
 ## Visualizing the model
 
-### The latent regression
-
-To make the consequences of measurement error intuitive,
-[`plot()`](https://rdrr.io/r/graphics/plot.default.html) compares a
-standard regression on observed sensitivities against the model’s latent
-regression side by side:
+### Latent regression and shrinkage
 
 ``` r
 
@@ -434,26 +364,16 @@ plot(fit_uSDT)
 
 ![](uSDT-tutorial_files/figure-html/plot-regression-1.png)
 
-The contrast between the two panels illustrates the core problem:
+The left panel regresses observed influence d' on observed awareness d'.
+Measurement error in the predictor can flatten the slope. The right
+panel draws the latent regression implied by the fitted covariance, with
+segments connecting observed pairs to their conditional model estimates.
+The line is not fitted through those partially pooled points. Its band
+is a pointwise confidence interval for the regression mean.
 
-- **Observed estimates (left panel):** Regressing raw indirect d' on raw
-  direct d' ignores measurement error. Unreliability severely flattens
-  the slope (b_1 = 0.043) and artificially pushes the intercept upward
-  (b_0 = 0.118, p \< .001). An applied researcher relying on standard
-  regression would mistakenly conclude that there is compelling evidence
-  for unconscious processing at d'\_{\text{Direct}} = 0.
-- **Model-estimated sensitivities (right panel):** The hierarchical
-  model corrects for trial-level noise. Grey segments show shrinkage
-  from raw d' to model-implied d' values (green points). Accounting for
-  unreliability steepens the latent slope (b_1 = 0.356) and pulls the
-  intercept down to near zero (b_0 = 0.044, p = .701, marked at the
-  vertical dotted line).
-
-### Shrinkage
-
-To inspect how the model pulls individual estimates toward the group
-distribution, set `type = "shrinkage"`, where grey circles show raw d',
-while green points show the model-implied d' estimates.
+Use `nrow = 2` to stack the panels and `caption = FALSE` to hide the
+caption. The shrinkage plot isolates the movement of the subject
+estimates:
 
 ``` r
 
@@ -464,9 +384,6 @@ plot(fit_uSDT, type = "shrinkage")
 
 ### Subject intervals
 
-To look at individual sensitivities relative to zero across tasks, use a
-caterpillar plot:
-
 ``` r
 
 plot(fit_uSDT, type = "caterpillar")
@@ -474,21 +391,13 @@ plot(fit_uSDT, type = "caterpillar")
 
 ![](uSDT-tutorial_files/figure-html/plot-caterpillar-1.png)
 
-The left panels show observed d' values and their 95% confidence
-intervals, whereas the right panels show model-implied d' values and
-their 95% confidence intervals. Green intervals exclude zero, whereas
-brown intervals cross the dotted vertical line.
-
-In the raw data, noisy trial estimates leave most individual intervals
-crossing zero (91% in direct, 79% in indirect). Pooling information in
-the hierarchical model shrinks extreme point estimates toward the group
-mean and tightens their uncertainty, reducing the share of intervals
-crossing zero.
+Observed intervals use Miller standard errors and a normal
+approximation. Model intervals include uncertainty in the means,
+variance components and subject effects when the joint covariance is
+available. The percentages describe intervals containing zero. They do
+not classify participants as aware or unaware.
 
 ### ROC curves
-
-To view task performance within standard Signal Detection Theory space,
-set `type = "roc"`:
 
 ``` r
 
@@ -497,12 +406,10 @@ plot(fit_uSDT, type = "roc")
 
 ![](uSDT-tutorial_files/figure-html/plot-roc-1.png)
 
-The plot draws model-implied, equal-variance ROC curves for each task
-based on the group-level parameter estimates. The circular markers
-indicate the operating point determined by the fitted response criterion
-(c), accompanied by their 95% Wald bands and Area Under the Curve (AUC)
-values. You can also inspect individual participants by supplying a
-`subject_id`:
+These equal-variance SDT curves describe a subject whose random effects
+are set to zero. Points mark fitted criteria and bands transform the
+sensitivity intervals. Binary responses identify one operating point per
+task. The full curves follow from the model.
 
 ``` r
 
@@ -511,20 +418,14 @@ plot(fit_uSDT, type = "roc", subject_id = 2040)
 
 ![](uSDT-tutorial_files/figure-html/plot-roc-subject-1.png)
 
-The solid curves and points reflect that participant’s partially pooled
-estimates, while the dashed lines keep the population curves in the
-background for visual reference.
+Subject curves use partially pooled estimates, with population curves
+dashed behind them. Their bands condition on the fitted population
+parameters.
 
-## Where to go from here
+## Further analyses
 
-### Parametric bootstrap inference
-
-Analytical standard errors and Wald intervals can become unreliable when
-variance components approach zero or correlations sit near boundaries
-(\pm 1). For more robust inference,
 [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_boot.md)
-implements a parametric bootstrap that simulates new data from the
-fitted model and refits each replicate.
+adds parametric bootstrap inference to a frequentist fit:
 
 ``` r
 
@@ -533,25 +434,24 @@ summary(fit_boot)
 fit_boot$tests
 ```
 
-A few practical considerations when bootstrapping:
+At least 500 usable replicates are required before bootstrap inference
+replaces the analytical results. Converged boundary refits are retained
+when all hypothesis estimates are finite. Inspect failures and retained
+boundary counts in `fit_boot$boot`. The bootstrap simulates binary
+responses at the original cell sizes. It does not repeat the RT median
+split or resolve a lack of information in the design. Read the returned
+`$tests` table to retain bootstrap results.
+[`usdt_tests()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.md)
+recomputes analytical tests.
 
-- **Convergence and filtering:** The function automatically discards
-  non-converged refits, tracking diagnostic flags in the output. A
-  minimum of 500 valid bootstrap replicates is recommended for
-  trustworthy confidence intervals.
-- **Dichotomized designs:** The simulation generates binary trial
-  responses at the original cell sizes without repeating upstream steps
-  like response-time median splits.
-- **Information limits:** While bootstrapping resolves boundary issues
-  in Wald approximations, it remains conditional on the model and cannot
-  compensate for an inherently underpowered design.
-
-### Long-format datasets
-
-If your direct and indirect data already reside in a single data frame
-with a task column, you can prepare them directly using
-[`usdt_data_long()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
-by specifying `task_col` and `task_levels`.
+[Bayesian
+estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.md)
+covers priors, posterior summaries and Bayes factors with
+`hsdt(estimation = "bayesian")`. [Planning a
+study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.md)
+covers power, sample sizes and detectable effects. For covariates, see
+the custom lme4 and brms examples in
+[`usdt_tests()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.md).
 
 ## References
 
@@ -559,10 +459,6 @@ Meyen, S., Zerweck, I. A., Amado, C., von Luxburg, U., & Franz, V. H.
 (2022). Advancing research on unconscious priming: When can scientists
 claim an indirect task advantage? *Journal of Experimental Psychology:
 General*, 151(1), 65-81. <https://doi.org/10.1037/xge0001065>
-
-Spearman, C. (1904). The proof and measurement of association between
-two things. *The American Journal of Psychology, 15*(1), 72–101.
-<https://doi.org/10.2307/1412159>
 
 Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the
 reliability multiverse of contextual cuing. *Journal of Experimental

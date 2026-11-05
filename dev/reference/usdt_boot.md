@@ -26,8 +26,9 @@ usdt_boot(
 
 - object:
 
-  An `hsdt` object fitted by
+  A frequentist `hsdt` object fitted by
   [`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md).
+  A Bayesian fit already carries the posterior of every quantity.
 
 - nsim:
 
@@ -62,7 +63,7 @@ usdt_boot(
   Type of bootstrap interval: `"perc"` (percentile), `"norm"` (normal
   approximation with bias correction), or `"basic"` (empirical basic).
   For correlations, `"norm"` and `"basic"` operate on the Fisher-\\z\\
-  scale; if the sample correlation lies on the boundary (-1 or 1), these
+  scale. If the sample correlation lies on the boundary (-1 or 1), these
   types return `NA`, whereas `"perc"` remains available.
 
 ## Value
@@ -83,10 +84,12 @@ by bootstrap estimates. A new `$boot` element contains:
 
 ## Details
 
-Replicates are dropped only if the model fails to fit or does not
-converge. Singular fits and boundary estimates are intentionally
-retained because discarding them artificially narrows intervals in
-constrained settings.
+Refits are retained if they converge and all four hypothesis estimates
+are finite, including singular or boundary refits meeting those
+conditions. Inspect `$boot$failures` and `$boot$retained`. For
+dichotomized data, the bootstrap simulates binary responses, without
+repeating the median split. It remains conditional on the fitted model
+and available information.
 
 When an attempted run finishes with fewer than 500 usable replicates,
 the original Wald intervals are preserved, a warning is issued, and raw
@@ -107,15 +110,16 @@ centered bootstrap distribution using standard finite-sample adjustment
 ``` r
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)
@@ -133,40 +137,40 @@ summary(b)
 #>   Observations:   416 aggregated rows (46,592 trials)
 #>   Family:         binomial (probit)
 #>   Coding:         deviation
-#>   Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
-#>   Estimation:     lme4::glmer (bobyqa)
+#>   Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
+#>   Estimation:     lme4::glmer (Nelder_Mead), tried bobyqa -> Nelder_Mead
 #>   Convergence:    TRUE
-#>   Bootstrap:      500 usable replicates (508 attempts; 190 at the boundary)
+#>   Bootstrap:      500 usable replicates (545 attempts; 175 at the boundary)
 #> 
 #> ── Fixed effects ───────────────────────────────────────────────────────────────
 #> 
 #>   Parameter      Task       Estimate       SE  95% CI                   z   p-value
-#>   criterion      Direct      -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
-#>   d'             Direct       0.2354   0.0335  [  0.170,  0.301]     7.03     <.001
-#>   d'             Indirect     0.1283   0.0153  [  0.098,  0.158]     8.41     <.001
+#>   criterion      Awareness   -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
+#>   d'             Awareness    0.2354   0.0335  [  0.170,  0.301]     7.03     <.001
+#>   d'             Influence    0.1283   0.0153  [  0.098,  0.158]     8.41     <.001
 #> 
 #> ── Random effects ──────────────────────────────────────────────────────────────
 #> 
 #>   Parameter      Task       Estimate       SE  95% CI            
-#>   sd(criterion)  Direct       0.2473   0.0246  [  0.203,  0.301]
-#>   sd(d')         Direct       0.1219   0.0666  [  0.042,  0.356]
-#>   sd(d')         Indirect     0.0883   0.0190  [  0.058,  0.135]
-#>   cor(d')        both         0.4912   0.5202  [ -1.000,  1.000]
+#>   sd(criterion)  Awareness    0.2473   0.0246  [  0.204,  0.301]
+#>   sd(d')         Awareness    0.1219   0.0666  [  0.042,  0.356]
+#>   sd(d')         Influence    0.0883   0.0190  [  0.058,  0.135]
+#>   cor(d')        both         0.4910   0.4949  [ -1.000,  1.000]
 #> 
 #> ── Hypotheses ──────────────────────────────────────────────────────────────────
 #> 
-#> H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+#> H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
 #>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
-#>   Δd' (I - D)       -0.1071   0.0346  [ -0.174, -0.038]                 .004
+#>   Δd' (I - A)       -0.1071   0.0364  [ -0.179, -0.033]                 .004
 #> 
 #> H2: Correlation between sensitivities across tasks
 #>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
-#>   rho                 0.4912   0.5202  [ -1.000,  1.000]                 .483
+#>   rho                 0.4910   0.4949  [ -1.000,  1.000]                 .459
 #> 
-#> H3: Latent regression of Indirect d' on Direct d'
+#> H3: Latent regression of Influence d' on Awareness d'
 #>   Parameter         Estimate  Boot SE  Boot 95% CI (percentile)  Boot p-value
-#>   Intercept           0.0445   0.8949  [ -1.125,  0.670]                 .685
-#>   Slope               0.3561   3.9094  [ -2.224,  5.438]                 .441
+#>   Intercept           0.0445 112650529.3249  [ -1.345,  0.341]                 .677
+#>   Slope               0.3558 489817354.3244  [ -0.875,  6.049]                 .425
 
 # Check fit diagnostics across bootstrap replicates
 b$boot[c("usable", "attempted", "retained", "failures")]
@@ -174,15 +178,15 @@ b$boot[c("usable", "attempted", "retained", "failures")]
 #> [1] 500
 #> 
 #> $attempted
-#> [1] 508
+#> [1] 545
 #> 
 #> $retained
 #> singular boundary 
-#>      187      190 
+#>      162      175 
 #> 
 #> $failures
 #>    non_finite non_converged 
-#>             7             1 
+#>             2            43 
 #> 
 # }
 ```

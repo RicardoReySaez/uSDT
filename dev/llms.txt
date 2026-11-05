@@ -1,15 +1,16 @@
 # uSDT
 
-`uSDT` estimates hierarchical signal detection theory (SDT) models for
-research on unconscious processing. It jointly models sensitivity in
-paired direct and indirect measures, allowing researchers to compare
-both sensitivities, estimate their latent association, and test indirect
-sensitivity when direct sensitivity is zero.
+`uSDT` fits hierarchical signal detection theory models to paired
+awareness and influence measures. It compares mean sensitivities,
+estimates their latent association and tests influence sensitivity at
+zero awareness sensitivity. Development features include Bayesian
+estimation with brms and Bayes factors, and study planning for power,
+precision, cost and detectable effects.
 
 ## Documentation
 
-The package website is at **<https://ricardoreysaez.github.io/uSDT/>**.
-It contains:
+The package website is at **<https://ricardoreysaez.github.io/uSDT/>**
+and documents the version on CRAN. It contains:
 
 - [Getting
   started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
@@ -19,6 +20,18 @@ It contains:
   the help page of every function.
 - [Changelog](https://ricardoreysaez.github.io/uSDT/news/index.html),
   the changes in each release.
+
+The development version from GitHub has its own website at
+**<https://ricardoreysaez.github.io/uSDT/dev/>**, with two additional
+tutorials:
+
+- [Bayesian
+  estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html),
+  the same analysis with priors, posterior summaries and Bayes factors.
+- [Planning a uSDT
+  study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html),
+  power analysis and the choice of subjects and trials, with the
+  tutorial data as a pilot study.
 
 ## Installation
 
@@ -34,14 +47,20 @@ Or install the development version from GitHub:
 ``` r
 
 # install.packages("pak")
-pak::pak("RicardoReySaez/uSDT")
+pak::pak("RicardoReySaez/uSDT@dev")
 ```
+
+The development version installs `brms`. Bayesian fitting also needs a
+C++ toolchain and either rstan with `BH` and `RcppEigen`, or cmdstanr
+with CmdStan.
 
 ## Example: Vadillo et al. data
 
+The examples below use the development API.
+
 The package includes the two trial-level data frames from Experiment 2
-of Vadillo et al. (2025): `vadillo_awareness` for the direct task and
-`vadillo_cuing` for the indirect task.
+of Vadillo et al. (2025): `vadillo_awareness` for the awareness task and
+`vadillo_cuing` for the influence task.
 
 ``` r
 
@@ -51,27 +70,30 @@ data(vadillo_awareness)
 data(vadillo_cuing)
 
 d <- usdt_data_tasks(
-  direct = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col = "subj",
   condition_col = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col = list(direct = "judged.old", indirect = "rt"),
+  response_col = list(awareness = "judged.old", influence = "rt"),
   response_levels = list(
-    direct = c(signal = 1, noise = 0),
-    indirect = c(signal = "faster", noise = "slower")
+    awareness = c(signal = 1, noise = 0),
+    influence = c(signal = "faster", noise = "slower")
   ),
-  dichotomize = list(direct = FALSE, indirect = TRUE)
+  dichotomize = list(awareness = FALSE, influence = TRUE)
 )
 
 fit <- hsdt(d)
 summary(fit)
+
+# The same model with brms, and Bayes factors for the three hypotheses
+fit_bayes <- hsdt(d, estimation = "bayesian")
+summary(fit_bayes)
+usdt_bf(fit_bayes)
 ```
 
-Every column, level and format argument takes either one value for both
-tasks or one per task as `list(direct = ..., indirect = ...)`, so the
-two tasks may differ in the columns they use, in the values those
-columns take, and in the format they arrive in.
+Column, level and format arguments take a shared value or task-specific
+values as `list(awareness = ..., influence = ...)`.
 
 The source data are from Vadillo, Malejka, and Shanks (2025), *Mapping
 the reliability multiverse of contextual cuing*,
@@ -81,7 +103,8 @@ the reliability multiverse of contextual cuing*,
 
 ## Prepare the data
 
-Build paired task data and dichotomize continuous responses.
+Build paired task data, dichotomize continuous responses and count
+trials for custom binomial models.
 
 - [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
   [`usdt_data_long()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_data.md)
@@ -89,6 +112,8 @@ Build paired task data and dichotomize continuous responses.
   : Prepare data for hierarchical SDT models
 - [`meyen_split()`](https://ricardoreysaez.github.io/uSDT/dev/reference/meyen_split.md)
   : Dichotomize response times into binary choices
+- [`usdt_aggregate()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_aggregate.md)
+  : Count binary responses by group
 
 ## Estimate descriptive SDT measures
 
@@ -106,12 +131,25 @@ Estimate the paired sensitivities with a binomial probit mixed model.
   [`print(`*`<hsdt>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
   : Fit a hierarchical signal detection theory model
 
+## Specify the Bayesian priors
+
+Choose the prior distributions of the Bayesian model and check what they
+imply.
+
+- [`usdt_priors()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_priors.md)
+  [`print(`*`<usdt_priors>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_priors.md)
+  : Priors for the Bayesian hierarchical SDT model
+- [`plot(`*`<usdt_priors>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot.usdt_priors.md)
+  : Prior predictive check for the Bayesian hierarchical SDT model
+
 ## Test hypotheses and bootstrap uncertainty
 
-sensitivity_diff() compares mean sensitivities; latent_cor() estimates
-their latent correlation; latent_regression() estimates the intercept
+sensitivity_diff() compares mean sensitivities. Latent_cor() estimates
+their latent correlation. Latent_regression() estimates the intercept
 and slope. usdt_tests() collects all three hypotheses. usdt_boot() adds
 parametric bootstrap inference to a fitted uSDT model.
+usdt_equivalence() tests equivalence, non-inferiority and minimal-effect
+hypotheses about the same quantities.
 
 - [`usdt_tests()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.md)
   [`sensitivity_diff()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_hypotheses.md)
@@ -120,6 +158,51 @@ parametric bootstrap inference to a fitted uSDT model.
   : Test the three core hypotheses of a hierarchical SDT model
 - [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_boot.md)
   : Parametric bootstrap intervals for hierarchical SDT models
+- [`usdt_equivalence()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_equivalence.md)
+  [`print(`*`<usdt_equivalence>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_equivalence.md)
+  : Equivalence, non-inferiority and minimal-effect tests
+
+## Bayes factors
+
+Test point, directional and interval hypotheses about the difference,
+correlation and latent regression of a Bayesian fit, and plot their
+prior and posterior.
+
+- [`usdt_bf()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_bf.md)
+  [`print(`*`<usdt_bf>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_bf.md)
+  : Bayes factors for the hypotheses of a Bayesian hierarchical SDT
+  model
+- [`plot(`*`<usdt_bf>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot.usdt_bf.md)
+  : Plot the prior and posterior of tested quantities
+
+## Plan a study
+
+Describe the population a planned study samples from, in either
+parameterization of the model or from the estimates of a pilot study.
+Compute the power of the three hypotheses for a number of subjects and
+of trials per task. Choose the subjects and trials at the lowest cost
+and find the smallest effect a design detects.
+
+- [`usdt_population()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_population.md)
+  [`print(`*`<usdt_population>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_population.md)
+  [`update(`*`<usdt_population>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_population.md)
+  : Population values for planning a uSDT study
+- [`usdt_power()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_power.md)
+  [`print(`*`<usdt_power>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_power.md)
+  [`summary(`*`<usdt_power>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_power.md)
+  [`print(`*`<summary.usdt_power>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_power.md)
+  : Power of a planned uSDT study
+- [`usdt_plan()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_plan.md)
+  [`print(`*`<usdt_plan>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_plan.md)
+  : Plan the subjects and trials of a uSDT study
+- [`usdt_mdes()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_mdes.md)
+  [`print(`*`<usdt_mdes>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_mdes.md)
+  : Smallest effect a uSDT study detects
+- [`plot(`*`<usdt_population>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot_power.md)
+  [`plot(`*`<usdt_power>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot_power.md)
+  [`plot(`*`<usdt_mdes>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot_power.md)
+  [`plot(`*`<usdt_plan>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/plot_power.md)
+  : Plot a population, its power, its smallest effects or a plan
 
 ## Visualize the fit and estimate reliability
 
@@ -131,7 +214,7 @@ reliability.
 - [`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md)
   [`summary(`*`<usdt_reliability>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md)
   [`print(`*`<usdt_reliability>`*`)`](https://ricardoreysaez.github.io/uSDT/dev/reference/usdt_reliability.md)
-  : Reliability of direct and indirect task measures
+  : Reliability of awareness and influence task measures
 
 ## Example datasets
 
@@ -153,3 +236,19 @@ Trial-level data from Experiment 2 of Vadillo, Malejka and Shanks
   A complete pass over the uSDT workflow, from two trial-level data
   frames to the three hypotheses of the unconscious-processing design,
   using the contextual cuing data of Vadillo, Malejka and Shanks (2025).
+
+- [Bayesian estimation with
+  uSDT](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.md):
+
+  The Bayesian side of uSDT on the contextual cuing data of the
+  tutorial: priors, a brms fit of the hierarchical SDT model, the three
+  hypotheses, Bayes factors, the plots and the latent regression
+  parameterization.
+
+- [Planning a uSDT
+  study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.md):
+
+  How many subjects, and how many trials in each task? The power of the
+  three hypotheses, the cheapest design that reaches it, the smallest
+  effect a design detects and a check by simulation, with the contextual
+  cuing data of Vadillo, Malejka and Shanks (2025) as a pilot study.

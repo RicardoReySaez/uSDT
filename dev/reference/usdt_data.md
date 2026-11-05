@@ -1,6 +1,7 @@
 # Prepare data for hierarchical SDT models
 
-Formats direct and indirect task data into a standardized structure for
+Formats awareness and influence task data into a standardized structure
+for
 [`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md).
 Use `usdt_data_tasks()` when tasks are stored in separate data frames,
 or `usdt_data_long()` when both tasks are kept in a single data frame
@@ -10,8 +11,8 @@ with a column that identifies each task.
 
 ``` r
 usdt_data_tasks(
-  direct,
-  indirect,
+  awareness,
+  influence,
   subject_col,
   condition_col = NULL,
   condition_levels = NULL,
@@ -21,10 +22,10 @@ usdt_data_tasks(
   trials_col = NULL,
   successes_type = c("auto", "counts", "proportions"),
   sdt_cols = NULL,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   ties = c("noise", "random"),
   coding = c("deviation", "treatment"),
-  labels = c(direct = "Direct", indirect = "Indirect")
+  labels = c(awareness = "Awareness", influence = "Influence")
 )
 
 usdt_data_long(
@@ -40,7 +41,7 @@ usdt_data_long(
   trials_col = NULL,
   successes_type = c("auto", "counts", "proportions"),
   sdt_cols = NULL,
-  dichotomize = c("none", "indirect", "direct", "both"),
+  dichotomize = c("none", "influence", "awareness", "both"),
   ties = c("noise", "random"),
   coding = c("deviation", "treatment"),
   labels = NULL
@@ -52,7 +53,7 @@ print(x, ...)
 
 ## Arguments
 
-- direct, indirect:
+- awareness, influence:
 
   Data frames for each task (used in `usdt_data_tasks()`).
 
@@ -101,8 +102,8 @@ print(x, ...)
 
   Which tasks to split at the median using
   [`meyen_split()`](https://ricardoreysaez.github.io/uSDT/dev/reference/meyen_split.md).
-  Use `"none"`, `"direct"`, `"indirect"`, `"both"`, or a list like
-  `list(direct = FALSE, indirect = TRUE)`.
+  Use `"none"`, `"awareness"`, `"influence"`, `"both"`, or a list like
+  `list(awareness = FALSE, influence = TRUE)`.
 
 - ties:
 
@@ -129,7 +130,7 @@ print(x, ...)
 - task_levels:
 
   Named vector mapping task labels, like
-  `c(direct = "D", indirect = "I")`.
+  `c(awareness = "A", influence = "I")`.
 
 - x:
 
@@ -157,10 +158,11 @@ can verify the column settings before fitting the model.
 Arguments for columns and levels take either a single value (used for
 both tasks) or a list with separate settings for each task:
 
-    condition_col    = list(direct = "cond", indirect = "cue")
-    condition_levels = list(direct   = c(signal = "old", noise = "new"),
-                            indirect = c(signal = "congruent", noise = "incongruent"))
-    dichotomize      = list(direct = FALSE, indirect = TRUE)
+    condition_col    = list(awareness = "cond", influence = "cue")
+    condition_levels = list(awareness = c(signal = "old", noise = "new"),
+                            influence = c(signal = "congruent",
+                                          noise = "incongruent"))
+    dichotomize      = list(awareness = FALSE, influence = TRUE)
 
 This works for all column and level arguments, so you can combine
 trial-level data in one task with summary tables in the other.
@@ -172,9 +174,12 @@ criterion measured from the point between the two distributions. Under
 `"treatment"` coding (0 vs. 1), the intercept is \\z(\mathrm{FAR})\\,
 the criterion measured from the noise distribution.
 
-When a task is split at the median, deviation coding sets the group
-criterion to zero in balanced designs, so the model does not need to
-estimate it.
+With balanced signal/noise trials and an exact half split, the classical
+criterion is zero under deviation coding. Ties, odd counts or imbalance
+can change this.
+[`hsdt()`](https://ricardoreysaez.github.io/uSDT/dev/reference/hsdt.md)
+fixes a dichotomized task's criterion only when its mean absolute
+descriptive subject criterion is below 0.02.
 
 ## See also
 
@@ -186,18 +191,19 @@ estimate it.
 
 ``` r
 # 1. Tasks in separate data frames
-# Direct task: binary choices (old/new)
-# Indirect task: response times (split at the median)
+# Awareness task: binary choices (old/new)
+# Influence task: response times (split at the median)
 d_separate <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 d_separate
 #> ── Data summary ──────────────────────────────────────────────────────────────── 
@@ -211,24 +217,24 @@ d_separate
 #> ── Variable mapping ────────────────────────────────────────────────────────────
 #> 
 #>   Variable       Task       Column          Signal        Noise
-#>   subject        Direct     subj            -             -
-#>                  Indirect   subj            -             -
-#>   condition      Direct     condition       old           new
-#>                  Indirect   condition       old           new
-#>   response       Direct     judged.old      1             0
-#>                  Indirect   rt              faster        slower  [Meyen split]
+#>   subject        Awareness  subj            -             -
+#>                  Influence  subj            -             -
+#>   condition      Awareness  condition       old           new
+#>                  Influence  condition       old           new
+#>   response       Awareness  judged.old      1             0
+#>                  Influence  rt              faster        slower  [Meyen split]
 #> 
 #> ── Descriptives: median [min, max] across subjects ─────────────────────────────
 #> 
 #>   Task       Trials/cell                  HR                 FAR   d' (method-of-moments)
-#>   Direct              32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
-#>   Indirect           192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
+#>   Awareness           32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
+#>   Influence          192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
 #> 
 #>   No cells at floor or ceiling.
 
 # 2. Tasks combined in a single long data frame
 long <- rbind(
-  data.frame(task      = "D",
+  data.frame(task      = "A",
              subj      = vadillo_awareness$subj,
              condition = vadillo_awareness$condition,
              response  = vadillo_awareness$judged.old),
@@ -241,14 +247,15 @@ long <- rbind(
 d_long <- usdt_data_long(
   long,
   task_col         = "task",
-  task_levels      = c(direct = "D", indirect = "I"),
+  task_levels      = c(awareness = "A", influence = "I"),
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
   response_col     = "response",
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 d_long
 #> ── Data summary ──────────────────────────────────────────────────────────────── 
@@ -262,18 +269,18 @@ d_long
 #> ── Variable mapping ────────────────────────────────────────────────────────────
 #> 
 #>   Variable       Task       Column          Signal        Noise
-#>   subject        Direct     subj            -             -
-#>                  Indirect   subj            -             -
-#>   condition      Direct     condition       old           new
-#>                  Indirect   condition       old           new
-#>   response       Direct     response        1             0
-#>                  Indirect   response        faster        slower  [Meyen split]
+#>   subject        Awareness  subj            -             -
+#>                  Influence  subj            -             -
+#>   condition      Awareness  condition       old           new
+#>                  Influence  condition       old           new
+#>   response       Awareness  response        1             0
+#>                  Influence  response        faster        slower  [Meyen split]
 #> 
 #> ── Descriptives: median [min, max] across subjects ─────────────────────────────
 #> 
 #>   Task       Trials/cell                  HR                 FAR   d' (method-of-moments)
-#>   Direct              32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
-#>   Indirect           192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
+#>   Awareness           32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
+#>   Influence          192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
 #> 
 #>   No cells at floor or ceiling.
 ```

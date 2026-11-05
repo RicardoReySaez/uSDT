@@ -247,7 +247,7 @@ d <- usdt_data_tasks(
 m <- hsdt(d, estimation = "bayesian", seed = 1)
 #> ── Fitting the Bayesian hierarchical SDT model ──────────────────────── rstan ──
 #> ℹ 4 chains of 5000 draws after 1000 warmup iterations, 2 at a time.
-#> ✔ Sampled 4 chains in 55.1s.
+#> ✔ Sampled 4 chains in 1m 38s.
 #> ✔ No divergent transitions.
 #> ✔ No transition reached the maximum tree depth (10).
 #> ✔ Largest R-hat 1.002, below 1.01.

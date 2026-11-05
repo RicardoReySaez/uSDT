@@ -281,7 +281,7 @@ summary(m)
 m$design$formula
 #> cbind(y, n - y) ~ 0 + c_A + d_A + d_I + (0 + c_A | subj) + (0 + 
 #>     d_A + d_I | subj)
-#> <environment: 0x55a8b84fec68>
+#> <environment: 0x559578facce8>
 
 # \donttest{
 # Bayesian estimation. The first call compiles the model.
@@ -289,7 +289,7 @@ mb <- hsdt(d, estimation = "bayesian", seed = 1)
 #> ── Fitting the Bayesian hierarchical SDT model ──────────────────────── rstan ──
 #> ℹ 4 chains of 5000 draws after 1000 warmup iterations, 2 at a time.
 #> ℹ Compiling the Stan model; this happens once per model and set of priors.
-#> ✔ Sampled 4 chains in 2m 3s.
+#> ✔ Sampled 4 chains in 3m 7s.
 #> ✔ No divergent transitions.
 #> ✔ No transition reached the maximum tree depth (10).
 #> ✔ Largest R-hat 1.002, below 1.01.

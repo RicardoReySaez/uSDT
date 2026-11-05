@@ -192,16 +192,16 @@ names(lme4::fixef(fit))
 
 # Evaluate hypotheses conditional on set size
 usdt_tests(fit, awareness = "taskA:cond", influence = "taskI:cond")
-#>   hypothesis                          term    estimate         se  statistic
-#> 1         H1 d'(influence) - d'(awareness) -0.11544701 0.03729773 -3.0952826
-#> 2         H2                   correlation  0.38184383 0.39474844  0.9804973
-#> 3         H3                     intercept  0.07364629 0.07325229  1.0053788
-#> 4         H3                         slope  0.24001692 0.28643292  0.9804973
-#>       p.value    conf.low   conf.high ci_method status reason
-#> 1 0.001966254 -0.18854922 -0.04234481      Wald     ok   <NA>
-#> 2 0.326840696 -0.46489648  0.86376154  Fisher-z     ok   <NA>
-#> 3 0.314714491 -0.06992555  0.21721814     delta     ok   <NA>
-#> 4 0.326840696 -0.32138129  0.80141513      Wald     ok   <NA>
+#>   hypothesis                          term    estimate         se statistic
+#> 1         H1 d'(influence) - d'(awareness) -0.11544746 0.03729771 -3.095297
+#> 2         H2                   correlation  0.38184054 0.39474795  0.980489
+#> 3         H3                     intercept  0.07364644 0.07325236  1.005380
+#> 4         H3                         slope  0.24001573 0.28643288  0.980489
+#>       p.value    conf.low  conf.high ci_method status reason
+#> 1 0.001966162 -0.18854962 -0.0423453      Wald     ok   <NA>
+#> 2 0.326844774 -0.46489654  0.8637596  Fisher-z     ok   <NA>
+#> 3 0.314714044 -0.06992556  0.2172184     delta     ok   <NA>
+#> 4 0.326844774 -0.32138239  0.8014138      Wald     ok   <NA>
 # }
 
 # \donttest{

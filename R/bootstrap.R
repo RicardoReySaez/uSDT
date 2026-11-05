@@ -15,7 +15,8 @@
 #' for the three core hypotheses (H1, H2, H3). This is especially useful when
 #' asymptotic Wald intervals are unreliable due to singular or boundary fits.
 #'
-#' @param object An `hsdt` object fitted by [hsdt()].
+#' @param object A frequentist `hsdt` object fitted by [hsdt()]. A Bayesian
+#'   fit already carries the posterior of every quantity.
 #' @param nsim Target number of successful replicates (at least 500).
 #' @param ncores Number of CPU cores for parallel processing. Values above 1
 #'   create a temporary cluster that works across Windows, macOS, and Linux,
@@ -29,8 +30,8 @@
 #' @param level Confidence level for intervals (default is 0.95).
 #' @param type Type of bootstrap interval: `"perc"` (percentile), `"norm"`
 #'   (normal approximation with bias correction), or `"basic"` (empirical basic).
-#'   For correlations, `"norm"` and `"basic"` operate on the Fisher-\eqn{z} scale;
-#'   if the sample correlation lies on the boundary (-1 or 1), these types return
+#'   For correlations, `"norm"` and `"basic"` operate on the Fisher-\eqn{z} scale.
+#'   If the sample correlation lies on the boundary (-1 or 1), these types return
 #'   `NA`, whereas `"perc"` remains available.
 #'
 #' @return An updated `hsdt` object where interval columns in `$tests` are
@@ -43,9 +44,11 @@
 #'   `failures`).
 #'
 #' @details
-#' Replicates are dropped only if the model fails to fit or does not converge.
-#' Singular fits and boundary estimates are intentionally retained because
-#' discarding them artificially narrows intervals in constrained settings.
+#' Refits are retained if they converge and all four hypothesis estimates are
+#' finite, including singular or boundary refits meeting those conditions.
+#' Inspect `$boot$failures` and `$boot$retained`. For dichotomized data, the
+#' bootstrap simulates binary responses, without repeating the median split.
+#' It remains conditional on the fitted model and available information.
 #'
 #' When an attempted run finishes with fewer than 500 usable replicates, the
 #' original Wald intervals are preserved, a warning is issued, and raw
@@ -61,15 +64,16 @@
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' m <- hsdt(d)
@@ -97,6 +101,10 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
     .usdt_stop("`object` must come from hsdt(), not a plain ",
                class(object)[1L], ".")
   }
+  if (.is_bayes(object)) {
+    .usdt_stop("usdt_boot() resamples maximum-likelihood fits. A Bayesian fit ",
+               "already carries its uncertainty in the posterior draws.")
+  }
   .check_scalar_number(nsim, "nsim", lower = .boot_min, whole = TRUE)
   .check_scalar_number(ncores, "ncores", lower = 1, whole = TRUE)
   .check_scalar_number(max_attempts, "max_attempts", lower = nsim, whole = TRUE)
@@ -112,7 +120,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   max_attempts <- as.integer(max_attempts)
 
   # Each refitted model returns the reported and task-specific estimates.
-  stat <- .boot_statistic(object$fit, "d_D", "d_I")
+  stat <- .boot_statistic(object$fit, "d_A", "d_I")
   layout <- attr(stat, "layout")
   t0 <- stat(object$fit)
 
@@ -236,14 +244,14 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 }
 
 # This function creates the calculation used by each bootstrap sample.
-.boot_statistic <- function(fit, direct, indirect) {
-  blk <- .locate_block(fit, direct, indirect)
+.boot_statistic <- function(fit, awareness, influence) {
+  blk <- .locate_block(fit, awareness, influence)
   fixed <- names(lme4::fixef(fit))
   subjects <- rownames(lme4::ranef(fit, condVar = FALSE)[["subj"]])
-  parameters <- c("c_D", "c_I", direct, indirect)
+  parameters <- c("c_A", "c_I", awareness, influence)
   summary_names <- c("diff", "rho", "intercept", "slope",
                      "converged", "singular", "boundary")
-  variance_names <- c("s2_D", "s2_I")
+  variance_names <- c("s2_A", "s2_I")
   variance_output_names <- paste0("variance.", variance_names)
   population_names <- paste0("population.", parameters)
   subject_names <- unlist(lapply(seq_along(parameters), function(j) {
@@ -251,70 +259,58 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
   }), use.names = FALSE)
   output_names <- c(summary_names, variance_output_names,
                     population_names, subject_names)
-  stat <- function(f, block_index, block_size, direct_random,
-                   indirect_random, direct_fixed, indirect_fixed,
-                   subjects, parameters, output_names) {
+  stat <- function(f, block_index, block_size, awareness_random,
+                   influence_random, awareness_fixed, influence_fixed,
+                   subjects, parameters, output_names,
+                   quantities, task_effects, convergence) {
     theta <- lme4::getME(f, "theta")
     beta <- lme4::fixef(f)
     L <- matrix(0, block_size, block_size)
     L[lower.tri(L, diag = TRUE)] <- theta[block_index]
     S <- tcrossprod(L)
 
-    gamma_D <- unname(beta[direct_fixed])
-    gamma_I <- unname(beta[indirect_fixed])
-    s2_D <- S[direct_random, direct_random]
-    s2_I <- S[indirect_random, indirect_random]
-    s_DI <- S[direct_random, indirect_random]
-    slope <- s_DI / s2_D
-    # The worker repeats the correlation limit in its own environment.
-    rho <- max(-1, min(1, s_DI / sqrt(s2_D * s2_I)))
+    primitives <- c(gamma_A = unname(beta[awareness_fixed]),
+                    gamma_I = unname(beta[influence_fixed]),
+                    s2_A = S[awareness_random, awareness_random],
+                    s2_I = S[influence_random, influence_random],
+                    s_AI = S[awareness_random, influence_random])
+    q <- quantities(primitives)
+    effects <- task_effects(f, subjects, parameters)
 
-    opt <- f@optinfo$conv$opt
-    opt_ok <- !length(opt) || (is.numeric(opt) && all(opt == 0))
-    messages <- f@optinfo$conv$lme4$messages
-    if (length(messages)) {
-      messages <- messages[!grepl("boundary.*singular", messages,
-                                  ignore.case = TRUE)]
-    }
-
-    population <- stats::setNames(rep.int(0, length(parameters)), parameters)
-    in_model <- intersect(parameters, names(beta))
-    population[in_model] <- beta[in_model]
-
-    random <- lme4::ranef(f, condVar = FALSE)[["subj"]]
-    subject_row <- match(subjects, rownames(random))
-    individual <- matrix(0, nrow = length(subjects), ncol = length(parameters),
-                         dimnames = list(subjects, parameters))
-    random_parameters <- intersect(parameters, colnames(random))
-    individual[, random_parameters] <-
-      as.matrix(random[subject_row, random_parameters, drop = FALSE])
-    individual <- sweep(individual, 2L, population, "+")
-
-    finite <- all(is.finite(c(gamma_D, gamma_I, S, slope, rho,
-                              population, individual)))
+    finite <- all(is.finite(c(primitives, S, q, effects$population,
+                              effects$subjects)))
     boundary <- TRUE
     if (finite) {
       values <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
-      boundary <- min(s2_D, s2_I) < 1e-8 || min(values) < 1e-8 ||
-        abs(rho) > 1 - 1e-6
+      boundary <- min(primitives[c("s2_A", "s2_I")]) < 1e-8 ||
+        min(values) < 1e-8 || abs(q[, "rho"]) > 1 - 1e-6
     }
 
     stats::setNames(
-      c(gamma_I - gamma_D, rho, gamma_I - slope * gamma_D, slope,
-        as.numeric(opt_ok && !length(messages)),
+      c(q, as.numeric(convergence(f)$ok),
         as.numeric(lme4::isSingular(f, tol = 1e-4)),
-        as.numeric(boundary), s2_D, s2_I,
-        population, as.vector(individual)),
+        as.numeric(boundary), primitives[c("s2_A", "s2_I")],
+        effects$population, as.vector(effects$subjects)),
       output_names
     )
   }
+
+  # The workers receive the package helpers without the package namespace, so
+  # a parallel run only needs lme4 on each worker.
+  in_base <- function(fun) {
+    environment(fun) <- baseenv()
+    fun
+  }
   args <- formals(stat)
+  args$quantities <- in_base(.usdt_quantities)
+  args$task_effects <- in_base(.task_effects)
+  args$convergence <- in_base(.fit_convergence)
   args$block_index <- blk$idx
   args$block_size <- blk$q
-  args$direct_random <- blk$iD
-  args$indirect_random <- blk$iI
-  args$direct_fixed <- match(direct, fixed)
-  args$indirect_fixed <- match(indirect, fixed)
+  args$awareness_random <- blk$iA
+  args$influence_random <- blk$iI
+  args$awareness_fixed <- match(awareness, fixed)
+  args$influence_fixed <- match(influence, fixed)
   args$subjects <- subjects
   args$parameters <- parameters
   args$output_names <- output_names
@@ -390,7 +386,7 @@ usdt_boot <- function(object, nsim = 1000, ncores = 1L,
 
 # This function adds bootstrap results to the hypothesis table.
 .boot_tests <- function(tests, t, level, type) {
-  map <- c("d'(indirect) - d'(direct)" = "diff", correlation = "rho",
+  map <- c("d'(influence) - d'(awareness)" = "diff", correlation = "rho",
            intercept = "intercept", slope = "slope")
 
   for (i in seq_len(nrow(tests))) {

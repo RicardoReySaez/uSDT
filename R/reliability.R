@@ -1,9 +1,9 @@
 # reliability.R
 # Estimate task-level and subject-level reliability for uSDT models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 03-10-2026
 
-#' Reliability of direct and indirect task measures
+#' Reliability of awareness and influence task measures
 #'
 #' Estimates the reliability of sensitivity (\eqn{d'}) by separating true
 #' variance across participants from sampling noise caused by finite trial counts.
@@ -11,14 +11,18 @@
 #' whereas values near 0 indicate that observed differences are mostly
 #' measurement error.
 #'
-#' @param object An `hsdt` object from [hsdt()], which may also contain
-#'   bootstrap results from [usdt_boot()].
+#' @param object An `hsdt` object from [hsdt()], frequentist or Bayesian. A
+#'   frequentist fit may also contain bootstrap results from [usdt_boot()].
 #'
 #' @return An object of class `usdt_reliability` containing:
 #' * `$tasks`: Overall reliability and variance components for each task.
 #' * `$subjects`: Participant-level \eqn{d'}, error variances, and individual
 #'   reliabilities.
 #' * Bootstrap intervals for both components when available in `object`.
+#'
+#' For a Bayesian fit, both tables hold posterior means and add the columns
+#' `sd`, `conf.low` and `conf.high`, and `$posterior$tasks` keeps the draws of
+#' each task's reliability.
 #'
 #' @details
 #' For participant \eqn{i} in task \eqn{j}, reliability is defined as:
@@ -43,6 +47,15 @@
 #' intervals for reliability are computed automatically across all retained
 #' samples.
 #'
+#' For a Bayesian fit, reliability is computed draw by draw: each draw gives
+#' \eqn{\tau_j^2} and, at that draw's subject sensitivities and criteria, each
+#' \eqn{v_{ij}}. The tables report posterior means, posterior standard
+#' deviations and central credible intervals. Under unequal variances the
+#' information of the signal trials is scaled by the signal standard deviation
+#' \eqn{\sigma_s}, so that \eqn{v_{ij} = \sigma_s^2 / w_{\mathrm{signal}} +
+#' 1 / w_{\mathrm{noise}}} with an estimated criterion, which reduces to the
+#' Gourevitch and Galanter formula when \eqn{\sigma_s = 1}.
+#'
 #' @references
 #' Gourevitch, V., & Galanter, E. (1967). A significance test for one parameter
 #' isosensitivity functions. \emph{Psychometrika}, 32(1), 25--33.
@@ -53,15 +66,16 @@
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' r <- usdt_reliability(hsdt(d))
@@ -80,30 +94,29 @@ usdt_reliability <- function(object) {
                "between-subject variance and the information each subject ",
                "contributes.")
   }
+  if (.is_bayes(object)) return(.reliability_bayes(object, match.call()))
 
-  agg    <- object$data$agg
-  labels <- object$data$meta$labels
-  fixed  <- lme4::fixef(object$fit)
-  random <- lme4::ranef(object$fit, condVar = FALSE)[["subj"]]
+  agg     <- object$data$agg
+  labels  <- object$data$meta$labels
+  effects <- .task_effects(object$fit, unique(as.character(agg$subj)))$subjects
 
-  results <- lapply(c("D", "I"), function(task) {
+  results <- lapply(c("A", "I"), function(task) {
     slope   <- paste0("d_", task)
     columns <- c(intersect(paste0("c_", task), object$design$criteria), slope)
-    tau2    <- object$pars$est[[if (task == "D") "s2_D" else "s2_I"]]
+    tau2    <- object$pars$est[[if (task == "A") "s2_A" else "s2_I"]]
     rows    <- agg[agg$task == task, ]
     who     <- unique(as.character(rows$subj))
 
     # Each subject supplies the cells that inform their own sensitivity.
     values <- vapply(who, function(s) {
       cells <- rows[as.character(rows$subj) == s, , drop = FALSE]
-      coef  <- fixed[columns] + unlist(random[s, columns, drop = FALSE],
-                                       use.names = FALSE)
+      coef  <- effects[s, ][columns]
       eta   <- drop(as.matrix(cells[, columns, drop = FALSE]) %*% coef)
       c(dprime   = unname(coef[[slope]]),
-        variance = .sensitivity_variance(cells, columns, slope, eta))
+        variance = .sensitivity_variance(cells, eta, length(columns) == 2L))
     }, c(dprime = 0, variance = 0))
 
-    label <- labels[[if (task == "D") "direct" else "indirect"]]
+    label <- labels[[if (task == "A") "awareness" else "influence"]]
     list(
       task = data.frame(task = label, subjects = length(who), tau2 = tau2,
                         mean_variance = mean(values["variance", ]),
@@ -149,16 +162,89 @@ usdt_reliability <- function(object) {
 
 # Internal functions
 
-# This function estimates a subject's trial-level sensitivity variance.
-.sensitivity_variance <- function(cells, columns, slope, eta) {
-
-  # The expected information of a binomial probit weights each cell.
+# This function gives the sampling variance of one subject's d' from the
+# expected probit information of its signal and noise cells. `eta` holds the
+# linear predictor of each cell, as a vector or as a matrix with one row per
+# replicate or draw. With an estimated criterion the variance is
+# sigma^2 / w_signal + 1 / w_noise; with the criterion fixed by the Meyen split
+# it is (1 + sigma)^2 / (w_signal + w_noise). Equal variances (sigma = 1) give
+# the formula of Gourevitch and Galanter (1967).
+.sensitivity_variance <- function(cells, eta, free, sigma = 1) {
+  eta <- matrix(eta, ncol = nrow(cells))
   p <- stats::pnorm(eta)
-  w <- cells$n * stats::dnorm(eta)^2 / (p * (1 - p))
+  w <- sweep(stats::dnorm(eta)^2 / (p * (1 - p)), 2L, cells$n, "*")
+  w_signal <- w[, cells$sig]
+  w_noise <- w[, !cells$sig]
+  variance <- if (free) {
+    sigma^2 / w_signal + 1 / w_noise
+  } else {
+    (1 + sigma)^2 / (w_signal + w_noise)
+  }
+  variance[!is.finite(variance) | variance <= 0] <- NA_real_
+  variance
+}
 
-  D <- as.matrix(cells[, columns, drop = FALSE])
-  tryCatch(solve(crossprod(D * sqrt(w)))[slope, slope],
-           error = function(e) NA_real_)
+# This function computes reliability draw by draw for a Bayesian fit and
+# summarises it with posterior means, SDs and central credible intervals.
+.reliability_bayes <- function(object, call) {
+  agg <- object$data$agg
+  labels <- object$data$meta$labels
+  free <- object$design$free_c
+  a <- (1 - object$level) / 2
+  population <- .population_draws(object)
+  draw <- function(name) {
+    as.numeric(posterior::extract_variable(population, name))
+  }
+  interval <- function(x) stats::quantile(x, c(a, 1 - a), names = FALSE)
+
+  results <- lapply(1:2, function(j) {
+    label <- labels[[c("awareness", "influence")[j]]]
+    rows <- agg[agg$task == c("A", "I")[j], ]
+    who <- unique(as.character(rows$subj))
+    d <- .subject_draws(object, "d", j, who)
+    criterion <- .subject_draws(object, "c", j, who)
+    sigma <- if (object$design$unequal_variances) draw(sprintf("sigma_s[%d]", j)) else 1
+    tau2 <- draw(sprintf("sigma_d[%d]", j))^2
+
+    # Each draw places the subject's cells on its own probit curve.
+    variance <- vapply(seq_along(who), function(k) {
+      cells <- rows[as.character(rows$subj) == who[k], , drop = FALSE]
+      eta <- vapply(cells$sig, function(signal) {
+        if (signal) (d[, k] / 2 - criterion[, k]) / sigma else
+          -d[, k] / 2 - criterion[, k]
+      }, numeric(nrow(d)))
+      .sensitivity_variance(cells, eta, free[j] == 1L, sigma)
+    }, numeric(nrow(d)))
+
+    reliability <- tau2 / (tau2 + variance)
+    task_draws <- tau2 / (tau2 + rowMeans(variance))
+    limits <- interval(task_draws)
+    subject_limits <- apply(reliability, 2L, interval)
+    list(
+      task = data.frame(task = label, subjects = length(who), tau2 = mean(tau2),
+                        mean_variance = mean(rowMeans(variance)),
+                        reliability = mean(task_draws), sd = stats::sd(task_draws),
+                        conf.low = limits[1L], conf.high = limits[2L],
+                        stringsAsFactors = FALSE),
+      subjects = data.frame(task = label, subj = who, dprime = colMeans(d),
+                            variance = colMeans(variance),
+                            reliability = colMeans(reliability),
+                            sd = apply(reliability, 2L, stats::sd),
+                            conf.low = subject_limits[1L, ],
+                            conf.high = subject_limits[2L, ],
+                            stringsAsFactors = FALSE),
+      draws = task_draws)
+  })
+
+  tasks <- do.call(rbind, lapply(results, `[[`, "task"))
+  subjects <- do.call(rbind, lapply(results, `[[`, "subjects"))
+  rownames(tasks) <- rownames(subjects) <- NULL
+  draws <- vapply(results, `[[`, numeric(length(results[[1L]]$draws)), "draws")
+  colnames(draws) <- tasks$task
+  structure(list(tasks = tasks, subjects = subjects, boot = NULL,
+                 posterior = list(tasks = draws, level = object$level),
+                 call = call),
+            class = "usdt_reliability")
 }
 
 # This function recalculates reliability across bootstrap samples.
@@ -179,8 +265,9 @@ usdt_reliability <- function(object) {
     NA_real_, n_boot, nrow(subjects),
     dimnames = list(NULL, paste(subjects$task, subjects$subj, sep = "\r")))
 
-  for (task in c("D", "I")) {
-    label <- object$data$meta$labels[[if (task == "D") "direct" else "indirect"]]
+  for (task in c("A", "I")) {
+    label <- object$data$meta$labels[[if (task == "A") "awareness" else
+                                        "influence"]]
     slope <- paste0("d_", task)
     columns <- c(intersect(paste0("c_", task), object$design$criteria), slope)
     rows <- object$data$agg[object$data$agg$task == task, ]
@@ -199,8 +286,8 @@ usdt_reliability <- function(object) {
         estimates[, estimate_rows[j], columns, drop = FALSE],
         nrow = n_boot, ncol = length(columns))
       eta <- coefficient %*% t(as.matrix(cells[, columns, drop = FALSE]))
-      local_variance[, j] <- .sensitivity_variance_many(
-        cells, columns, slope, eta)
+      local_variance[, j] <- .sensitivity_variance(
+        cells, eta, length(columns) == 2L)
     }
 
     tau2 <- theta[, paste0("s2_", task)]
@@ -229,30 +316,6 @@ usdt_reliability <- function(object) {
        usable = n_boot, level = object$level, type = boot$type)
 }
 
-# This function estimates several local variances at once.
-.sensitivity_variance_many <- function(cells, columns, slope, eta) {
-  p <- stats::pnorm(eta)
-  weight <- sweep(stats::dnorm(eta)^2 / (p * (1 - p)),
-                  2L, cells$n, "*")
-  design <- as.matrix(cells[, columns, drop = FALSE])
-  information <- function(i, j) {
-    rowSums(sweep(weight, 2L, design[, i] * design[, j], "*"))
-  }
-
-  slope_column <- match(slope, columns)
-  if (length(columns) == 1L) {
-    variance <- 1 / information(slope_column, slope_column)
-  } else {
-    other <- setdiff(seq_along(columns), slope_column)
-    iss <- information(slope_column, slope_column)
-    ioo <- information(other, other)
-    iso <- information(slope_column, other)
-    variance <- ioo / (iss * ioo - iso^2)
-  }
-  variance[!is.finite(variance) | variance <= 0] <- NA_real_
-  variance
-}
-
 # This function summarises one bootstrap distribution.
 .reliability_boot_stats <- function(values, estimate, level, type) {
   values <- values[is.finite(values)]
@@ -278,7 +341,23 @@ summary.usdt_reliability <- function(object, ...) {
 
   # The table shows the group estimate and the subject distribution.
   cat(.rule("Reliability summary"), "\n\n")
-  if (is.null(object$boot)) {
+  if (!is.null(object$posterior)) {
+    cat(sprintf("  %-12s %8s %10s %8s  %-18s   %s\n",
+                "Task", "Subjects", "Group mean", "SD",
+                sprintf("%.0f%% CrI", 100 * object$posterior$level),
+                "By-subject mean median [min, max]"))
+    for (i in seq_len(nrow(object$tasks))) {
+      task <- object$tasks$task[i]
+      values <- object$subjects$reliability[object$subjects$task == task]
+      cat(sprintf("  %-12s %8s %10s %8s  %-18s   %s\n",
+                  task, .fmt_int(object$tasks$subjects[i]),
+                  .fmt_reliability(object$tasks$reliability[i], 10L),
+                  .fmt_reliability(object$tasks$sd[i], 8L),
+                  .fmt_ci(object$tasks$conf.low[i], object$tasks$conf.high[i]),
+                  .fmt_reliability_range(values)))
+    }
+    cat("\n  Means, SDs and credible intervals summarise the posterior draws.\n")
+  } else if (is.null(object$boot)) {
     cat(sprintf("  %-12s %8s %20s   %s\n",
                 "Task", "Subjects", "Group-level estimate",
                 "By-subject estimate median [min, max]"))

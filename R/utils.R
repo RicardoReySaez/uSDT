@@ -114,12 +114,12 @@
 # This function checks two display labels.
 .check_labels <- function(x) {
   if (!is.character(x) || length(x) != 2L ||
-      !setequal(names(x), c("direct", "indirect")) || anyNA(x) ||
-      any(!nzchar(trimws(x))) || x[["direct"]] == x[["indirect"]]) {
-    .usdt_stop("`labels` must contain two different names called `direct` ",
-               "and `indirect`.")
+      !setequal(names(x), c("awareness", "influence")) || anyNA(x) ||
+      any(!nzchar(trimws(x))) || x[["awareness"]] == x[["influence"]]) {
+    .usdt_stop("`labels` must contain two different names called `awareness` ",
+               "and `influence`.")
   }
-  x[c("direct", "indirect")]
+  x[c("awareness", "influence")]
 }
 
 # Argument handling
@@ -129,26 +129,27 @@
 
   # The function accepts a missing value only when the caller allows it.
   if (is.null(x)) {
-    if (allow_null) return(list(direct = NULL, indirect = NULL))
+    if (allow_null) return(list(awareness = NULL, influence = NULL))
     .usdt_stop("`", arg, "` is required.")
   }
 
   # Task names provide separate values.
   nms <- names(x)
-  if (length(x) == 2L && !is.null(nms) && setequal(nms, c("direct", "indirect"))) {
-    return(list(direct = x[["direct"]], indirect = x[["indirect"]]))
+  if (length(x) == 2L && !is.null(nms) &&
+      setequal(nms, c("awareness", "influence"))) {
+    return(list(awareness = x[["awareness"]], influence = x[["influence"]]))
   }
 
   # A partial task name is a typo, not a value shared by both tasks.
-  if (any(c("direct", "indirect") %in% nms)) {
+  if (any(c("awareness", "influence") %in% nms)) {
     .usdt_stop("`", arg, "` names one task but not the other. Give one value ",
                "for both tasks, or one for each, e.g.\n  ", arg,
-               " = list(direct = ..., indirect = ...)\n  Names found: ",
+               " = list(awareness = ..., influence = ...)\n  Names found: ",
                paste0("`", nms, "`", collapse = ", "), ".")
   }
 
   # Both tasks use the same value in every other case.
-  list(direct = x, indirect = x)
+  list(awareness = x, influence = x)
 }
 
 # This function gives each task one option from a fixed set.
@@ -170,7 +171,7 @@
 # This function decides which tasks need the median split.
 .check_dichotomize <- function(x) {
 
-  tasks <- c("direct", "indirect")
+  tasks <- c("awareness", "influence")
   out   <- stats::setNames(logical(2L), tasks)
 
   # A logical value for each task states the choice directly.
@@ -187,17 +188,18 @@
 
   # Task names select the tasks to split.
   if (!is.character(x) || !length(x) || anyNA(x)) {
-    .usdt_stop("`dichotomize` must be `\"none\"`, `\"direct\"`, `\"indirect\"`, ",
-               "`\"both\"`, or one logical value for each task, e.g.\n",
-               "  dichotomize = list(direct = FALSE, indirect = TRUE)")
+    .usdt_stop("`dichotomize` must be `\"none\"`, `\"awareness\"`, ",
+               "`\"influence\"`, `\"both\"`, or one logical value for each ",
+               "task, e.g.\n",
+               "  dichotomize = list(awareness = FALSE, influence = TRUE)")
   }
-  choices <- c("none", "indirect", "direct", "both")
+  choices <- c("none", "influence", "awareness", "both")
   if (identical(x, choices)) x <- "none"
   bad <- setdiff(x, choices)
   if (length(bad)) {
     .usdt_stop("`dichotomize` does not accept `", bad[1L], "`. Use `\"none\"`, ",
-               "`\"direct\"`, `\"indirect\"`, `\"both\"`, or one logical value ",
-               "for each task.")
+               "`\"awareness\"`, `\"influence\"`, `\"both\"`, or one logical ",
+               "value for each task.")
   }
   if (length(x) > 1L && any(c("none", "both") %in% x)) {
     .usdt_stop("`dichotomize` combines `", paste(x, collapse = "`, `"),
@@ -284,9 +286,9 @@
 # This function chooses characters that the console can display.
 .usdt_chars <- function() {
   if (isTRUE(l10n_info()[["UTF-8"]])) {
-    list(h = "\u2500", dot = "\u00b7", delta = "\u0394")
+    list(h = "\u2500", hh = "\u2550", dot = "\u00b7", delta = "\u0394")
   } else {
-    list(h = "-", dot = "*", delta = "Delta ")
+    list(h = "-", hh = "=", dot = "*", delta = "Delta ")
   }
 }
 

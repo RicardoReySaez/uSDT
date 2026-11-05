@@ -20,16 +20,29 @@ Authors@R: c(
            role    = "aut",
            comment = c(ORCID = "0000-0001-8421-816X")))
 Description: Fits hierarchical signal detection theory (SDT) models to paired
-    direct and indirect measures, the design used to test for unconscious
-    processing. Continuous indirect measures (typically response times) are
+    awareness and influence measures, the design used to test for unconscious
+    processing. Continuous influence measures (typically response times) are
     dichotomized with the within-subject median split of Meyen et al. (2022)
     <doi:10.1037/xge0001065> so that both tasks are placed on a common
     sensitivity scale. The package estimates a binomial probit mixed model in
     which the two sensitivities are correlated random effects, and tests the
     three hypotheses of interest: the group-level difference between
     sensitivities, their latent correlation, and the latent regression of the
-    indirect on the direct measure, whose intercept is the test for
-    unconscious processing. Frequentist estimation uses 'lme4'.
+    influence on the awareness measure, whose intercept is the test for
+    unconscious processing. Frequentist estimation uses 'lme4'. Bayesian
+    estimation uses 'brms', which runs 'Stan' through 'rstan' or 'cmdstanr',
+    with priors on the means, standard deviations and correlation of the two
+    sensitivities, or on the intercept of the latent regression in place of
+    the influence mean, and weighs each hypothesis with Bayes factors: the
+    Savage-Dickey density ratio for point hypotheses (Wagenmakers et al., 2010
+    <doi:10.1016/j.cogpsych.2009.12.001>) and the change from prior to
+    posterior odds for directional and interval ones. The tests and Bayes
+    factors also accept custom models fitted with 'lme4' or 'brms'. To plan
+    a study, the package computes the power of the three tests for a number
+    of subjects and of trials per task, from the sampling distribution of
+    the subjects' sample mean and covariance or by simulating and fitting
+    whole studies, finds the design that reaches a given power at the lowest
+    cost, and finds the smallest effect a design detects.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -37,15 +50,27 @@ LazyDataCompression: xz
 Depends:
     R (>= 4.1)
 Imports:
+    grid,
+    parallel,
     stats,
     utils,
     lme4,
     ggplot2,
-    rlang
+    gtable,
+    rlang,
+    brms,
+    posterior,
+    logspline,
+    callr,
+    cli
 Suggests:
     testthat (>= 3.1.7),
     knitr,
-    rmarkdown
+    rmarkdown,
+    BH,
+    RcppEigen,
+    cmdstanr
+Additional_repositories: https://stan-dev.r-universe.dev
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3
@@ -53,4 +78,4 @@ Config/Needs/website: pkgdown
 URL: https://github.com/RicardoReySaez/uSDT,
     https://ricardoreysaez.github.io/uSDT/
 BugReports: https://github.com/RicardoReySaez/uSDT/issues
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1

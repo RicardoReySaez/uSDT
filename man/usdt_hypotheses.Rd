@@ -8,22 +8,22 @@
 \alias{latent_regression}
 \title{Test the three core hypotheses of a hierarchical SDT model}
 \usage{
-usdt_tests(fit, direct = "d_D", indirect = "d_I", level = 0.95)
+usdt_tests(fit, awareness = "d_A", influence = "d_I", level = 0.95)
 
-sensitivity_diff(fit, direct = "d_D", indirect = "d_I", level = 0.95)
+sensitivity_diff(fit, awareness = "d_A", influence = "d_I", level = 0.95)
 
-latent_cor(fit, direct = "d_D", indirect = "d_I", level = 0.95)
+latent_cor(fit, awareness = "d_A", influence = "d_I", level = 0.95)
 
-latent_regression(fit, direct = "d_D", indirect = "d_I", level = 0.95)
+latent_regression(fit, awareness = "d_A", influence = "d_I", level = 0.95)
 }
 \arguments{
-\item{fit}{A fitted model: an \code{hsdt} object or a \code{glmerMod} from
-\code{lme4::glmer()}.}
+\item{fit}{A fitted model: an \code{hsdt} object, frequentist or Bayesian, a
+\code{glmerMod} from \code{lme4::glmer()} or a \code{brmsfit} from \code{brms::brm()}.}
 
-\item{direct, indirect}{Character strings naming the sensitivity terms in the
-model. Defaults match the internal naming of \code{\link[=hsdt]{hsdt()}}. For custom models,
-both terms must be fixed effects and share a common random-effects grouping
-by subject.}
+\item{awareness, influence}{Character strings naming the sensitivity terms in
+the model. Defaults match the internal naming of \code{\link[=hsdt]{hsdt()}}. For custom
+models, both terms must be fixed effects and share a common random-effects
+grouping by subject.}
 
 \item{level}{Confidence level for intervals (default is 0.95).}
 }
@@ -32,55 +32,67 @@ A data frame with columns \code{term}, \code{estimate}, \code{se}, \code{statist
 \code{p.value}, \code{conf.low}, \code{conf.high}, and \code{ci_method}. Columns \code{status} and
 \code{reason} flag unsupported estimates (e.g., singular fits). \code{usdt_tests()}
 includes an extra \code{hypothesis} column (\code{H1}, \code{H2}, \code{H3}).
+
+For a Bayesian \code{hsdt} fit the columns are \code{term}, \code{estimate} (posterior
+mean), \code{est.error} (posterior standard deviation), \code{conf.low} and
+\code{conf.high} (central credible interval), \code{ci_method}, \code{p.value} (two-sided
+posterior p-value, below \code{1 - level} exactly when the interval excludes
+zero), \code{rhat} and \code{ess_bulk}.
 }
 \description{
 Evaluates the difference between average task sensitivities (H1), their
-correlation across subjects (H2), and the regression of indirect sensitivity
-on direct sensitivity (H3). \code{usdt_tests()} computes all three together,
+correlation across subjects (H2), and the regression of influence sensitivity
+on awareness sensitivity (H3). \code{usdt_tests()} computes all three together,
 while individual functions compute them separately.
 }
 \details{
 These tests run automatically inside \code{\link[=hsdt]{hsdt()}} and appear in its summary.
 Calling them directly is especially useful when fitting custom models with
-\code{\link[lme4:glmer]{lme4::glmer()}}, allowing you to test these hypotheses while controlling for
-additional covariates (e.g., set size, experimental groups).
+\code{\link[lme4:glmer]{lme4::glmer()}} or \code{\link[brms:brm]{brms::brm()}}, allowing you to test these hypotheses
+while controlling for additional covariates (e.g., set size, experimental
+groups).
 }
 \section{The three hypotheses}{
 \itemize{
 \item \strong{H1 (Mean difference):} Tests whether average sensitivity differs
-between the direct and indirect tasks.
+between the awareness and influence tasks.
 \item \strong{H2 (Correlation):} Tests the correlation between task sensitivities
 across participants using a Fisher-\eqn{z} transformed interval.
-\item \strong{H3 (Latent regression):} Regresses indirect sensitivity onto direct
-sensitivity. The intercept represents expected indirect performance when
-direct sensitivity is zero (\eqn{d'_{\mathrm{Direct}} = 0}), testing for
-unconscious processing.
+\item \strong{H3 (Latent regression):} Regresses influence sensitivity onto awareness
+sensitivity. The intercept represents expected influence performance when
+awareness sensitivity is zero (\eqn{d'_{\mathrm{Awareness}} = 0}), testing
+for unconscious processing.
 }
 
-Because both the correlation (H2) and regression slope (H3) are zero if and
-only if the covariance between sensitivities is zero, they evaluate the same
-association and share identical test statistics.
+With positive sensitivity variances, H2 and the H3 slope share the same
+zero-covariance null. The analytical frequentist output uses the same
+covariance test for both. The correlation interval uses Fisher-\eqn{z}.
 }
 
 \section{Custom models with covariates}{
 To adjust tests for additional factors, specify the model directly using
-\code{\link[lme4:glmer]{lme4::glmer()}}. As long as the two sensitivity terms are included as fixed
-effects and correlated across subjects via random slopes, \code{usdt_tests()} will
-compute the latent tests conditional on those covariates.
+\code{\link[lme4:glmer]{lme4::glmer()}} or \code{\link[brms:brm]{brms::brm()}}. As long as the two sensitivity terms are
+included as fixed effects and correlated across subjects via random slopes,
+\code{usdt_tests()} will compute the latent tests conditional on those
+covariates. A brms model is summarised from its posterior, like a Bayesian
+\code{\link[=hsdt]{hsdt()}} fit, and keeps the term names that lme4 would give it. Aggregating
+the trials with \code{\link[=usdt_aggregate]{usdt_aggregate()}} gives either model the same estimates
+and makes it much faster to fit.
 }
 
 \examples{
 # 1. Standard model via hsdt()
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)
@@ -98,26 +110,31 @@ latent_regression(m)  # H3
 # Controlling for display set size across both tasks
 trials <- rbind(
   data.frame(vadillo_awareness[c("subj", "condition", "set.size")],
-             task = "D", resp = vadillo_awareness$judged.old),
+             task = "A", resp = vadillo_awareness$judged.old),
   data.frame(vadillo_cuing[c("subj", "condition", "set.size")],
              task = "I", resp = meyen_split(vadillo_cuing$rt,
                                             by = vadillo_cuing$subj))
 )
 
-# Deviation contrasts (-0.5 vs 0.5); `direct` flags the direct task
+# Deviation contrasts (-0.5 vs 0.5). `awareness` flags the awareness task
 trials <- within(trials, {
   cond   <- ifelse(condition == "old", 0.5, -0.5)
   size   <- ifelse(set.size == "set size 16", 0.5, -0.5)
-  direct <- as.integer(task == "D")
+  awareness <- as.integer(task == "A")
 })
 
-# Standard glmer formula: indirect criterion is omitted (fixed at 0
-# by the median split). Random effects estimate the direct criterion
+# Counting responses per subject, task and condition keeps the likelihood
+# and makes the fit much faster than one row per trial
+counts <- usdt_aggregate(trials, response = "resp",
+                         by = c("subj", "task", "cond", "size", "awareness"))
+
+# Standard glmer formula: influence criterion is omitted (fixed at 0
+# by the median split). Random effects estimate the awareness criterion
 # and correlated task sensitivities across subjects.
 fit <- lme4::glmer(
-  resp ~ 0 + direct + task:size + task:cond +
-    (0 + direct | subj) + (0 + task:cond | subj),
-  data = trials, family = binomial("probit"),
+  cbind(y, n - y) ~ 0 + awareness + task:size + task:cond +
+    (0 + awareness | subj) + (0 + task:cond | subj),
+  data = counts, family = binomial("probit"),
   control = lme4::glmerControl(optimizer = "bobyqa")
 )
 
@@ -125,10 +142,27 @@ fit <- lme4::glmer(
 names(lme4::fixef(fit))
 
 # Evaluate hypotheses conditional on set size
-usdt_tests(fit, direct = "taskD:cond", indirect = "taskI:cond")
+usdt_tests(fit, awareness = "taskA:cond", influence = "taskI:cond")
+}
+
+\donttest{
+# 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
+fit_b <- brms::brm(
+  y | trials(n) ~ 0 + awareness + task:size + task:cond +
+    (0 + awareness | subj) + (0 + task:cond | subj),
+  data = counts, family = binomial("probit"),
+  prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
+)
+
+# The same term names. The tests now summarise the posterior
+usdt_tests(fit_b, awareness = "taskA:cond", influence = "taskI:cond")
+
+# With a proper prior on the sensitivities, also Bayes factors
+set.seed(1)
+usdt_bf(fit_b, awareness = "taskA:cond", influence = "taskI:cond")
 }
 
 }
 \seealso{
-\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}
+\code{\link[=hsdt]{hsdt()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=usdt_aggregate]{usdt_aggregate()}}
 }

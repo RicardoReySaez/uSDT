@@ -12,7 +12,7 @@ make_binary <- function(seed = 1L, n_subj = 30L, n_trials = 60L) {
 # This function keeps the common input options in one place.
 long_args <- function(df, ...) {
   args <- list(data = df, task_col = "task",
-               task_levels      = c(direct = "D", indirect = "I"),
+               task_levels      = c(awareness = "A", influence = "I"),
                subject_col      = "subj",
                condition_col    = "cond",
                condition_levels = c(signal = 1, noise = 0),
@@ -24,13 +24,14 @@ long_args <- function(df, ...) {
 test_that("both entry points give the same object", {
   df <- make_binary()
   d1 <- long_args(df)
-  d2 <- usdt_data_tasks(direct = df[df$task == "D", ], indirect = df[df$task == "I", ],
+  d2 <- usdt_data_tasks(awareness = df[df$task == "A", ],
+                        influence = df[df$task == "I", ],
                         subject_col      = "subj",
                         condition_col    = "cond",
                         condition_levels = c(signal = 1, noise = 0),
                         response_col     = "response",
                         response_levels  = c(signal = 1, noise = 0))
-  keep <- c("subj", "task", "sig", "y", "n", "cond", "c_D", "c_I", "d_D", "d_I")
+  keep <- c("subj", "task", "sig", "y", "n", "cond", "c_A", "c_I", "d_A", "d_I")
   expect_identical(d1$agg[, keep], d2$agg[, keep])
 })
 
@@ -42,7 +43,8 @@ test_that("counts, proportions and SDT tables reproduce trial-level input", {
   cnt <- ref$agg
   cnt$tk <- as.character(cnt$task)
   d_cnt <- usdt_data_long(cnt, task_col = "tk",
-                          task_levels      = c(direct = "D", indirect = "I"),
+                          task_levels      = c(awareness = "A",
+                                               influence = "I"),
                           subject_col      = "subj",
                           condition_col    = "sig",
                           condition_levels = c(signal = TRUE, noise = FALSE),
@@ -53,7 +55,8 @@ test_that("counts, proportions and SDT tables reproduce trial-level input", {
   # This input contains response proportions.
   prp <- cnt; prp$p <- prp$y / prp$n
   d_prp <- usdt_data_long(prp, task_col = "tk",
-                          task_levels      = c(direct = "D", indirect = "I"),
+                          task_levels      = c(awareness = "A",
+                                               influence = "I"),
                           subject_col      = "subj",
                           condition_col    = "sig",
                           condition_levels = c(signal = TRUE, noise = FALSE),
@@ -70,7 +73,7 @@ test_that("counts, proportions and SDT tables reproduce trial-level input", {
   w$cr   <- w$n_noise - w$fa
   w$task <- as.character(w$task)
   d_sdt <- usdt_data_long(w, task_col = "task",
-                          task_levels = c(direct = "D", indirect = "I"),
+                          task_levels = c(awareness = "A", influence = "I"),
                           subject_col = "subj",
                           sdt_cols    = c(hit = "hit", miss = "miss",
                                           fa = "fa", cr = "cr"))
@@ -98,29 +101,30 @@ test_that("a Meyen-split task has its criterion fixed under deviation coding onl
 
   mk <- function(coding) {
     usdt_data_tasks(
-      direct   = df[df$task == "D", ],
-      indirect = df[df$task == "I", ],
+      awareness = df[df$task == "A", ],
+      influence = df[df$task == "I", ],
       subject_col      = "subj",
       condition_col    = "cond",
       condition_levels = c(signal = 1, noise = 0),
-      response_col     = c(direct = "response", indirect = "rt"),
-      response_levels  = list(direct   = c(signal = 1, noise = 0),
-                              indirect = c(signal = "faster", noise = "slower")),
-      dichotomize = "indirect", coding = coding)
+      response_col     = c(awareness = "response", influence = "rt"),
+      response_levels  = list(awareness = c(signal = 1, noise = 0),
+                              influence = c(signal = "faster",
+                                            noise = "slower")),
+      dichotomize = "influence", coding = coding)
   }
 
   dev <- mk("deviation")
   trt <- suppressMessages(mk("treatment"))
 
   # Deviation coding makes the criterion equal to zero in this design.
-  expect_true(dev$meta$criterion_zero[["indirect"]])
-  expect_lt(dev$meta$criterion[["indirect"]]$mean_abs, 0.02)
+  expect_true(dev$meta$criterion_zero[["influence"]])
+  expect_lt(dev$meta$criterion[["influence"]]$mean_abs, 0.02)
 
   # Treatment coding makes the criterion equal to d'/2, so it is estimated.
-  expect_false(trt$meta$criterion_zero[["indirect"]])
+  expect_false(trt$meta$criterion_zero[["influence"]])
 
-  # The direct task keeps its criterion with both coding choices.
-  expect_false(dev$meta$criterion_zero[["direct"]])
+  # The awareness task keeps its criterion with both coding choices.
+  expect_false(dev$meta$criterion_zero[["awareness"]])
 })
 
 test_that("the formula follows the criterion decision", {
@@ -130,13 +134,13 @@ test_that("the formula follows the criterion decision", {
 
   # Both criteria are estimated when no task was dichotomized.
   f_all <- .usdt_formula(d)
-  expect_setequal(f_all$criteria, c("c_D", "c_I"))
+  expect_setequal(f_all$criteria, c("c_A", "c_I"))
   expect_identical(f_all$n_fixed, 4L)
 
-  # Fixing the indirect criterion at zero removes one term.
-  d$meta$criterion_zero[["indirect"]] <- TRUE
+  # Fixing the influence criterion at zero removes one term.
+  d$meta$criterion_zero[["influence"]] <- TRUE
   f_one <- .usdt_formula(d)
-  expect_identical(f_one$criteria, "c_D")
+  expect_identical(f_one$criteria, "c_A")
   expect_identical(f_one$dropped, "c_I")
   expect_identical(f_one$n_fixed, 3L)
   expect_identical(f_one$n_var, 4)
@@ -157,9 +161,9 @@ test_that("input problems are caught with actionable messages", {
                "named `signal` and `noise`")
 
   # An unknown task label produces an error.
-  expect_error(long_args(df, task_levels = c(direct = "D", indirect = "Z")),
+  expect_error(long_args(df, task_levels = c(awareness = "A", influence = "Z")),
                "no rows")
-  expect_error(long_args(df, task_levels = c(direct = "D", indirect = "D")),
+  expect_error(long_args(df, task_levels = c(awareness = "A", influence = "A")),
                "different values")
 
   # Missing subject identifiers produce an error.
@@ -168,20 +172,21 @@ test_that("input problems are caught with actionable messages", {
   expect_error(long_args(bad_id), "missing subject")
 
   # Display labels must identify two different tasks.
-  expect_error(long_args(df, labels = c(direct = "Task", indirect = "Task")),
+  expect_error(long_args(df, labels = c(awareness = "Task",
+                                        influence = "Task")),
                "two different names")
 
   # Aggregated data cannot be dichotomized.
   df$one <- 1L
   expect_error(
     usdt_data_long(df, task_col = "task",
-                   task_levels      = c(direct = "D", indirect = "I"),
+                   task_levels      = c(awareness = "A", influence = "I"),
                    subject_col      = "subj",
                    condition_col    = "cond",
                    condition_levels = c(signal = 1, noise = 0),
                    successes_col    = "response", trials_col = "one",
                    successes_type   = "counts",
-                   dichotomize      = "indirect"),
+                   dichotomize      = "influence"),
     "needs one row per trial")
 })
 
@@ -191,7 +196,7 @@ test_that("aggregated values are validated before conversion", {
   cnt$tk <- as.character(cnt$task)
   prepare <- function(x, type = "counts", successes = "y") {
     usdt_data_long(x, task_col = "tk",
-                   task_levels = c(direct = "D", indirect = "I"),
+                   task_levels = c(awareness = "A", influence = "I"),
                    subject_col = "subj",
                    condition_col = "sig",
                    condition_levels = c(signal = TRUE, noise = FALSE),
@@ -233,7 +238,7 @@ test_that("aggregated values are validated before conversion", {
   wide$hit[1L] <- 0.5
   expect_error(
     usdt_data_long(wide, task_col = "task",
-                   task_levels = c(direct = "D", indirect = "I"),
+                   task_levels = c(awareness = "A", influence = "I"),
                    subject_col = "subj",
                    sdt_cols = c(hit = "hit", miss = "miss",
                                 fa = "fa", cr = "cr")),
@@ -243,17 +248,18 @@ test_that("aggregated values are validated before conversion", {
 test_that("a factor cannot be used as a response time", {
   set.seed(7)
   df <- make_trials(n_subj = 20L, n_trials = 60L, rt = TRUE)
-  direct <- df[df$task == "D", ]
-  indirect <- df[df$task == "I", ]
-  indirect$rt <- factor(indirect$rt)
+  awareness <- df[df$task == "A", ]
+  influence <- df[df$task == "I", ]
+  influence$rt <- factor(influence$rt)
   expect_error(
     usdt_data_tasks(
-      direct = direct, indirect = indirect, subject_col = "subj",
+      awareness = awareness, influence = influence, subject_col = "subj",
       condition_col = "cond", condition_levels = c(signal = 1, noise = 0),
-      response_col = c(direct = "response", indirect = "rt"),
-      response_levels = list(direct = c(signal = 1, noise = 0),
-                             indirect = c(signal = "faster", noise = "slower")),
-      dichotomize = "indirect"),
+      response_col = c(awareness = "response", influence = "rt"),
+      response_levels = list(awareness = c(signal = 1, noise = 0),
+                             influence = c(signal = "faster",
+                                           noise = "slower")),
+      dichotomize = "influence"),
     "must be numeric")
 })
 
@@ -275,9 +281,9 @@ test_that("missing signal and noise roles are an error, never a guess", {
   rt <- make_trials(n_subj = 30L, n_trials = 60L, rt = TRUE)
   expect_error(
     long_args(rt,
-              response_col    = c(direct = "response", indirect = "rt"),
+              response_col    = c(awareness = "response", influence = "rt"),
               response_levels = NULL,
-              dichotomize     = "indirect"),
+              dichotomize     = "influence"),
     "`response_levels` is required")
 })
 
@@ -286,28 +292,28 @@ test_that("missing signal and noise roles are an error, never a guess", {
 # This function relabels one task so the two designs differ.
 make_split_tasks <- function(seed = 3L) {
   df <- make_binary(seed)
-  direct   <- df[df$task == "D", ]
-  indirect <- df[df$task == "I", ]
-  names(direct)[names(direct) == "cond"]     <- "seen"
-  names(indirect)[names(indirect) == "cond"] <- "cue"
-  direct$seen  <- ifelse(direct$seen == 1, "old", "new")
-  indirect$cue <- ifelse(indirect$cue == 1, "cued", "uncued")
-  list(direct = direct, indirect = indirect)
+  awareness <- df[df$task == "A", ]
+  influence <- df[df$task == "I", ]
+  names(awareness)[names(awareness) == "cond"] <- "seen"
+  names(influence)[names(influence) == "cond"] <- "cue"
+  awareness$seen <- ifelse(awareness$seen == 1, "old", "new")
+  influence$cue  <- ifelse(influence$cue == 1, "cued", "uncued")
+  list(awareness = awareness, influence = influence)
 }
 
 test_that("each task may use its own condition column and levels", {
   p <- make_split_tasks()
   d <- usdt_data_tasks(
-    direct = p$direct, indirect = p$indirect, subject_col = "subj",
-    condition_col    = list(direct = "seen", indirect = "cue"),
-    condition_levels = list(direct   = c(signal = "old",  noise = "new"),
-                            indirect = c(signal = "cued", noise = "uncued")),
+    awareness = p$awareness, influence = p$influence, subject_col = "subj",
+    condition_col    = list(awareness = "seen", influence = "cue"),
+    condition_levels = list(awareness = c(signal = "old",  noise = "new"),
+                            influence = c(signal = "cued", noise = "uncued")),
     response_col     = "response",
     response_levels  = c(signal = 1, noise = 0))
 
-  expect_identical(d$meta$tasks$direct$condition_col, "seen")
-  expect_identical(d$meta$tasks$indirect$condition_col, "cue")
-  expect_identical(unname(d$meta$tasks$indirect$condition_levels[["signal"]]),
+  expect_identical(d$meta$tasks$awareness$condition_col, "seen")
+  expect_identical(d$meta$tasks$influence$condition_col, "cue")
+  expect_identical(unname(d$meta$tasks$influence$condition_levels[["signal"]]),
                    "cued")
 
   # The relabelling changes no count, so the aggregate must not move.
@@ -318,27 +324,28 @@ test_that("each task may use its own condition column and levels", {
 
 test_that("each task may use its own subject column and input format", {
   p <- make_split_tasks()
-  tab <- do.call(rbind, lapply(split(p$indirect, p$indirect$subj), function(z)
+  tab <- do.call(rbind, lapply(split(p$influence, p$influence$subj), function(z)
     data.frame(id = z$subj[1L],
                H  = sum(z$cue == "cued"   & z$response == 1),
                M  = sum(z$cue == "cued"   & z$response == 0),
                FA = sum(z$cue == "uncued" & z$response == 1),
                CR = sum(z$cue == "uncued" & z$response == 0))))
   d <- usdt_data_tasks(
-    direct = p$direct, indirect = tab,
-    subject_col      = list(direct = "subj", indirect = "id"),
-    condition_col    = list(direct = "seen", indirect = NULL),
-    condition_levels = list(direct = c(signal = "old", noise = "new"),
-                            indirect = NULL),
-    response_col     = list(direct = "response", indirect = NULL),
-    response_levels  = list(direct = c(signal = 1, noise = 0), indirect = NULL),
-    sdt_cols         = list(direct = NULL,
-                            indirect = c(hit = "H", miss = "M",
-                                         fa = "FA", cr = "CR")))
+    awareness = p$awareness, influence = tab,
+    subject_col      = list(awareness = "subj", influence = "id"),
+    condition_col    = list(awareness = "seen", influence = NULL),
+    condition_levels = list(awareness = c(signal = "old", noise = "new"),
+                            influence = NULL),
+    response_col     = list(awareness = "response", influence = NULL),
+    response_levels  = list(awareness = c(signal = 1, noise = 0),
+                            influence = NULL),
+    sdt_cols         = list(awareness = NULL,
+                            influence = c(hit = "H", miss = "M",
+                                          fa = "FA", cr = "CR")))
 
-  expect_identical(d$meta$tasks$indirect$subject, "id")
-  expect_identical(d$meta$tasks$indirect$granularity, "SDT table")
-  expect_identical(d$meta$tasks$direct$granularity, "trial level")
+  expect_identical(d$meta$tasks$influence$subject, "id")
+  expect_identical(d$meta$tasks$influence$granularity, "SDT table")
+  expect_identical(d$meta$tasks$awareness$granularity, "trial level")
 
   ref <- long_args(make_binary(3L))
   expect_equal(d$agg$y, ref$agg$y)
@@ -349,24 +356,24 @@ test_that("dichotomize accepts task names and one logical per task", {
   df <- make_binary(5L, n_trials = 40L)
   df$rt <- stats::rnorm(nrow(df))
   args <- list(
-    response_col    = list(direct = "response", indirect = "rt"),
-    response_levels = list(direct   = c(signal = 1, noise = 0),
-                           indirect = c(signal = "faster", noise = "slower")))
+    response_col    = list(awareness = "response", influence = "rt"),
+    response_levels = list(awareness = c(signal = 1, noise = 0),
+                           influence = c(signal = "faster", noise = "slower")))
 
-  by_name <- do.call(long_args, c(list(df, dichotomize = "indirect"), args))
+  by_name <- do.call(long_args, c(list(df, dichotomize = "influence"), args))
   by_flag <- do.call(long_args,
-                     c(list(df, dichotomize = list(direct = FALSE,
-                                                   indirect = TRUE)), args))
+                     c(list(df, dichotomize = list(awareness = FALSE,
+                                                   influence = TRUE)), args))
   expect_equal(by_name$agg, by_flag$agg)
-  expect_false(by_flag$meta$tasks$direct$dichotomized)
-  expect_true(by_flag$meta$tasks$indirect$dichotomized)
+  expect_false(by_flag$meta$tasks$awareness$dichotomized)
+  expect_true(by_flag$meta$tasks$influence$dichotomized)
 
   both <- do.call(long_args, c(list(df, dichotomize = TRUE),
                                list(response_col = "rt",
                                     response_levels = c(signal = "faster",
                                                         noise = "slower"))))
-  expect_true(both$meta$tasks$direct$dichotomized)
-  expect_true(both$meta$tasks$indirect$dichotomized)
+  expect_true(both$meta$tasks$awareness$dichotomized)
+  expect_true(both$meta$tasks$influence$dichotomized)
 })
 
 test_that("ties and successes_type may differ between tasks", {
@@ -376,37 +383,39 @@ test_that("ties and successes_type may differ between tasks", {
                  response_col    = "rt",
                  response_levels = c(signal = "faster", noise = "slower"),
                  dichotomize     = "both",
-                 ties            = list(direct = "noise", indirect = "random"))
+                 ties            = list(awareness = "noise",
+                                        influence = "random"))
   expect_identical(unname(d$meta$ties), c("noise", "random"))
-  expect_error(long_args(df, ties = list(direct = "noise", indirect = "half")),
+  expect_error(long_args(df, ties = list(awareness = "noise",
+                                         influence = "half")),
                "`ties` must be one of")
 })
 
 test_that("naming only one task is an error rather than a shared value", {
   df <- make_binary(7L)
-  expect_error(long_args(df, condition_col = list(direct = "cond",
-                                                  indriect = "cond")),
+  expect_error(long_args(df, condition_col = list(awareness = "cond",
+                                                  influnce = "cond")),
                "names one task but not the other")
-  expect_error(long_args(df, dichotomize = "indirecto"),
+  expect_error(long_args(df, dichotomize = "influencia"),
                "does not accept")
-  expect_error(long_args(df, dichotomize = c("none", "direct")),
+  expect_error(long_args(df, dichotomize = c("none", "awareness")),
                "combines")
 })
 
 test_that("the printed mapping keeps one row per task", {
   p <- make_split_tasks()
   d <- usdt_data_tasks(
-    direct = p$direct, indirect = p$indirect, subject_col = "subj",
-    condition_col    = list(direct = "seen", indirect = "cue"),
-    condition_levels = list(direct   = c(signal = "old",  noise = "new"),
-                            indirect = c(signal = "cued", noise = "uncued")),
+    awareness = p$awareness, influence = p$influence, subject_col = "subj",
+    condition_col    = list(awareness = "seen", influence = "cue"),
+    condition_levels = list(awareness = c(signal = "old",  noise = "new"),
+                            influence = c(signal = "cued", noise = "uncued")),
     response_col     = "response",
     response_levels  = c(signal = 1, noise = 0))
   out <- utils::capture.output(print(d))
 
   expect_false(any(grepl("\bboth\b", out)))
-  expect_true(any(grepl("^  subject .* Direct .* subj", out)))
-  expect_true(any(grepl("^ +Indirect +subj", out)))
-  expect_true(any(grepl("^  condition +Direct +seen +old +new", out)))
-  expect_true(any(grepl("^ +Indirect +cue +cued +uncued", out)))
+  expect_true(any(grepl("^  subject .* Awareness .* subj", out)))
+  expect_true(any(grepl("^ +Influence +subj", out)))
+  expect_true(any(grepl("^  condition +Awareness +seen +old +new", out)))
+  expect_true(any(grepl("^ +Influence +cue +cued +uncued", out)))
 })

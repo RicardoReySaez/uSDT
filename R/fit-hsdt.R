@@ -1,71 +1,144 @@
 # fit-hsdt.R
 # Fit hierarchical Signal Detection Theory models
 # Author: Ricardo Rey-Sáez
-# Last modified: 18-09-2026
+# Last modified: 18-10-2026
 
 # Public functions
 
 #' Fit a hierarchical signal detection theory model
 #'
-#' Fits a bivariate hierarchical SDT model using [lme4::glmer()] and evaluates
-#' the core unconscious processing hypotheses. The model estimates task-specific
-#' sensitivities (\eqn{d'}) and response criteria (\eqn{c}) as fixed effects,
-#' while estimating their variation and correlation across participants via
-#' random effects.
+#' Models paired awareness and influence sensitivities and criteria, their
+#' population means and between-subject variation. Frequentist estimation uses
+#' [lme4::glmer()]. Bayesian estimation uses brms and Stan.
 #'
 #' @param data A `usdt_data` object from [usdt_data_tasks()] or
 #'   [usdt_data_long()].
-#' @param estimation Estimation framework. Currently only `"frequentist"`
-#'   (maximum likelihood via Laplace approximation) is supported.
+#' @param estimation Estimation framework: `"frequentist"` (maximum likelihood
+#'   via Laplace approximation with lme4) or `"bayesian"` (Hamiltonian Monte
+#'   Carlo with Stan, through brms).
 #' @param fix_criteria How to handle response criteria. `"auto"` fixes to zero
-#'   any criterion that is zero by design (such as a task split at the median
-#'   under deviation coding). `"none"` estimates all criteria.
-#' @param level Confidence level for Wald intervals (default is 0.95).
+#'   a dichotomized task's criterion when its mean absolute descriptive subject
+#'   criterion is below 0.02. `"none"` estimates all criteria.
+#' @param level Confidence level for Wald intervals, or credible level for the
+#'   posterior intervals of a Bayesian fit (default is 0.95).
 #' @param optimizer Primary optimizer passed to [lme4::glmerControl()].
 #'   Alternative optimizers are automatically evaluated if the default fails to
-#'   converge or produces a singular fit.
-#' @param ... Additional arguments passed to [lme4::glmer()]. Model formula,
-#'   family, and data inputs remain managed by the package.
+#'   converge or produces a singular fit. Frequentist estimation only.
+#' @param priors A `usdt_priors` object from [usdt_priors()]. Bayesian
+#'   estimation only.
+#' @param unequal_variances Logical. Estimate the standard deviation of the
+#'   signal distribution of each task instead of fixing it to that of the noise
+#'   distribution. Bayesian estimation only.
+#' @param latent How the Bayesian model writes the relation between the two
+#'   latent sensitivities, which decides where it places the prior on the
+#'   location of the influence sensitivity: on its mean, by their latent
+#'   correlation (`"correlation"`, the default), or on the intercept of the
+#'   latent regression of the influence on the awareness sensitivity
+#'   (`"regression"`). Both keep the priors on the awareness mean, the
+#'   standard deviations and the correlation. Bayesian estimation only.
+#' @param backend Stan interface brms uses for Bayesian estimation: `"rstan"`
+#'   (available from CRAN) or `"cmdstanr"` (installed from the Stan R-universe
+#'   together with CmdStan). As in brms, the default is the `brms.backend`
+#'   option, or `"rstan"` when it is not set. Bayesian estimation only.
+#' @param ... For frequentist estimation, additional arguments passed to
+#'   [lme4::glmer()]. The model formula, family and data remain managed by the
+#'   package. For Bayesian estimation, sampling options: `chains` (default 4),
+#'   `iter` (iterations per chain including warmup, default 6000), `warmup`
+#'   (default 1000, so each chain keeps 5000 draws), `cores` (chains run at
+#'   once, default `min(parallel::detectCores() - 2, 4)`, at least 1), `seed`,
+#'   `control = list(adapt_delta, max_treedepth)` (default 0.95 and 10) and
+#'   `refresh` (iterations between progress updates of each chain, default 1%
+#'   of `iter`, and `0` hides the progress bar).
 #'
 #' @return An object of class `hsdt` containing:
-#' * `$fit`: The underlying `glmerMod` object from `lme4`.
+#' * `$fit`: The underlying fit: a `glmerMod` object from lme4, or a `brmsfit`
+#'   object from brms (see [brms::prior_summary()] and [brms::pp_check()]).
 #' * `$tests`: Summary table for hypotheses H1, H2, and H3.
-#' * `$pars`: Model parameter estimates on the SDT scale.
-#' * `$design`: Summary of the model specification and formula.
-#' * `$diagnostics`: Convergence flags and singular fit indicators.
+#' * `$design`: Summary of the model specification.
+#' * `$diagnostics`: Convergence diagnostics.
+#'
+#' A frequentist fit also contains `$pars`, the parameter estimates and their
+#' joint covariance. A Bayesian fit also contains `$priors`. Its posterior
+#' draws are those of `$fit`, where `b_dA_Intercept` and `b_dI_Intercept` are
+#' the mean \eqn{d'} of the awareness and influence tasks,
+#' `sd_subj__dA_Intercept` and `sd_subj__dI_Intercept` their SDs,
+#' `cor_subj__dA_Intercept__dI_Intercept` their correlation, `b_cA_Intercept`
+#' and `b_cI_Intercept` the mean of an estimated criterion (on the classical
+#' scale), and `b_sA_Intercept` and `b_sI_Intercept` the signal SDs under
+#' unequal variances.
 #'
 #' @details
-#' The model fits trial counts with a binomial probit link, directly mapping
-#' coefficients to standard Signal Detection Theory parameters. Fixed effects
-#' capture population sensitivities and criteria, while random effects estimate
-#' participant variation and the latent correlation between direct and indirect
-#' sensitivity.
-#'
 #' Hypotheses evaluated by default:
 #' * **H1:** Mean sensitivity difference between tasks.
 #' * **H2:** Latent correlation of sensitivities across participants.
-#' * **H3:** Latent regression of indirect on direct sensitivity. Its intercept
-#'   reflects expected indirect performance when direct awareness is zero
-#'   (\eqn{d'_{\mathrm{Direct}} = 0}).
+#' * **H3:** Latent regression of influence on awareness sensitivity. Its
+#'   intercept reflects expected influence performance when awareness
+#'   sensitivity is zero (\eqn{d'_{\mathrm{Awareness}} = 0}).
 #'
 #' When sample sizes or trial counts are low, variance components can reach
 #' singular boundaries. In these cases, the function issues a warning, and
-#' parametric bootstrap intervals can be calculated using [usdt_boot()].
+#' parametric bootstrap intervals can be calculated using [usdt_boot()], or the
+#' model can be fitted with `estimation = "bayesian"`.
 #'
-#' @seealso [usdt_data_tasks()], [usdt_tests()], [usdt_boot()], [plot.hsdt()]
+#' # Bayesian estimation
+#'
+#' The Bayesian model places its priors on the mean, standard deviation and
+#' correlation of the two sensitivities and on the criteria. See
+#' [usdt_priors()]. The slope and intercept of the latent regression are
+#' derived from them draw by draw. The hypothesis table reports the posterior
+#' mean and standard deviation, a central credible interval and a two-sided
+#' posterior p-value, \eqn{2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}}.
+#' The p-value falls below `1 - level` exactly when zero lies outside the
+#' credible interval, so with the default `level = 0.95` a p-value below .05
+#' means that the 95% credible interval excludes zero.
+#'
+#' With `latent = "regression"`, the prior of the influence mean
+#' moves to the intercept \eqn{\beta_0} of the latent regression, and the
+#' influence mean follows as
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The
+#' intercept tested by H3 then has its specified prior, and the correlation
+#' (H2) keeps its own. The difference between the means (H1) has an induced,
+#' heavy-tailed prior instead, and because the data fix \eqn{\mu_I}, the
+#' intercept prior also informs the posterior of \eqn{\rho}. See
+#' [usdt_priors()] and [plot.usdt_priors()]. The fit samples the same
+#' parameters and reports the same hypotheses either way. Near-zero awareness
+#' SDs can produce difficult posterior geometry and divergences. A prior with
+#' less weight near zero may help, if substantively justified. Inspect its
+#' implications with [plot.usdt_priors()].
+#'
+#' With `unequal_variances = TRUE`, the noise distribution of each task is
+#' \eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so
+#' \eqn{d} is the distance between their means in units of the noise standard
+#' deviation, and H1-H3 compare these \eqn{d}. When \eqn{\sigma_s} differs
+#' between the tasks, \eqn{d} no longer measures the same discriminability in
+#' both: the measure comparable with an equal-variance \eqn{d'} is
+#' \eqn{d_a = d \sqrt{2 / (1 + \sigma_s^2)}}, and the mean \eqn{d_a} of a task
+#' is its mean \eqn{d} times that factor, which can be computed from the draws
+#' of `b_dA_Intercept` and `b_sA_Intercept` (and their influence counterparts)
+#' in `$fit`. The correlation (H2) is the same on either scale.
+#'
+#' The model is a brms model of the aggregated counts, with one prior per
+#' parameter and task. It is compiled the first time it is used with a given
+#' set of priors, which needs a C++ toolchain, and stays in a per-user cache
+#' directory for later sessions. Inspect the reported divergences, tree-depth
+#' warnings, R-hat and effective sample sizes before interpreting results.
+#'
+#' @seealso [usdt_data_tasks()], [usdt_priors()], [usdt_tests()],
+#'   [usdt_boot()], [plot.hsdt()]
 #'
 #' @examples
 #' # Contextual cuing data from Vadillo et al. (2025)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' m <- hsdt(d)
@@ -73,15 +146,25 @@
 #' # Full summary table with SDT parameters and hypothesis tests
 #' summary(m)
 #'
-#' # Inspect the model formula (indirect criterion omitted by default)
+#' # Inspect the model formula (influence criterion omitted by default)
 #' m$design$formula
+#'
+#' \donttest{
+#' # Bayesian estimation. The first call compiles the model.
+#' mb <- hsdt(d, estimation = "bayesian", seed = 1)
+#' summary(mb)
+#' }
 #'
 #' @export
 hsdt <- function(data,
-                 estimation   = c("frequentist"),
+                 estimation   = c("frequentist", "bayesian"),
                  fix_criteria = c("auto", "none"),
                  level        = 0.95,
                  optimizer    = "bobyqa",
+                 priors       = usdt_priors(),
+                 unequal_variances = FALSE,
+                 latent       = c("correlation", "regression"),
+                 backend      = getOption("brms.backend", "rstan"),
                  ...) {
 
   # The function checks the data and the requested options.
@@ -90,17 +173,43 @@ hsdt <- function(data,
                "not a plain ", class(data)[1L], ".")
   }
   estimation <- tryCatch(match.arg(estimation), error = function(e)
-    .usdt_stop("`estimation` accepts only `\"frequentist\"`, which fits the ",
-               "model by maximum likelihood with lme4."))
+    .usdt_stop("`estimation` must be `\"frequentist\"` or `\"bayesian\"`."))
   fix_criteria <- match.arg(fix_criteria)
   .check_confidence_level(level)
-  if (!is.character(optimizer) || length(optimizer) != 1L ||
-      is.na(optimizer) || !nzchar(optimizer)) {
-    .usdt_stop("`optimizer` must be one optimizer name.")
-  }
   dots <- list(...)
   if (length(dots) && (is.null(names(dots)) || any(!nzchar(names(dots))))) {
     .usdt_stop("every argument in `...` must have a name.")
+  }
+
+  # Each estimation takes its own options.
+  if (estimation == "bayesian") {
+    if (!missing(optimizer)) {
+      .usdt_stop("`optimizer` applies only to `estimation = \"frequentist\"`.")
+    }
+    if (!inherits(priors, "usdt_priors")) {
+      .usdt_stop("`priors` must come from usdt_priors(), not a plain ",
+                 class(priors)[1L], ".")
+    }
+    if (!is.logical(unequal_variances) || length(unequal_variances) != 1L ||
+        is.na(unequal_variances)) {
+      .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
+    }
+    latent <- .check_latent(latent)
+    if (!is.character(backend) || length(backend) != 1L ||
+        !backend %in% c("rstan", "cmdstanr")) {
+      .usdt_stop("`backend` must be `\"rstan\"` or `\"cmdstanr\"`.")
+    }
+    return(.hsdt_bayes(data, fix_criteria, level, priors, unequal_variances,
+                       latent, backend, dots, match.call()))
+  }
+  if (!missing(priors) || !missing(unequal_variances) ||
+      !missing(latent) || !missing(backend)) {
+    .usdt_stop("`priors`, `unequal_variances`, `latent` and ",
+               "`backend` apply only to `estimation = \"bayesian\"`.")
+  }
+  if (!is.character(optimizer) || length(optimizer) != 1L ||
+      is.na(optimizer) || !nzchar(optimizer)) {
+    .usdt_stop("`optimizer` must be one optimizer name.")
   }
   removed <- intersect(names(dots), c("re", "ci"))
   if (length(removed)) {
@@ -142,7 +251,7 @@ hsdt <- function(data,
     error = function(e) NULL)
 
   # The fitted parameters produce the three hypothesis tests.
-  pars  <- .usdt_pars(fit, "d_D", "d_I", devfun = devfun)
+  pars  <- .usdt_pars(fit, "d_A", "d_I", devfun = devfun)
   tests <- rbind(
     cbind(hypothesis = "H1", .diff_rows(pars, level)),
     cbind(hypothesis = "H2", .cor_rows(pars, level)),
@@ -158,12 +267,14 @@ hsdt <- function(data,
                  paste0("  At the bound: ",
                         paste(pars$at_bound, collapse = ", "), ".\n") else "",
                "  Reason: ", pars$inference_reason, "\n",
-               "  Use usdt_boot() for a parametric bootstrap.")
+               "  Use usdt_boot() for a parametric bootstrap, or ",
+               "estimation = \"bayesian\".")
   }
 
   structure(list(fit = fit, tests = tests, pars = pars, design = design,
                  data = data, diagnostics = diag, devfun = devfun,
-                 call = match.call(), level = level),
+                 call = match.call(), level = level,
+                 estimation = "frequentist"),
             class = "hsdt")
 }
 
@@ -236,7 +347,8 @@ hsdt <- function(data,
   detail <- unique(reasons[nzchar(reasons)])
   .usdt_stop("the model did not converge with any available optimizer.",
              if (length(detail)) paste0("\n  ", paste(detail, collapse = "\n  ")) else "",
-             "\n  Check the data and model identification.")
+             "\n  Check the data and model identification, or fit the model ",
+             "with estimation = \"bayesian\".")
 }
 
 # This function collects the main fitting diagnostics.
@@ -245,7 +357,7 @@ hsdt <- function(data,
   grad <- tryCatch(
     max(abs(solve(derivs$Hessian, derivs$gradient))),
     error = function(e) NA_real_)
-  sds <- sqrt(c(pars$est[["s2_D"]], pars$est[["s2_I"]]))
+  sds <- sqrt(c(pars$est[["s2_A"]], pars$est[["s2_I"]]))
   list(optimizer = fitted$optimizer, retried = fitted$retried,
        tried = fitted$tried, max_grad = grad,
        singular = pars$singular, boundary = !pars$joint_ok,

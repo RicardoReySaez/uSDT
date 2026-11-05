@@ -1,7 +1,7 @@
 # vcov-full.R
 # This script estimates uncertainty for fixed and random model parameters.
 # Author: Ricardo Rey-Sáez
-# Last modified: 04-09-2026
+# Last modified: 03-10-2026
 
 # Numerical derivatives
 
@@ -127,11 +127,8 @@
 
 # Random-effect variances and covariances
 
-# This function keeps a correlation inside its range.
-.cor_clamp <- function(rho) max(-1, min(1, rho))
-
 # This function finds the random term that contains both sensitivities.
-.locate_block <- function(fit, direct, indirect) {
+.locate_block <- function(fit, awareness, influence) {
 
   # The model lists the columns of each random term in parameter order.
   cnms  <- lme4::getME(fit, "cnms")
@@ -140,10 +137,11 @@
   start <- c(0L, ends[-length(ends)])
 
   # The selected term must contain both sensitivities.
-  hit <- which(vapply(cnms, function(z) all(c(direct, indirect) %in% z), TRUE))
+  hit <- which(vapply(cnms, function(z) all(c(awareness, influence) %in% z),
+                      TRUE))
   if (!length(hit)) {
-    .usdt_stop("no random-effects term contains both `", direct, "` and `",
-               indirect, "`.\n  Terms found: ",
+    .usdt_stop("no random-effects term contains both `", awareness, "` and `",
+               influence, "`.\n  Terms found: ",
                paste(vapply(cnms, function(z) paste0("(", paste(z, collapse = " + "),
                                                      " | ...)"), ""),
                      collapse = ", "), "\n",
@@ -156,8 +154,8 @@
   q <- sizes[[hit]]
   list(idx  = seq.int(start[hit] + 1L, ends[hit]),
        q    = q,
-       iD   = match(direct,   cnms[[hit]]),
-       iI   = match(indirect, cnms[[hit]]),
+       iA   = match(awareness, cnms[[hit]]),
+       iI   = match(influence, cnms[[hit]]),
        name = names(cnms)[hit])
 }
 
@@ -233,7 +231,7 @@
 .random_correlation <- function(fit, V, par, first, second) {
   blk <- .locate_block(fit, first, second)
   S   <- .theta_to_sigma(par[blk$idx], blk$q)
-  a   <- S[blk$iD, blk$iD]; b <- S[blk$iI, blk$iI]; cc <- S[blk$iD, blk$iI]
+  a   <- S[blk$iA, blk$iA]; b <- S[blk$iI, blk$iI]; cc <- S[blk$iA, blk$iI]
   estimate <- cc / sqrt(a * b)
 
   se <- NA_real_
@@ -241,16 +239,38 @@
     G <- .sigma_gradient(par[blk$idx], blk$q)
     J <- matrix(0, 1L, length(par))
     J[1L, blk$idx] <- vapply(G, function(g) {
-      g[blk$iD, blk$iI] / sqrt(a * b) -
-        estimate * (g[blk$iD, blk$iD] / a + g[blk$iI, blk$iI] / b) / 2
+      g[blk$iA, blk$iI] / sqrt(a * b) -
+        estimate * (g[blk$iA, blk$iA] / a + g[blk$iI, blk$iI] / b) / 2
     }, 0)
     variance <- drop(J %*% V %*% t(J))
     if (is.finite(variance) && variance >= 0) se <- sqrt(variance)
   }
-  list(estimate = .cor_clamp(estimate), se = se)
+  list(estimate = max(-1, min(1, estimate)), se = se)
 }
 
 # Conditional effects
+
+# This function gives each task parameter at the population level and, for the
+# requested subjects, the fixed effect plus the subject's conditional mode. A
+# parameter absent from the model, such as a criterion fixed at zero, is zero.
+.task_effects <- function(fit, subjects = character(0),
+                          parameters = c("c_A", "c_I", "d_A", "d_I")) {
+  beta <- lme4::fixef(fit)
+  population <- stats::setNames(rep.int(0, length(parameters)), parameters)
+  in_model <- intersect(parameters, names(beta))
+  population[in_model] <- beta[in_model]
+
+  individual <- matrix(0, nrow = length(subjects), ncol = length(parameters),
+                       dimnames = list(subjects, parameters))
+  if (length(subjects)) {
+    random <- lme4::ranef(fit, condVar = FALSE)[["subj"]]
+    random_parameters <- intersect(parameters, colnames(random))
+    individual[, random_parameters] <- as.matrix(
+      random[match(subjects, rownames(random)), random_parameters, drop = FALSE])
+  }
+  list(population = population,
+       subjects = sweep(individual, 2L, population, "+"))
+}
 
 # This function estimates uncertainty for each group's total effect.
 #
@@ -311,35 +331,35 @@
 }
 
 # This function calculates the five values used by the hypotheses.
-.quantity_parts <- function(fit, direct, indirect, par) {
-  blk <- .locate_block(fit, direct, indirect)
+.quantity_parts <- function(fit, awareness, influence, par) {
+  blk <- .locate_block(fit, awareness, influence)
   nt  <- length(lme4::getME(fit, "theta"))
   fx  <- names(lme4::fixef(fit))
   S   <- .theta_to_sigma(par[blk$idx], blk$q)
   G   <- .sigma_gradient(par[blk$idx], blk$q)
 
-  est <- c(gamma_D = unname(par[nt + match(direct, fx)]),
-           gamma_I = unname(par[nt + match(indirect, fx)]),
-           s2_D    = S[blk$iD, blk$iD],
+  est <- c(gamma_A = unname(par[nt + match(awareness, fx)]),
+           gamma_I = unname(par[nt + match(influence, fx)]),
+           s2_A    = S[blk$iA, blk$iA],
            s2_I    = S[blk$iI, blk$iI],
-           s_DI    = S[blk$iD, blk$iI])
+           s_AI    = S[blk$iA, blk$iI])
 
   J <- matrix(0, 5L, length(par), dimnames = list(names(est), names(par)))
-  J[1L, nt + match(direct, fx)]   <- 1
-  J[2L, nt + match(indirect, fx)] <- 1
-  J[3L, blk$idx] <- vapply(G, function(g) g[blk$iD, blk$iD], 0)
+  J[1L, nt + match(awareness, fx)]   <- 1
+  J[2L, nt + match(influence, fx)] <- 1
+  J[3L, blk$idx] <- vapply(G, function(g) g[blk$iA, blk$iA], 0)
   J[4L, blk$idx] <- vapply(G, function(g) g[blk$iI, blk$iI], 0)
-  J[5L, blk$idx] <- vapply(G, function(g) g[blk$iD, blk$iI], 0)
+  J[5L, blk$idx] <- vapply(G, function(g) g[blk$iA, blk$iI], 0)
 
   list(est = est, jacobian = J)
 }
 
 # This function collects the estimates and their joint covariance.
-.usdt_pars <- function(fit, direct, indirect, devfun = NULL) {
+.usdt_pars <- function(fit, awareness, influence, devfun = NULL) {
 
   # The model must contain both sensitivities as fixed effects.
   fx <- lme4::fixef(fit)
-  missing <- setdiff(c(direct, indirect), names(fx))
+  missing <- setdiff(c(awareness, influence), names(fx))
   if (length(missing)) {
     .usdt_stop("fixed effect", if (length(missing) > 1L) "s" else "", " ",
                paste0("`", missing, "`", collapse = " and "),
@@ -349,7 +369,7 @@
 
   # The fitted model always provides the five point estimates.
   par   <- c(lme4::getME(fit, "theta"), fx)
-  parts <- .quantity_parts(fit, direct, indirect, par)
+  parts <- .quantity_parts(fit, awareness, influence, par)
   est   <- parts$est
 
   # The fixed-effects covariance remains available without the full matrix.
@@ -370,14 +390,14 @@
   }
 
   # The sensitivity block must be inside its valid parameter range.
-  rho <- .cor_clamp(est[["s_DI"]] / sqrt(est[["s2_D"]] * est[["s2_I"]]))
-  S <- matrix(c(est[["s2_D"]], est[["s_DI"]],
-                est[["s_DI"]], est[["s2_I"]]), 2L)
+  rho <- .usdt_quantities(est)[, "rho"]
+  S <- matrix(c(est[["s2_A"]], est[["s_AI"]],
+                est[["s_AI"]], est[["s2_I"]]), 2L)
   s_values <- tryCatch(eigen(S, symmetric = TRUE, only.values = TRUE)$values,
                        error = function(e) NA_real_)
-  sensitivity_boundary <- any(!is.finite(c(est[c("s2_D", "s2_I", "s_DI")],
+  sensitivity_boundary <- any(!is.finite(c(est[c("s2_A", "s2_I", "s_AI")],
                                                rho, s_values))) ||
-    min(est[["s2_D"]], est[["s2_I"]]) < 1e-8 ||
+    min(est[["s2_A"]], est[["s2_I"]]) < 1e-8 ||
     min(s_values) < 1e-8 || abs(rho) > 1 - 1e-6
 
   lower <- lme4::getME(fit, "lower")
@@ -392,14 +412,14 @@
     NA_character_
   }
 
-  criterion_cor <- if (all(c("c_D", "c_I") %in% names(fx))) {
-    .random_correlation(fit, V, par, "c_D", "c_I")
+  criterion_cor <- if (all(c("c_A", "c_I") %in% names(fx))) {
+    .random_correlation(fit, V, par, "c_A", "c_I")
   } else {
     NULL
   }
 
   list(est = est, vcov = Vq, fixed_vcov = V_fixed,
-       fixed_names = c(direct, indirect), rho = rho,
+       fixed_names = c(awareness, influence), rho = rho,
        V_full = V, par = par, re = .re_summary(fit, V, par),
        criterion_cor = criterion_cor,
        at_bound = at_bound,

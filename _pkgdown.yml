@@ -1,7 +1,7 @@
 # _pkgdown.yml
 # This file configures the uSDT website built by pkgdown.
 # Author: Ricardo Rey-Sáez
-# Last modified: 07-10-2026
+# Last modified: 28-10-2026
 
 url: https://ricardoreysaez.github.io/uSDT/
 
@@ -36,7 +36,7 @@ template:
     heading_font: { google: "Source Serif 4" }
     code_font:    { google: "JetBrains Mono" }
 
-    # Light mode. The background is a warm off-white rather than pure white:
+    # Light mode. The background is a warm off-white:
     # it lowers the contrast of large text blocks without dulling the code.
     body-bg: "#FCFCFB"
     body-color: "#23272B"
@@ -63,22 +63,27 @@ navbar:
 home:
   title: uSDT • Hierarchical SDT models for unconscious processing
   description: >
-    Fit hierarchical signal detection theory models to paired direct and
-    indirect measures, and test whether the indirect measure retains
-    sensitivity where the direct one has none.
+    Fit hierarchical signal detection theory models to paired awareness and
+    influence measures, and test whether the influence measure retains
+    sensitivity where the awareness one has none.
 
 articles:
 - title: Tutorials
   navbar: ~
   contents:
   - uSDT-tutorial
+  - uSDT-bayesian
+  - uSDT-power
 
 reference:
 - title: Prepare the data
-  desc: Build paired task data and dichotomize continuous responses.
+  desc: >
+    Build paired task data, dichotomize continuous responses and count
+    trials for custom binomial models.
   contents:
   - usdt_data
   - meyen_split
+  - usdt_aggregate
 
 - title: Estimate descriptive SDT measures
   desc: Calculate subject-level SDT quantities without fitting a model.
@@ -90,15 +95,47 @@ reference:
   contents:
   - hsdt
 
+- title: Specify the Bayesian priors
+  desc: Choose the prior distributions of the Bayesian model and check what they imply.
+  contents:
+  - usdt_priors
+  - plot.usdt_priors
+
 - title: Test hypotheses and bootstrap uncertainty
   desc: >
-    sensitivity_diff() compares mean sensitivities; latent_cor() estimates
-    their latent correlation; latent_regression() estimates the intercept
+    sensitivity_diff() compares mean sensitivities. Latent_cor() estimates
+    their latent correlation. Latent_regression() estimates the intercept
     and slope. usdt_tests() collects all three hypotheses. usdt_boot()
     adds parametric bootstrap inference to a fitted uSDT model.
+    usdt_equivalence() tests equivalence, non-inferiority and
+    minimal-effect hypotheses about the same quantities.
   contents:
   - usdt_hypotheses
   - usdt_boot
+  - usdt_equivalence
+
+- title: Bayes factors
+  desc: >
+    Test point, directional and interval hypotheses about the difference,
+    correlation and latent regression of a Bayesian fit, and plot their
+    prior and posterior.
+  contents:
+  - usdt_bf
+  - plot.usdt_bf
+
+- title: Plan a study
+  desc: >
+    Describe the population a planned study samples from, in either
+    parameterization of the model or from the estimates of a pilot study.
+    Compute the power of the three hypotheses for a number of subjects and
+    of trials per task. Choose the subjects and trials at the lowest cost
+    and find the smallest effect a design detects.
+  contents:
+  - usdt_population
+  - usdt_power
+  - usdt_plan
+  - usdt_mdes
+  - plot_power
 
 - title: Visualize the fit and estimate reliability
   desc: Compare observed and fitted estimates and quantify measurement reliability.

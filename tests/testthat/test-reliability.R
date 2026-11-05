@@ -10,7 +10,7 @@ fitted_example <- function() {
   data <- usdt_data_long(
     trials,
     task_col = "task",
-    task_levels = c(direct = "D", indirect = "I"),
+    task_levels = c(awareness = "A", influence = "I"),
     subject_col = "subj",
     condition_col = "cond",
     condition_levels = c(signal = 1, noise = 0),
@@ -20,21 +20,21 @@ fitted_example <- function() {
   list(data = data, fit = suppressWarnings(hsdt(data)))
 }
 
-# A Meyen split removes the indirect criterion.
+# A Meyen split removes the influence criterion.
 split_example <- function() {
   set.seed(21)
   trials <- make_trials(n_subj = 24L, n_trials = 60L, rt = TRUE)
   data <- suppressMessages(usdt_data_long(
     trials,
     task_col = "task",
-    task_levels = c(direct = "D", indirect = "I"),
+    task_levels = c(awareness = "A", influence = "I"),
     subject_col = "subj",
     condition_col = "cond",
     condition_levels = c(signal = 1, noise = 0),
-    response_col = c(direct = "response", indirect = "rt"),
-    response_levels = list(direct   = c(signal = 1, noise = 0),
-                           indirect = c(signal = "faster", noise = "slower")),
-    dichotomize = "indirect"
+    response_col = c(awareness = "response", influence = "rt"),
+    response_levels = list(awareness = c(signal = 1, noise = 0),
+                           influence = c(signal = "faster", noise = "slower")),
+    dichotomize = "influence"
   ))
   list(data = data, fit = suppressWarnings(hsdt(data)))
 }
@@ -75,7 +75,7 @@ test_that("reliability requires a fitted model", {
 test_that("reliability uses every usable bootstrap refit", {
   example <- fitted_example()
   point <- usdt_reliability(example$fit)
-  statistic <- .boot_statistic(example$fit$fit, "d_D", "d_I")
+  statistic <- .boot_statistic(example$fit$fit, "d_A", "d_I")
   fitted <- statistic(example$fit$fit)
   samples <- matrix(rep(fitted, times = .boot_min),
                     nrow = .boot_min, byrow = TRUE,
@@ -108,7 +108,7 @@ test_that("the profiled information reproduces the closed form", {
     random <- lme4::ranef(fit$fit, condVar = FALSE)[["subj"]]
     subject <- rownames(random)[1L]
 
-    for (task in c("D", "I")) {
+    for (task in c("A", "I")) {
       slope <- paste0("d_", task)
       columns <- task_columns(fit, task)
       cells <- agg[as.character(agg$subj) == subject & agg$task == task, ]
@@ -126,7 +126,8 @@ test_that("the profiled information reproduces the closed form", {
       } else {
         4 / sum(w)
       }
-      expect_equal(.sensitivity_variance(cells, columns, slope, eta), expected)
+      expect_equal(.sensitivity_variance(cells, eta, length(columns) == 2L),
+                   expected)
     }
   }
 })
@@ -138,7 +139,7 @@ test_that("the profiled information is the error variance of a per-subject GLM",
     fit <- example$fit
     agg <- example$data$agg
 
-    for (task in c("D", "I")) {
+    for (task in c("A", "I")) {
       slope <- paste0("d_", task)
       columns <- task_columns(fit, task)
       formula <- stats::as.formula(paste(
@@ -160,7 +161,7 @@ test_that("the profiled information is the error variance of a per-subject GLM",
                           control = stats::glm.control(epsilon = 1e-12,
                                                        maxit = 200L))
         eta <- unname(stats::predict(one, type = "link"))
-        ours <- c(ours, .sensitivity_variance(cells, columns, slope, eta))
+        ours <- c(ours, .sensitivity_variance(cells, eta, length(columns) == 2L))
         theirs <- c(theirs, unname(stats::vcov(one)[slope, slope]))
       }
 
@@ -176,15 +177,14 @@ test_that("the profiled information is var_gg at the observed rates", {
   # Both routes evaluate the same variance at the same rates.
   example <- fitted_example()
   moments <- sdt_moments(example$data, correction = "hautus", variances = TRUE)
-  moments <- moments[moments$task == "Direct", ]
+  moments <- moments[moments$task == "Awareness", ]
 
-  rows <- example$data$agg[example$data$agg$task == "D", ]
+  rows <- example$data$agg[example$data$agg$task == "A", ]
   ours <- vapply(as.character(moments$subj), function(s) {
     cells <- rows[as.character(rows$subj) == s, , drop = FALSE]
     cells <- cells[order(cells$sig), ]
     row <- moments[as.character(moments$subj) == s, ]
-    .sensitivity_variance(cells, c("c_D", "d_D"), "d_D",
-                          stats::qnorm(c(row$far, row$hr)))
+    .sensitivity_variance(cells, stats::qnorm(c(row$far, row$hr)), TRUE)
   }, 0)
 
   expect_equal(unname(ours), moments$var_gg)

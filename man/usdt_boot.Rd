@@ -16,7 +16,8 @@ usdt_boot(
 )
 }
 \arguments{
-\item{object}{An \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}.}
+\item{object}{A frequentist \code{hsdt} object fitted by \code{\link[=hsdt]{hsdt()}}. A Bayesian
+fit already carries the posterior of every quantity.}
 
 \item{nsim}{Target number of successful replicates (at least 500).}
 
@@ -37,8 +38,8 @@ seed is set and the bootstrap continues the current random number stream.}
 
 \item{type}{Type of bootstrap interval: \code{"perc"} (percentile), \code{"norm"}
 (normal approximation with bias correction), or \code{"basic"} (empirical basic).
-For correlations, \code{"norm"} and \code{"basic"} operate on the Fisher-\eqn{z} scale;
-if the sample correlation lies on the boundary (-1 or 1), these types return
+For correlations, \code{"norm"} and \code{"basic"} operate on the Fisher-\eqn{z} scale.
+If the sample correlation lies on the boundary (-1 or 1), these types return
 \code{NA}, whereas \code{"perc"} remains available.}
 }
 \value{
@@ -60,9 +61,11 @@ for the three core hypotheses (H1, H2, H3). This is especially useful when
 asymptotic Wald intervals are unreliable due to singular or boundary fits.
 }
 \details{
-Replicates are dropped only if the model fails to fit or does not converge.
-Singular fits and boundary estimates are intentionally retained because
-discarding them artificially narrows intervals in constrained settings.
+Refits are retained if they converge and all four hypothesis estimates are
+finite, including singular or boundary refits meeting those conditions.
+Inspect \verb{$boot$failures} and \verb{$boot$retained}. For dichotomized data, the
+bootstrap simulates binary responses, without repeating the median split.
+It remains conditional on the fitted model and available information.
 
 When an attempted run finishes with fewer than 500 usable replicates, the
 original Wald intervals are preserved, a warning is issued, and raw
@@ -76,15 +79,16 @@ centered bootstrap distribution using standard finite-sample adjustment
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)

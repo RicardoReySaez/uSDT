@@ -48,8 +48,7 @@
 #'   present when `variances = TRUE`.
 #'
 #' @details
-#' Edge corrections apply only to participants with extreme rates (0 or 1)
-#' rather than the whole sample, leaving well-defined rates unchanged.
+#' Edge corrections apply only to participants with extreme rates (0 or 1).
 #'
 #' When requested, the sampling variance of \eqn{d'} is estimated using the
 #' asymptotic approximation of Gourevitch and Galanter (1967) and the
@@ -77,15 +76,16 @@
 #' @examples
 #' # 1. From a prepared usdt_data object (both tasks at once)
 #' d <- usdt_data_tasks(
-#'   direct   = vadillo_awareness,
-#'   indirect = vadillo_cuing,
+#'   awareness = vadillo_awareness,
+#'   influence = vadillo_cuing,
 #'   subject_col      = "subj",
 #'   condition_col    = "condition",
 #'   condition_levels = c(signal = "old", noise = "new"),
-#'   response_col     = list(direct = "judged.old", indirect = "rt"),
-#'   response_levels  = list(direct   = c(signal = 1, noise = 0),
-#'                           indirect = c(signal = "faster", noise = "slower")),
-#'   dichotomize      = list(direct = FALSE, indirect = TRUE)
+#'   response_col     = list(awareness = "judged.old", influence = "rt"),
+#'   response_levels  = list(awareness = c(signal = 1, noise = 0),
+#'                           influence = c(signal = "faster",
+#'                                         noise = "slower")),
+#'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
 #' head(sdt_moments(d))
@@ -114,8 +114,9 @@ sdt_moments <- function(data,
 
   # Prepared data already contain the required columns and coding.
   if (inherits(data, "usdt_data")) {
-    out <- lapply(c("D", "I"), function(k) {
-      cbind(task = data$meta$labels[[if (k == "D") "direct" else "indirect"]],
+    out <- lapply(c("A", "I"), function(k) {
+      task <- if (k == "A") "awareness" else "influence"
+      cbind(task = data$meta$labels[[task]],
             .task_moments(data$agg, k, data$meta$coding,
                           correction = correction, variances = variances))
     })

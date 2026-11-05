@@ -29,9 +29,9 @@ Data retrieved from \url{https://osf.io/jp3gx/}.
 vadillo_awareness
 }
 \description{
-Trial-level direct-awareness data from Experiment 2 of Vadillo et al.
+Trial-level awareness data from Experiment 2 of Vadillo et al.
 (2025). The object reproduces the source CSV file without filtering or
-recoding and can be used as the \code{direct} input to \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.
+recoding and can be used as the \code{awareness} input to \code{\link[=usdt_data_tasks]{usdt_data_tasks()}}.
 }
 \examples{
 data(vadillo_awareness)

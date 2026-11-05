@@ -6,10 +6,10 @@
 # This function fits a stable model for the comparisons below.
 fit_reference <- function(seed = 4L, ...) {
   set.seed(seed)
-  df <- make_trials(n_subj = 60L, n_trials = 120L, gamma_D = 0.8,
-                    gamma_I = 0.35, sd_D = 0.5, sd_I = 0.3, rho = 0.5)
+  df <- make_trials(n_subj = 60L, n_trials = 120L, gamma_A = 0.8,
+                    gamma_I = 0.35, sd_A = 0.5, sd_I = 0.3, rho = 0.5)
   d  <- usdt_data_long(df, task_col = "task",
-                       task_levels      = c(direct = "D", indirect = "I"),
+                       task_levels      = c(awareness = "A", influence = "I"),
                        subject_col      = "subj",
                        condition_col    = "cond",
                        condition_levels = c(signal = 1, noise = 0),
@@ -49,8 +49,8 @@ test_that("subject errors include the fixed and random covariance", {
 
   m <- fit_reference()
   ag <- m$data$agg
-  form <- cbind(y, n - y) ~ 0 + d_D + d_I +
-    (0 + d_D + d_I | subj)
+  form <- cbind(y, n - y) ~ 0 + d_A + d_I +
+    (0 + d_A + d_I | subj)
   fit <- lme4::glmer(
     form, data = ag, family = stats::binomial("probit"), nAGQ = 1L,
     control = lme4::glmerControl(optimizer = "bobyqa")
@@ -69,14 +69,14 @@ test_that("subject errors include the fixed and random covariance", {
 
   subjects <- levels(lme4::getME(fit, "flist")$subj)
   newdata <- data.frame(subj = factor(subjects, levels = subjects),
-                        d_D = 1, d_I = 0)
+                        d_A = 1, d_I = 0)
   reference <- suppressWarnings(
     stats::predict(fit, newdata = newdata, se.fit = TRUE)$se.fit
   )
-  direct <- ours[ours$term == "d_D", ]
-  direct <- direct$se[match(subjects, as.character(direct$grp))]
+  awareness <- ours[ours$term == "d_A", ]
+  awareness <- awareness$se[match(subjects, as.character(awareness$grp))]
 
-  expect_equal(unname(direct), unname(reference), tolerance = 1e-3)
+  expect_equal(unname(awareness), unname(reference), tolerance = 1e-3)
 })
 
 test_that("subject errors follow the full two-block mixed system", {
@@ -105,19 +105,19 @@ test_that("subject errors follow the full two-block mixed system", {
   n_subjects <- length(subjects)
   sensitivity_start <- 2L * n_subjects
   reference <- unlist(lapply(seq_along(subjects), function(j) {
-    v_direct <- c(Lambda[sensitivity_start + 2L * j - 1L, ],
-                  as.numeric(fixed == "d_D"))
-    v_indirect <- c(Lambda[sensitivity_start + 2L * j, ],
-                    as.numeric(fixed == "d_I"))
-    c(d_D = sqrt(drop(crossprod(v_direct, joint %*% v_direct))),
-      d_I = sqrt(drop(crossprod(v_indirect, joint %*% v_indirect))))
+    v_awareness <- c(Lambda[sensitivity_start + 2L * j - 1L, ],
+                     as.numeric(fixed == "d_A"))
+    v_influence <- c(Lambda[sensitivity_start + 2L * j, ],
+                     as.numeric(fixed == "d_I"))
+    c(d_A = sqrt(drop(crossprod(v_awareness, joint %*% v_awareness))),
+      d_I = sqrt(drop(crossprod(v_influence, joint %*% v_influence))))
   }))
   names(reference) <- NULL
 
   actual <- unlist(lapply(seq_along(subjects), function(j) {
-    rows <- ours$grp == subjects[j] & ours$term %in% c("d_D", "d_I")
+    rows <- ours$grp == subjects[j] & ours$term %in% c("d_A", "d_I")
     values <- ours[rows, ]
-    values$se[match(c("d_D", "d_I"), values$term)]
+    values$se[match(c("d_A", "d_I"), values$term)]
   }))
 
   expect_equal(actual, reference, tolerance = 1e-3)
@@ -126,17 +126,18 @@ test_that("subject errors follow the full two-block mixed system", {
 test_that("the variance components match VarCorr", {
   m  <- fit_reference()
   vc <- lme4::VarCorr(m$fit)
-  b  <- vc[[which(vapply(vc, function(z) all(c("d_D", "d_I") %in% colnames(z)),
+  b  <- vc[[which(vapply(vc, function(z) all(c("d_A", "d_I") %in% colnames(z)),
                          TRUE))]]
-  expect_equal(unname(m$pars$est[["s2_D"]]), b["d_D", "d_D"], tolerance = 1e-9)
+  expect_equal(unname(m$pars$est[["s2_A"]]), b["d_A", "d_A"], tolerance = 1e-9)
   expect_equal(unname(m$pars$est[["s2_I"]]), b["d_I", "d_I"], tolerance = 1e-9)
-  expect_equal(unname(m$pars$est[["s_DI"]]), b["d_D", "d_I"], tolerance = 1e-9)
-  expect_equal(m$pars$rho, attr(b, "correlation")["d_D", "d_I"], tolerance = 1e-7)
+  expect_equal(unname(m$pars$est[["s_AI"]]), b["d_A", "d_I"], tolerance = 1e-9)
+  expect_equal(m$pars$rho, attr(b, "correlation")["d_A", "d_I"],
+               tolerance = 1e-7)
 
-  criteria <- vc[[which(vapply(vc, function(z) all(c("c_D", "c_I") %in%
+  criteria <- vc[[which(vapply(vc, function(z) all(c("c_A", "c_I") %in%
                                                     colnames(z)), TRUE))]]
   expect_equal(m$pars$criterion_cor$estimate,
-               attr(criteria, "correlation")["c_D", "c_I"], tolerance = 1e-7)
+               attr(criteria, "correlation")["c_A", "c_I"], tolerance = 1e-7)
   expect_identical(m$design$n_fixed, 4L)
   expect_equal(m$design$n_var, 6)
 })
@@ -144,15 +145,15 @@ test_that("the variance components match VarCorr", {
 test_that("the printed model uses the classical criterion sign", {
   m <- fit_reference()
   output <- capture.output(summary(m))
-  line <- output[grepl("^  criterion +Direct", output)]
-  estimate <- sprintf("%.4f", -unname(lme4::fixef(m$fit)[["c_D"]]))
-  z <- -unname(lme4::fixef(m$fit)[["c_D"]]) /
-    sqrt(diag(as.matrix(stats::vcov(m$fit))))[["c_D"]]
+  line <- output[grepl("^  criterion +Awareness", output)]
+  estimate <- sprintf("%.4f", -unname(lme4::fixef(m$fit)[["c_A"]]))
+  z <- -unname(lme4::fixef(m$fit)[["c_A"]]) /
+    sqrt(diag(as.matrix(stats::vcov(m$fit))))[["c_A"]]
 
   expect_match(line, estimate, fixed = TRUE)
   expect_match(line, sprintf("%.2f", z), fixed = TRUE)
   expect_output(summary(m), "cor\\(c\\)")
-  expect_output(summary(m), paste0(.usdt_chars()$delta, "d' \\(I - D\\)"))
+  expect_output(summary(m), paste0(.usdt_chars()$delta, "d' \\(I - A\\)"))
 })
 
 test_that("the model plots use the expected subject sensitivities", {
@@ -163,32 +164,32 @@ test_that("the model plots use the expected subject sensitivities", {
   random <- lme4::ranef(m$fit, condVar = FALSE)$subj
   fixed <- lme4::fixef(m$fit)
 
-  direct <- moments[moments$task == m$data$meta$labels[["direct"]], ]
-  indirect <- moments[moments$task == m$data$meta$labels[["indirect"]], ]
-  direct_row <- match(values$subject, as.character(direct$subj))
-  indirect_row <- match(values$subject, as.character(indirect$subj))
+  awareness <- moments[moments$task == m$data$meta$labels[["awareness"]], ]
+  influence <- moments[moments$task == m$data$meta$labels[["influence"]], ]
+  awareness_row <- match(values$subject, as.character(awareness$subj))
+  influence_row <- match(values$subject, as.character(influence$subj))
   random_row <- match(values$subject, rownames(random))
 
   expect_s3_class(figure, "ggplot")
-  expect_equal(values$observed_direct, direct$dprime[direct_row])
-  expect_equal(values$observed_indirect, indirect$dprime[indirect_row])
-  expect_equal(values$model_direct,
-               fixed[["d_D"]] + random$d_D[random_row])
-  expect_equal(values$model_indirect,
+  expect_equal(values$observed_awareness, awareness$dprime[awareness_row])
+  expect_equal(values$observed_influence, influence$dprime[influence_row])
+  expect_equal(values$model_awareness,
+               fixed[["d_A"]] + random$d_A[random_row])
+  expect_equal(values$model_influence,
                fixed[["d_I"]] + random$d_I[random_row])
   expect_no_error(ggplot2::ggplot_build(figure))
 
   caterpillar <- plot(m, type = "caterpillar")
   intervals <- caterpillar$data
   observed_intervals <- intervals[
-    intervals$method == "Observed" & intervals$task == "Direct", ]
+    intervals$method == "Observed" & intervals$task == "Awareness", ]
   model_intervals <- intervals[
-    intervals$method == "Model-estimated" & intervals$task == "Direct", ]
+    intervals$method == "Model-estimated" & intervals$task == "Awareness", ]
   moments <- sdt_moments(m$data, variances = TRUE)
-  moments <- moments[moments$task == "Direct", ]
+  moments <- moments[moments$task == "Awareness", ]
   moment_row <- match(observed_intervals$subject, as.character(moments$subj))
   conditional <- as.data.frame(lme4::ranef(m$fit, condVar = TRUE))
-  conditional <- conditional[conditional$term == "d_D", ]
+  conditional <- conditional[conditional$term == "d_A", ]
   conditional_row <- match(model_intervals$subject,
                            as.character(conditional$grp))
   critical <- stats::qnorm(1 - (1 - m$level) / 2)
@@ -199,20 +200,20 @@ test_that("the model plots use the expected subject sensitivities", {
 
   # `observed_se` selects the other standard error without touching the rest.
   miller <- plot(m, type = "caterpillar", observed_se = "miller")$data
-  miller <- miller[miller$method == "Observed" & miller$task == "Direct", ]
+  miller <- miller[miller$method == "Observed" & miller$task == "Awareness", ]
   expect_equal(miller$se, moments$se_miller[moment_row])
   expect_equal(miller$estimate, observed_intervals$estimate)
   expect_error(plot(m, type = "shrinkage", observed_se = "gg"),
                "only used by")
   expect_equal(model_intervals$estimate,
-               fixed[["d_D"]] + conditional$condval[conditional_row])
+               fixed[["d_A"]] + conditional$condval[conditional_row])
 
   # The model interval includes all fitted uncertainty.
   condsd <- conditional$condsd[conditional_row]
   expect_true(all(model_intervals$se > condsd))
 
   joint <- .conditional_se(m$fit, m$pars$V_full, m$devfun)
-  joint <- joint[joint$term == "d_D", ]
+  joint <- joint[joint$term == "d_A", ]
   expect_equal(model_intervals$se,
                joint$se[match(model_intervals$subject, as.character(joint$grp))])
 
@@ -222,7 +223,7 @@ test_that("the model plots use the expected subject sensitivities", {
   fixed_names <- names(fixed)
   fixed_vcov[fixed_names, fixed_names] <- as.matrix(stats::vcov(m$fit))
   fixed_only <- .conditional_se(m$fit, fixed_vcov, m$devfun)
-  fixed_only <- fixed_only[fixed_only$term == "d_D", ]
+  fixed_only <- fixed_only[fixed_only$term == "d_A", ]
   fixed_only <- fixed_only$se[match(model_intervals$subject,
                                     as.character(fixed_only$grp))]
   expect_true(all(fixed_only < model_intervals$se))
@@ -249,7 +250,8 @@ test_that("the regression plot separates observed and model relationships", {
   m <- fit_reference()
   figure <- plot(m, type = "regression")
   values <- .regression_data(m)
-  naive <- stats::lm(observed_indirect ~ observed_direct, data = values$points)
+  naive <- stats::lm(observed_influence ~ observed_awareness,
+                     data = values$points)
   latent <- m$tests[m$tests$hypothesis == "H3", ]
 
   expect_s3_class(figure, "ggplot")
@@ -272,6 +274,26 @@ test_that("the regression plot separates observed and model relationships", {
   }, logical(1L))))
   expect_no_error(lapply(values$annotations$label, function(x) parse(text = x)))
   expect_no_error(ggplot2::ggplot_build(figure))
+
+  # The panels sit side by side by default, and nrow = 2 stacks them.
+  expect_identical(figure$facet$params$nrow, 1L)
+  stacked <- plot(m, type = "regression", nrow = 2)
+  expect_equal(stacked$facet$params$nrow, 2)
+  expect_no_error(ggplot2::ggplot_build(stacked))
+  expect_error(plot(m, type = "regression", nrow = 3), "must be 1")
+  expect_error(plot(m, type = "shrinkage", nrow = 2), "only used by")
+
+  # The panel titles stand over a thin line instead of a box.
+  strip <- ggplot2::calc_element("strip.background.x",
+                                 ggplot2::theme_get() + figure$theme)
+  expect_s3_class(strip, "usdt_rule")
+  expect_s3_class(ggplot2::element_grob(strip), "segments")
+
+  # The caption is one paragraph, and caption = FALSE leaves it out.
+  expect_false(grepl("\n", figure$labels$caption, fixed = TRUE))
+  expect_null(plot(m, type = "regression", caption = FALSE)$labels$caption)
+  expect_null(plot(m, type = "roc", caption = FALSE)$labels$caption)
+  expect_error(plot(m, caption = NA), "`caption` must be")
 })
 
 test_that("ROC plots transform the fitted sensitivities and criteria", {
@@ -279,31 +301,31 @@ test_that("ROC plots transform the fitted sensitivities and criteria", {
   fixed <- lme4::fixef(m$fit)
   population <- plot(m, type = "roc")
   values <- population$data
-  direct <- values[values$task == "Direct", ]
-  midpoint <- which(direct$false_alarm == 0.5)
+  awareness <- values[values$task == "Awareness", ]
+  midpoint <- which(awareness$false_alarm == 0.5)
 
   expect_s3_class(population, "ggplot")
-  expect_equal(direct$hit[midpoint], stats::pnorm(fixed[["d_D"]]))
-  expect_equal(unique(direct$auc), stats::pnorm(fixed[["d_D"]] / sqrt(2)))
+  expect_equal(awareness$hit[midpoint], stats::pnorm(fixed[["d_A"]]))
+  expect_equal(unique(awareness$auc), stats::pnorm(fixed[["d_A"]] / sqrt(2)))
   expect_identical(unique(values$interval), "Wald")
   expect_true(all(values$conf.low <= values$hit))
   expect_true(all(values$conf.high >= values$hit))
 
   operating <- .roc_data(m, band = FALSE)$points
-  direct_point <- operating[operating$task == "Direct", ]
-  expect_equal(direct_point$false_alarm,
-               stats::pnorm(fixed[["c_D"]] - fixed[["d_D"]] / 2))
-  expect_equal(direct_point$hit,
-               stats::pnorm(fixed[["c_D"]] + fixed[["d_D"]] / 2))
+  awareness_point <- operating[operating$task == "Awareness", ]
+  expect_equal(awareness_point$false_alarm,
+               stats::pnorm(fixed[["c_A"]] - fixed[["d_A"]] / 2))
+  expect_equal(awareness_point$hit,
+               stats::pnorm(fixed[["c_A"]] + fixed[["d_A"]] / 2))
 
   id <- as.character(m$data$agg$subj[1L])
   subject <- plot(m, type = "roc", subject_id = id)
   random <- lme4::ranef(m$fit, condVar = FALSE)$subj
-  expected <- fixed[["d_D"]] + random[id, "d_D"]
-  subject_direct <- subject$data[subject$data$task == "Direct", ]
-  midpoint <- which(subject_direct$false_alarm == 0.5)
+  expected <- fixed[["d_A"]] + random[id, "d_A"]
+  subject_awareness <- subject$data[subject$data$task == "Awareness", ]
+  midpoint <- which(subject_awareness$false_alarm == 0.5)
 
-  expect_equal(subject_direct$hit[midpoint], stats::pnorm(expected))
+  expect_equal(subject_awareness$hit[midpoint], stats::pnorm(expected))
   expect_identical(unique(subject$data$interval), "conditional")
   expect_no_error(ggplot2::ggplot_build(population))
   expect_no_error(ggplot2::ggplot_build(subject))
@@ -313,7 +335,7 @@ test_that("ROC plots transform the fitted sensitivities and criteria", {
 
 test_that("the bootstrap separates population and subject parameters", {
   m <- fit_reference(seed = 8L)
-  statistic <- .boot_statistic(m$fit, "d_D", "d_I")
+  statistic <- .boot_statistic(m$fit, "d_A", "d_I")
   fitted <- statistic(m$fit)
   samples <- rbind(fitted, fitted)
   effects <- .boot_effects(fitted, samples, attr(statistic, "layout"))
@@ -321,30 +343,30 @@ test_that("the bootstrap separates population and subject parameters", {
   random <- lme4::ranef(m$fit, condVar = FALSE)$subj
 
   expect_identical(names(effects$population$t0),
-                   c("c_D", "c_I", "d_D", "d_I"))
-  expect_identical(names(effects$variance$t0), c("s2_D", "s2_I"))
+                   c("c_A", "c_I", "d_A", "d_I"))
+  expect_identical(names(effects$variance$t0), c("s2_A", "s2_I"))
   expect_identical(dim(effects$variance$t), c(2L, 2L))
   expect_identical(dim(effects$population$t), c(2L, 4L))
   expect_identical(dim(effects$subjects$t),
                    c(2L, nrow(random), 4L))
-  expect_equal(effects$population$t0[["d_D"]], fixed[["d_D"]])
-  expect_equal(unname(effects$subjects$t0[, "d_D"]),
-               unname(fixed[["d_D"]] + random$d_D))
+  expect_equal(effects$population$t0[["d_A"]], fixed[["d_A"]])
+  expect_equal(unname(effects$subjects$t0[, "d_A"]),
+               unname(fixed[["d_A"]] + random$d_A))
 })
 
 test_that("the block is found whichever order the random terms are written in", {
   m  <- fit_reference()
   ag <- m$data$agg
-  f2 <- lme4::glmer(cbind(y, n - y) ~ 0 + c_D + c_I + d_D + d_I +
-                      (0 + d_D + d_I | subj) + (0 + c_D + c_I | subj),
+  f2 <- lme4::glmer(cbind(y, n - y) ~ 0 + c_A + c_I + d_A + d_I +
+                      (0 + d_A + d_I | subj) + (0 + c_A + c_I | subj),
                     data = ag, family = stats::binomial("probit"),
                     control = lme4::glmerControl(optimizer = "bobyqa"))
-  f3 <- lme4::glmer(cbind(y, n - y) ~ 0 + c_D + c_I + d_D + d_I +
-                      (0 + c_D + c_I | subj) + (0 + d_D + d_I | subj),
+  f3 <- lme4::glmer(cbind(y, n - y) ~ 0 + c_A + c_I + d_A + d_I +
+                      (0 + c_A + c_I | subj) + (0 + d_A + d_I | subj),
                     data = ag, family = stats::binomial("probit"),
                     control = lme4::glmerControl(optimizer = "bobyqa"))
-  p2 <- .usdt_pars(f2, "d_D", "d_I")
-  p3 <- .usdt_pars(f3, "d_D", "d_I")
+  p2 <- .usdt_pars(f2, "d_A", "d_I")
+  p3 <- .usdt_pars(f3, "d_A", "d_I")
   expect_equal(unname(p2$est), unname(p3$est), tolerance = 1e-5)
 })
 
@@ -355,19 +377,19 @@ test_that("the hypotheses are internally consistent", {
 
   # The slope has two equivalent expressions.
   slope <- t$estimate[t$term == "slope"]
-  expect_equal(slope, e[["s_DI"]] / e[["s2_D"]], tolerance = 1e-10,
+  expect_equal(slope, e[["s_AI"]] / e[["s2_A"]], tolerance = 1e-10,
                ignore_attr = TRUE)
-  expect_equal(slope, m$pars$rho * sqrt(e[["s2_I"]] / e[["s2_D"]]),
+  expect_equal(slope, m$pars$rho * sqrt(e[["s2_I"]] / e[["s2_A"]]),
                tolerance = 1e-8, ignore_attr = TRUE)
 
-  # The intercept adjusts the indirect mean by the slope.
+  # The intercept adjusts the influence mean by the slope.
   expect_equal(t$estimate[t$term == "intercept"],
-               e[["gamma_I"]] - slope * e[["gamma_D"]], tolerance = 1e-10,
+               e[["gamma_I"]] - slope * e[["gamma_A"]], tolerance = 1e-10,
                ignore_attr = TRUE)
 
   # The difference compares the two fixed effects.
   expect_equal(t$estimate[t$hypothesis == "H1"],
-               e[["gamma_I"]] - e[["gamma_D"]], tolerance = 1e-10,
+               e[["gamma_I"]] - e[["gamma_A"]], tolerance = 1e-10,
                ignore_attr = TRUE)
 })
 
@@ -410,12 +432,12 @@ test_that("the layer-2 functions agree with the fitted table", {
 })
 
 test_that("a boundary fit returns stable hypothesis rows", {
-  # Very little direct variation makes the slope hard to identify.
+  # Very little awareness variation makes the slope hard to identify.
   set.seed(12)
-  df <- make_trials(n_subj = 40L, n_trials = 100L, gamma_D = 0.6,
-                    gamma_I = 0.2, sd_D = 0.02, sd_I = 0.05, rho = 0.3)
+  df <- make_trials(n_subj = 40L, n_trials = 100L, gamma_A = 0.6,
+                    gamma_I = 0.2, sd_A = 0.02, sd_I = 0.05, rho = 0.3)
   d  <- usdt_data_long(df, task_col = "task",
-                       task_levels      = c(direct = "D", indirect = "I"),
+                       task_levels      = c(awareness = "A", influence = "I"),
                        subject_col      = "subj",
                        condition_col    = "cond",
                        condition_levels = c(signal = 1, noise = 0),
@@ -455,4 +477,11 @@ test_that("failure with every optimizer stops the analysis", {
 
 test_that("hsdt rejects anything that is not a usdt_data object", {
   expect_error(hsdt(data.frame(x = 1)), "usdt_data_long")
+})
+
+test_that("the hypotheses come from the five parameters by the shared algebra", {
+  m <- fit_reference()
+  q <- .usdt_quantities(m$pars$est)
+  expect_equal(unname(q[1L, c("diff", "rho", "intercept", "slope")]),
+               m$tests$estimate)
 })

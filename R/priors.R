@@ -1,0 +1,736 @@
+# priors.R
+# Specify the priors of the Bayesian hierarchical SDT model
+# Author: Ricardo Rey-Sáez
+# Last modified: 18-10-2026
+
+# Public functions
+
+#' Priors for the Bayesian hierarchical SDT model
+#'
+#' Specifies the prior distributions of the Bayesian model. Each prior is
+#' written as a string in Stan notation, `"family(arguments)"`, with the
+#' families and parameterisations of Stan, e.g. `"normal(0, 1)"`,
+#' `"student_t(4, 0, 0.5)"` or `"gamma(2, 4)"`. Each argument takes the
+#' families that cover the values its parameter can take:
+#' * means of \eqn{d'} and of the criterion can take any real value, so their
+#'   prior must be defined on the whole real line: `normal`, `std_normal`,
+#'   `student_t`, `cauchy`, `double_exponential`, `logistic`, `gumbel`,
+#'   `skew_normal`, `exp_mod_normal` or `skew_double_exponential`.
+#' * standard deviations take any of those, truncated at zero (with location
+#'   0, a `student_t` is a half-Student-\eqn{t}), or a family on the positive
+#'   values: `lognormal`, `exponential`, `gamma`, `inv_gamma`, `weibull`,
+#'   `frechet`, `rayleigh`, `chi_square`, `inv_chi_square`,
+#'   `scaled_inv_chi_square`, `loglogistic`, or `pareto_type_2` with
+#'   `mu <= 0`.
+#' * correlations take `"lkj(eta)"`, the LKJ prior on a correlation matrix and
+#'   the only correlation prior brms accepts. On a 2 x 2 matrix the
+#'   correlation follows a beta(eta, eta) distribution stretched from
+#'   \eqn{(0, 1)} to \eqn{(-1, 1)}: `lkj(1)` is uniform, and larger values of
+#'   eta concentrate it around zero.
+#'
+#' @param dprime Prior of the mean \eqn{d'} of each task.
+#' @param sd_dprime Prior of the between-subject standard deviation of
+#'   \eqn{d'} in each task.
+#' @param cor_dprime Prior of the correlation between awareness and influence
+#'   \eqn{d'} across subjects.
+#' @param criterion Prior of the mean criterion \eqn{c} of each task, on the
+#'   classical scale where positive values are conservative.
+#' @param sd_criterion Prior of the between-subject standard deviation of the
+#'   criterion in each task.
+#' @param cor_criterion Prior of the correlation between the two criteria. It is
+#'   used only when both criteria are estimated.
+#' @param sd_signal Prior of the standard deviation of the signal distribution,
+#'   relative to the noise distribution. It is used only under unequal
+#'   variances.
+#' @param intercept Prior of the intercept of the latent regression of
+#'   influence on awareness \eqn{d'}. It is used only by the latent regression
+#'   parameterization, where it replaces the prior of the influence mean
+#'   \eqn{d'}.
+#'
+#' @details
+#' `dprime`, `sd_dprime`, `criterion`, `sd_criterion` and `sd_signal` take one
+#' prior for both tasks or one per task as
+#' `list(awareness = ..., influence = ...)`. The correlations take a single
+#' prior.
+#'
+#' The defaults are centred at zero and weakly informative on the probit
+#' scale: `normal(0, 1)` for the mean \eqn{d'}, `normal(0, 0.5)` for the mean
+#' criterion, `student_t(4, 0, 0.5)` for every between-subject standard
+#' deviation and a uniform `lkj(1)` for every correlation. With them, the hit
+#' and false-alarm rates of a new subject spread over \eqn{(0, 1)} without
+#' piling up at either end. See [plot.usdt_priors()]. With the same prior for
+#' both means, the prior of the difference between them (H1) is symmetric
+#' around zero, and every `lkj` prior is centred at zero (H2).
+#'
+#' The model describes the two sensitivities by their means, standard
+#' deviations and correlation, so the slope and intercept of the latent
+#' regression (H3) have no priors of their own: their priors follow from
+#' those of the means, standard deviations and correlation. With the defaults,
+#' the intercept prior is symmetric around zero but has heavy tails. It does
+#' not change when both standard deviation priors are rescaled by the same
+#' factor, because the slope depends on their ratio.
+#'
+#' The latent regression parameterization moves the prior of the influence mean
+#' to the intercept \eqn{\beta_0} of the latent regression, so that both the
+#' intercept (H3) and the correlation (H2) have the priors you give them. It
+#' keeps the priors of the awareness mean, of both standard deviations and of
+#' the correlation, and the influence mean follows from them as
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. `dprime`
+#' then applies to the awareness task only. The intercept takes `normal(0, 1)`
+#' by default. Inspect its implications with [plot.usdt_priors()].
+#' Two things follow:
+#' * the difference between the means (H1) has an induced prior,
+#'   \eqn{\beta_0 + (\rho \sigma_I / \sigma_A - 1) \mu_A}, with the heavy tails
+#'   the intercept has under the correlation parameterization.
+#' * the intercept and the correlation are independent a priori but not a
+#'   posteriori. The data fix the influence mean, the sum of \eqn{\beta_0} and
+#'   \eqn{\rho (\sigma_I / \sigma_A) \mu_A}, so a narrow intercept prior also
+#'   narrows the posterior of \eqn{\rho}, mostly when \eqn{\sigma_A} is small.
+#'   The Bayes factor of a correlation hypothesis then depends on the
+#'   intercept prior too.
+#'
+#' @return An object of class `usdt_priors`: a data frame with one row per
+#'   prior, giving the parameter, the task, the family, its arguments (a list
+#'   column) and the prior as a string.
+#'
+#' @examples
+#' # Default priors
+#' usdt_priors()
+#'
+#' # A narrower prior for the mean influence sensitivity
+#' usdt_priors(dprime = list(awareness = "normal(0, 1)",
+#'                           influence = "normal(0, 0.5)"))
+#'
+#' # A correlation prior that concentrates near zero
+#' usdt_priors(cor_dprime = "lkj(2)")
+#'
+#' # Standard deviations of d' expected around 0.3
+#' usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
+#'
+#' # Any family that covers the positive values, e.g. a gamma distribution
+#' usdt_priors(sd_dprime = "gamma(2, 4)")
+#'
+#' @export
+usdt_priors <- function(dprime        = "normal(0, 1)",
+                        sd_dprime     = "student_t(4, 0, 0.5)",
+                        cor_dprime    = "lkj(1)",
+                        criterion     = "normal(0, 0.5)",
+                        sd_criterion  = "student_t(4, 0, 0.5)",
+                        cor_criterion = "lkj(1)",
+                        sd_signal     = "lognormal(0, 0.5)",
+                        intercept     = "normal(0, 1)") {
+  values <- as.list(environment())
+
+  # Task arguments take one prior for both tasks or one per task.
+  rows <- lapply(names(.prior_parameters), function(parameter) {
+    value <- values[[parameter]]
+    tasks <- if (.prior_parameters[[parameter]]$tasks) {
+      .per_task(value, parameter)
+    } else {
+      list(both = value)
+    }
+    lapply(names(tasks), function(task) {
+      c(list(parameter = parameter, task = task),
+        .parse_prior(tasks[[task]], parameter))
+    })
+  })
+  .priors_frame(unlist(rows, recursive = FALSE))
+}
+
+#' @param x A `usdt_priors` object.
+#' @param ... Ignored.
+#' @rdname usdt_priors
+#' @export
+print.usdt_priors <- function(x, ...) {
+  cat(.rule("Priors"), "\n\n")
+  .print_prior_rows(x)
+  cat("\n  Standard deviation priors are truncated at zero. cor(c) applies when\n",
+      "  both criteria are estimated, and sd(signal) under unequal variances.\n",
+      "  Under the latent regression, intercept replaces the influence mean ",
+      "d'.\n",
+      sep = "")
+  invisible(x)
+}
+
+# Internal functions
+
+# The parameters that take a prior: whether each task has its own, the kind
+# of value they are, and the label they print with.
+.prior_parameters <- list(
+  dprime        = list(tasks = TRUE,  kind = "mean", label = "mean d'"),
+  sd_dprime     = list(tasks = TRUE,  kind = "sd",   label = "sd(d')"),
+  cor_dprime    = list(tasks = FALSE, kind = "cor",  label = "cor(d')"),
+  criterion     = list(tasks = TRUE,  kind = "mean", label = "mean c"),
+  sd_criterion  = list(tasks = TRUE,  kind = "sd",   label = "sd(c)"),
+  cor_criterion = list(tasks = FALSE, kind = "cor",  label = "cor(c)"),
+  sd_signal     = list(tasks = TRUE,  kind = "sd",   label = "sd(signal)"),
+  intercept     = list(tasks = FALSE, kind = "mean", label = "intercept")
+)
+
+# The values each kind of parameter can take.
+.prior_domains <- list(mean = c(-Inf, Inf), sd = c(0, Inf), cor = c(-1, 1))
+
+# This function prints one line per prior.
+.print_prior_rows <- function(x) {
+  cat(sprintf("  %-12s %-10s %s\n", "Parameter", "Task", "Prior"))
+  for (i in seq_len(nrow(x))) {
+    cat(sprintf("  %-12s %-10s %s\n", .prior_parameters[[x$parameter[i]]]$label,
+                x$task[i], x$prior[i]))
+  }
+  invisible(NULL)
+}
+
+# This function keeps the priors a fit with the given design uses: those of
+# its parameterization of the two sensitivities, of the estimated criteria, of
+# the criterion correlation when both are estimated, and of the signal SDs
+# under unequal variances.
+.used_priors <- function(priors, design) {
+  free <- c("awareness", "influence")[design$free_c == 1L]
+  regression <- design$latent == "regression"
+  sensitivities <- priors$parameter %in% c("sd_dprime", "cor_dprime") |
+    (priors$parameter == "dprime" &
+       (!regression | priors$task == "awareness")) |
+    (priors$parameter == "intercept" & regression)
+  keep <- sensitivities |
+    (priors$parameter %in% c("criterion", "sd_criterion") &
+       priors$task %in% free) |
+    (priors$parameter == "cor_criterion" & length(free) == 2L) |
+    (priors$parameter == "sd_signal" & design$unequal_variances)
+  priors[keep, , drop = FALSE]
+}
+
+# This function reads one prior of usdt_priors() and checks that its family is
+# known, that its arguments are valid, and that it covers every value its
+# parameter can take.
+.parse_prior <- function(x, parameter) {
+  kind <- .prior_parameters[[parameter]]$kind
+  example <- formals(usdt_priors)[[parameter]]
+  if (!is.character(x) || length(x) != 1L || is.na(x)) {
+    .usdt_stop("`", parameter, "` must be one prior written as a string, ",
+               "e.g. \"", example, "\".")
+  }
+  read <- .read_prior(x)
+  if (is.null(read)) {
+    .usdt_stop("cannot read the prior \"", x, "\" of `", parameter, "`. ",
+               "Write it as family(arguments), e.g. \"", example, "\".")
+  }
+  family <- .distributions[[read$family]]
+  if (is.null(family)) {
+    .usdt_stop("`", parameter, "` uses `", read$family, "`, which is not a ",
+               "Stan distribution uSDT can use as a prior. The families that ",
+               "suit `", parameter, "` are ",
+               paste0("`", .families_for(kind), "`", collapse = ", "), ".")
+  }
+  n <- length(family$args)
+  if (length(read$args) != n || !all(is.finite(read$args))) {
+    .usdt_stop("`", parameter, "`: ", read$family, " takes ",
+               if (n) paste0(n, " number", if (n > 1L) "s", " (",
+                             paste(family$args, collapse = ", "), ")")
+               else "no arguments",
+               ", not \"", x, "\".")
+  }
+  if (!family$valid(read$args)) {
+    .usdt_stop("`", parameter, "`: ", read$family, " needs ", family$rule, ".")
+  }
+
+  prior <- paste0(read$family, "(", paste(read$args, collapse = ", "), ")")
+  if (kind == "cor" && read$family != "lkj") {
+    .usdt_stop("`", parameter, "` is a correlation, so its prior must be ",
+               "lkj(eta), the only correlation prior brms accepts, e.g. ",
+               "\"lkj(1)\".")
+  }
+  support <- family$support(read$args)
+  domain <- .prior_domains[[kind]]
+  if (support[1L] > domain[1L] || support[2L] < domain[2L]) {
+    .usdt_stop("`", parameter, "` ",
+               switch(kind, mean = "can take any real value",
+                      sd = "is a standard deviation, which can take any positive value"),
+               ", but ", prior, " is defined only on [", support[1L], ", ",
+               support[2L], "].")
+  }
+  list(family = read$family, args = read$args, prior = prior)
+}
+
+# This function names the families whose support covers every value of a kind
+# of parameter whatever their arguments.
+.families_for <- function(kind) {
+  domain <- .prior_domains[[kind]]
+  covers <- vapply(.distributions, function(f) {
+    support <- f$support(rep(NA_real_, length(f$args)))
+    isTRUE(support[1L] <= domain[1L] && support[2L] >= domain[2L])
+  }, TRUE)
+  names(.distributions)[covers]
+}
+
+# This function builds a usdt_priors table from a list of rows, each a list
+# with the parameter, the task, the family, its arguments and the prior text.
+.priors_frame <- function(rows) {
+  field <- function(name) vapply(rows, `[[`, "", name)
+  out <- data.frame(parameter = field("parameter"), task = field("task"),
+                    family = field("family"), stringsAsFactors = FALSE)
+  out$args <- lapply(rows, `[[`, "args")
+  out$prior <- field("prior")
+  structure(out, class = c("usdt_priors", "data.frame"))
+}
+
+# This function returns the rows of one prior parameter in the given task order.
+.prior_rows <- function(priors, parameter,
+                        tasks = c("awareness", "influence")) {
+  rows <- priors[priors$parameter == parameter, , drop = FALSE]
+  rows[match(tasks, rows$task), , drop = FALSE]
+}
+
+# Number of draws that approximate a prior the model induces rather than
+# states, such as the prior of the latent intercept, and the smaller number
+# that suffices to draw it.
+.prior_samples <- 1e5L
+.curve_samples <- 2e4L
+
+# This function returns the log density, the distribution function and a
+# generator of one prior, restricted to the values its parameter can take: a
+# standard deviation prior defined on the whole real line is truncated at zero
+# and renormalised. Truncated draws are kept by rejection.
+.prior_fun <- function(row) {
+  a <- row$args[[1L]]
+  spec <- .prior_parameters[[row$parameter]]
+  if (!.known_prior(list(family = row$family, args = a))) {
+    .usdt_stop("uSDT cannot simulate the ", spec$label, " prior \"",
+               row$prior, "\". The families it can use are ",
+               paste0("`", names(.distributions), "`", collapse = ", "), ".")
+  }
+  family <- .distributions[[row$family]]
+  support <- family$support(a)
+  domain <- .prior_domains[[spec$kind]]
+  lower <- max(domain[1L], support[1L])
+  upper <- min(domain[2L], support[2L])
+
+  # The distribution function of the family, at values clamped to the domain.
+  p <- function(q) {
+    q <- pmin(pmax(q, lower), upper)
+    inside <- q > support[1L] & q < support[2L]
+    out <- as.numeric(q >= support[2L])
+    out[inside] <- family$p(q[inside], a)
+    out
+  }
+  base <- p(lower)
+  mass <- p(upper) - base
+  truncated <- lower > support[1L] || upper < support[2L]
+
+  list(
+    log_density = function(x) {
+      if (lower == -Inf && upper == Inf) return(family$logd(x, a))
+      out <- rep(-Inf, length(x))
+      inside <- x >= lower & x <= upper
+      out[inside] <- family$logd(x[inside], a) - log(mass)
+      out
+    },
+    cdf = function(q) (p(q) - base) / mass,
+    r = function(n) {
+      if (!truncated) return(family$r(n, a))
+      if (mass < 1e-4) {
+        .usdt_stop("the ", spec$label, " prior \"", row$prior, "\" puts ",
+                   "almost no mass on the values its parameter can take.")
+      }
+      draws <- numeric(0)
+      while (length(draws) < n) {
+        x <- family$r(ceiling((n - length(draws)) * 1.1 / mass) + 10L, a)
+        draws <- c(draws, x[x >= lower & x <= upper])
+      }
+      draws[seq_len(n)]
+    })
+}
+
+# This function draws n values from the prior of one parameter in one task.
+.prior_sample <- function(priors, parameter, task, n) {
+  .prior_fun(.prior_rows(priors, parameter, task))$r(n)
+}
+
+# This function simulates the population distribution of the two sensitivities
+# from its priors, one draw per row: their means, SDs and correlation. Under
+# the latent regression the influence mean follows from the intercept as
+# mu_I = b0 + rho * sigma_I / sigma_A * mu_A.
+.prior_draws <- function(priors, n, latent) {
+  draw <- function(parameter, task) .prior_sample(priors, parameter, task, n)
+  if (latent == "regression") {
+    mu_A <- draw("dprime", "awareness")
+    sigma_A <- draw("sd_dprime", "awareness")
+    sigma_I <- draw("sd_dprime", "influence")
+    rho <- draw("cor_dprime", "both")
+    return(cbind(mu_A = mu_A,
+                 mu_I = draw("intercept", "both") +
+                   rho * sigma_I / sigma_A * mu_A,
+                 sigma_A = sigma_A, sigma_I = sigma_I, rho = rho))
+  }
+  cbind(mu_A = draw("dprime", "awareness"), mu_I = draw("dprime", "influence"),
+        sigma_A = draw("sd_dprime", "awareness"),
+        sigma_I = draw("sd_dprime", "influence"),
+        rho = draw("cor_dprime", "both"))
+}
+
+# This function adds one new subject to every population draw and returns that
+# subject's hit and false-alarm rates in each task, following the subject level
+# of the model with the given design (from .bayes_design()). A criterion fixed
+# by the Meyen split takes the value that makes HR + FAR = 1.
+.prior_predictive <- function(priors, n, design) {
+  draw <- function(row) .prior_fun(row)$r(n)
+  B <- .prior_draws(priors, n, design$latent)
+  z <- matrix(stats::rnorm(2L * n), n)
+  d <- cbind(B[, "mu_A"] + B[, "sigma_A"] * z[, 1L],
+             B[, "mu_I"] + B[, "sigma_I"] *
+               (B[, "rho"] * z[, 1L] + sqrt(1 - B[, "rho"]^2) * z[, 2L]))
+  signal <- .prior_rows(priors, "sd_signal")
+  sigma_s <- if (design$unequal_variances) {
+    vapply(1:2, function(j) draw(signal[j, ]), numeric(n))
+  } else {
+    matrix(1, n, 2L)
+  }
+
+  criterion <- d * (1 - sigma_s) / (2 * (1 + sigma_s))
+  free <- which(design$free_c == 1L)
+  if (length(free)) {
+    mean_c <- .prior_rows(priors, "criterion")
+    sd_c <- .prior_rows(priors, "sd_criterion")
+    w <- matrix(stats::rnorm(2L * n), n)
+    if (length(free) == 2L) {
+      r <- draw(.prior_rows(priors, "cor_criterion", "both"))
+      w[, 2L] <- r * w[, 1L] + sqrt(1 - r^2) * w[, 2L]
+    }
+    for (k in seq_along(free)) {
+      j <- free[k]
+      criterion[, j] <- draw(mean_c[j, ]) + draw(sd_c[j, ]) * w[, k]
+    }
+  }
+
+  list(draws = B,
+       hit = stats::pnorm((d / 2 - criterion) / sigma_s),
+       fa = stats::pnorm(-d / 2 - criterion))
+}
+
+# This function returns the log density and the distribution function of the
+# prior of each requested tested quantity under a parameterization. A quantity
+# with a prior of its own is exact: the correlation, and under the latent
+# regression the intercept. Any other one is an increasing function of a
+# parameter theta with a prior of its own, given the other parameters, so its
+# prior averages the transformed prior of theta over n prior draws of them (a
+# Rao-Blackwell estimate), whatever the families of the priors.
+.quantity_priors <- function(priors, quantities, latent,
+                             n = .prior_samples) {
+  prior <- function(parameter, task = "both") {
+    .prior_fun(.prior_rows(priors, parameter, task))
+  }
+  draw <- function(parameter, task = "both") {
+    .prior_sample(priors, parameter, task, n)
+  }
+  exact <- function(theta, bounds = NULL) {
+    .transformed_prior(theta, identity, function(x) 0, bounds,
+                       induced = FALSE)
+  }
+  regression <- latent == "regression"
+
+  # slope = rho r with r = sigma_I / sigma_A. The difference and the intercept
+  # shift the influence mean or, under the latent regression, the intercept:
+  # diff = mu_I - mu_A = b0 + (slope - 1) mu_A and b0 = mu_I - slope mu_A.
+  rho <- prior("cor_dprime")
+  out <- list(rho = exact(rho, bounds = c(-1, 1)))
+  shifted <- if (regression) "diff" else "intercept"
+  if (any(c("diff", "intercept") %in% quantities)) {
+    mu_A <- draw("dprime", "awareness")
+  }
+  if (any(c(shifted, "slope") %in% quantities)) {
+    r <- draw("sd_dprime", "influence") / draw("sd_dprime", "awareness")
+    slope <- rho$r(n) * r
+    out$slope <- .transformed_prior(rho, function(x) x / r,
+                                    function(x) -log(r))
+  }
+  if (regression) {
+    b0 <- prior("intercept")
+    out$intercept <- exact(b0)
+    if ("diff" %in% quantities) {
+      out$diff <- .transformed_prior(b0, function(x) x - (slope - 1) * mu_A,
+                                     function(x) 0)
+    }
+    return(out)
+  }
+  mu_I <- prior("dprime", "influence")
+  if ("diff" %in% quantities) {
+    out$diff <- .transformed_prior(mu_I, function(x) x + mu_A, function(x) 0)
+  }
+  if ("intercept" %in% quantities) {
+    out$intercept <- .transformed_prior(mu_I, function(x) x + slope * mu_A,
+                                        function(x) 0)
+  }
+  out
+}
+
+# This function gives the prior of q = g(theta), with g increasing, from that
+# of theta (from .prior_fun()), the inverse of g and the log of the derivative
+# of that inverse at q. Both may depend on draws of other parameters, over
+# which the density and the distribution function are averaged; such a prior
+# is induced by those parameters.
+.transformed_prior <- function(theta, inverse, log_jacobian, bounds = NULL,
+                               induced = TRUE) {
+  list(
+    log_density = function(x) vapply(x, function(v) {
+      .log_mean_exp(theta$log_density(inverse(v)) + log_jacobian(v))
+    }, 0),
+    cdf = function(x) vapply(x, function(v) mean(theta$cdf(inverse(v))), 0),
+    bounds = bounds, induced = induced)
+}
+
+# This function averages probabilities given on the log scale.
+.log_mean_exp <- function(l) {
+  top <- max(l)
+  if (!is.finite(top)) return(top)
+  top + log(mean(exp(l - top)))
+}
+
+# Prior predictive check
+
+#' Prior predictive check for the Bayesian hierarchical SDT model
+#'
+#' Draws what the priors imply before seeing any data: the hit and
+#' false-alarm rates of a new subject in each task, and the prior of the
+#' quantity tested by each hypothesis. Use it to check that the priors allow
+#' the data you expect and to see the prior that the model induces on the
+#' latent intercept.
+#'
+#' @param x A `usdt_priors` object from [usdt_priors()].
+#' @param data Optional `usdt_data` object. When given, a criterion fixed by
+#'   the median split stays fixed, as in [hsdt()], and the tasks take the data
+#'   labels. Without it, both criteria are estimated. The caption says which
+#'   criteria are fixed.
+#' @param unequal_variances Logical. Simulate the signal standard deviation
+#'   from its prior instead of fixing it to 1.
+#' @param latent How the model writes the relation between the two latent
+#'   sensitivities, as in [hsdt()]: by their means, standard deviations and
+#'   correlation (`"correlation"`, the default) or by the latent regression of
+#'   the influence on the awareness one (`"regression"`).
+#' @param caption Logical. Show the caption that explains the plot under it
+#'   (default `TRUE`).
+#' @param ... Ignored.
+#'
+#' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
+#'
+#' @details
+#' The plot simulates 100,000 draws from the priors in R. No model is fitted
+#' and Stan is not needed.
+#'
+#' The rates panel shows the hit and false-alarm rates of one new subject drawn
+#' from each population draw. Rates piled up at 0 or 1 mean that the priors
+#' allow extreme performance.
+#'
+#' Each hypothesis panel shows the prior of the quantity it tests. A quantity
+#' with a prior of its own is drawn exactly: the correlation (H2), and under
+#' the latent regression also the intercept (H3). The others have priors that
+#' the model induces through the remaining priors: the intercept under the
+#' correlation parameterization, the difference (H1) under the latent
+#' regression. Each of these is drawn as the density that one prior gives it,
+#' averaged over 20,000 prior draws of the other parameters (a Rao-Blackwell
+#' estimate), the same priors that [usdt_bf()] averages over 100,000 draws.
+#' The difference (H1) and the intercept (H3) span four robust standard
+#' deviations either side of their median, since an induced prior of either
+#' has heavy tails. Dotted lines mark the value of each hypothesis under the
+#' null.
+#'
+#' @seealso [usdt_priors()]
+#'
+#' @examples
+#' plot(usdt_priors())
+#'
+#' # A narrower prior for the mean influence sensitivity
+#' plot(usdt_priors(dprime = list(awareness = "normal(0, 1)",
+#'                                influence = "normal(0, 0.5)")))
+#'
+#' # The latent regression, with a prior on its intercept
+#' plot(usdt_priors(intercept = "normal(0, 0.3)"), latent = "regression")
+#'
+#' @export
+plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
+                             latent = c("correlation", "regression"),
+                             caption = TRUE, ...) {
+  .check_caption(caption)
+  if (!is.null(data) && !inherits(data, "usdt_data")) {
+    .usdt_stop("`data` must come from usdt_data_long() or usdt_data_tasks(), ",
+               "not a plain ", class(data)[1L], ".")
+  }
+  if (!is.logical(unequal_variances) || length(unequal_variances) != 1L ||
+      is.na(unequal_variances)) {
+    .usdt_stop("`unequal_variances` must be `TRUE` or `FALSE`.")
+  }
+  latent <- .check_latent(latent)
+  if (length(list(...))) {
+    .usdt_stop("`...` is not used by the prior predictive plot.")
+  }
+  .plot_priors(.prior_check_data(x, data, unequal_variances,
+                                 latent)) +
+    .hide_caption(caption)
+}
+
+# This function reads the parameterization of the two sensitivities.
+.check_latent <- function(x) {
+  tryCatch(match.arg(x, c("correlation", "regression")), error = function(e)
+    .usdt_stop("`latent` must be `\"correlation\"` or ",
+               "`\"regression\"`."))
+}
+
+# This function collects the curves drawn by the prior predictive check. With
+# data, the criteria fixed by the median split are those hsdt() fixes.
+.prior_check_data <- function(priors, data, unequal_variances,
+                              latent) {
+  labels <- if (is.null(data))
+    c(awareness = "Awareness", influence = "Influence") else data$meta$labels
+  design <- if (is.null(data)) {
+    list(free_c = c(1L, 1L), unequal_variances = unequal_variances,
+         latent = latent)
+  } else {
+    .bayes_design(data, "auto", unequal_variances, latent)
+  }
+  simulated <- .prior_predictive(priors, .prior_samples, design)
+
+  # Panel titles are drawn on a graphics device, so they stay ASCII.
+  panels <- c("Hit and false-alarm rates of a new subject",
+              "H1: difference in mean d'",
+              "H2: correlation between d'",
+              "H3: intercept of the latent regression")
+  curve <- function(panel, x, density, task = NA_character_,
+                    rate = NA_character_) {
+    data.frame(panel = panel, x = x, density = density, task = task,
+               rate = rate, stringsAsFactors = FALSE)
+  }
+
+  # Rates are bounded, so their densities reflect the draws at 0 and 1.
+  rates <- do.call(rbind, lapply(1:2, function(j) {
+    rbind(curve(panels[1L], .unit_grid, .unit_density(simulated$hit[, j]),
+                labels[[j]], "Hit rate"),
+          curve(panels[1L], .unit_grid, .unit_density(simulated$fa[, j]),
+                labels[[j]], "False-alarm rate"))
+  }))
+
+  # The hypotheses take the priors of the Bayes factors. The difference and
+  # the intercept span four robust SDs either side of their median, since an
+  # induced prior of either has heavy tails. Each point of an induced density
+  # averages over prior draws, so these smooth curves take fewer points and
+  # draws than a Bayes factor, which reads one point precisely.
+  priors_of <- .quantity_priors(priors, c("diff", "rho", "intercept"),
+                                latent, n = .curve_samples)
+  Q <- .usdt_quantities(.bivariate_primitives(simulated$draws))
+  span <- function(x) {
+    spread <- stats::IQR(x) / (2 * stats::qnorm(0.75))
+    stats::median(x) + c(-4, 4) * spread
+  }
+  density <- function(panel, quantity, range) {
+    grid <- seq(range[1L], range[2L], length.out = 128L)
+    curve(panel, grid, exp(priors_of[[quantity]]$log_density(grid)))
+  }
+
+  curves <- rbind(rates,
+                  density(panels[2L], "diff", span(Q[, "diff"])),
+                  density(panels[3L], "rho", c(-0.999, 0.999)),
+                  density(panels[4L], "intercept", span(Q[, "intercept"])))
+  curves$panel <- factor(curves$panel, levels = panels)
+  curves$task <- factor(curves$task, levels = unname(labels))
+  curves$rate <- factor(curves$rate,
+                        levels = c("Hit rate", "False-alarm rate"))
+  list(curves = curves, labels = labels,
+       fixed = unname(labels[c("awareness", "influence")][design$free_c == 0L]),
+       unequal_variances = unequal_variances,
+       latent = latent,
+       nulls = data.frame(panel = factor(panels[-1L], levels = panels), x = 0))
+}
+
+# The grid on which rate densities are evaluated.
+.unit_grid <- seq(0, 1, length.out = 512L)
+
+# This function estimates a density on (0, 1), reflecting the draws at both
+# ends so that the mass near a bound is not lost.
+.unit_density <- function(v) {
+  k <- stats::density(c(v, -v, 2 - v), bw = stats::bw.nrd0(v),
+                      from = 0, to = 1, n = length(.unit_grid))
+  3 * k$y
+}
+
+# This function draws the prior predictive check.
+.plot_priors <- function(values) {
+  curves <- values$curves
+  hypotheses <- curves[is.na(curves$task), , drop = FALSE]
+  rates <- curves[!is.na(curves$task), , drop = FALSE]
+
+  # The tasks keep the colours of the ROC plot, and the hypotheses those of the
+  # model estimates in the shrinkage plot.
+  task_colours <- stats::setNames(
+    c("#176B60", "#B6543A"),
+    unname(values$labels[c("awareness", "influence")]))
+  model_colour <- "#116B60"
+  model_fill <- "#3FA88E"
+
+  # The rates depend on which criteria the median split fixes, so the caption
+  # names them. Under equal variances a fixed criterion is exactly zero.
+  fixed <- values$fixed
+  where <- if (values$unequal_variances) "by the median split (HR + FAR = 1)" else
+    "at 0 by the median split"
+  criteria <- if (!length(fixed)) {
+    "Both criteria are estimated."
+  } else if (length(fixed) == 2L) {
+    paste0("Both criteria are fixed ", where, ".")
+  } else {
+    paste0("The ", fixed, " criterion is fixed ", where,
+           ". The other is estimated.")
+  }
+
+  ggplot2::ggplot(curves) +
+    ggplot2::geom_vline(
+      data = values$nulls, ggplot2::aes(xintercept = .data[["x"]]),
+      colour = "#697076", linetype = "dotted", linewidth = 0.5
+    ) +
+    ggplot2::geom_area(
+      data = hypotheses,
+      ggplot2::aes(x = .data[["x"]], y = .data[["density"]]),
+      fill = model_fill, alpha = 0.17, colour = NA
+    ) +
+    ggplot2::geom_line(
+      data = hypotheses,
+      ggplot2::aes(x = .data[["x"]], y = .data[["density"]]),
+      colour = model_colour, linewidth = 0.9
+    ) +
+    ggplot2::geom_line(
+      data = rates,
+      ggplot2::aes(x = .data[["x"]], y = .data[["density"]],
+                   colour = .data[["task"]], linetype = .data[["rate"]]),
+      linewidth = 0.9
+    ) +
+    ggplot2::facet_wrap(ggplot2::vars(.data[["panel"]]), ncol = 2,
+                        scales = "free") +
+    # The task legend always comes first, so the legend reads the same way
+    # whatever the labels.
+    ggplot2::scale_colour_manual(
+      values = task_colours, name = NULL,
+      guide = ggplot2::guide_legend(order = 1L)
+    ) +
+    ggplot2::scale_linetype_manual(
+      values = c("Hit rate" = "solid", "False-alarm rate" = "dashed"),
+      name = NULL, guide = ggplot2::guide_legend(order = 2L)
+    ) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.03)) +
+    ggplot2::scale_y_continuous(
+      expand = ggplot2::expansion(mult = c(0, 0.06))
+    ) +
+    ggplot2::labs(
+      x = NULL, y = NULL,
+      caption = paste0(
+        "Prior densities from 100,000 draws of the priors. No responses are ",
+        "used. Rates belong to one new subject per draw. ", criteria, " ",
+        if (values$latent == "regression") {
+          paste0("H2 and H3 are the exact priors of the correlation and the ",
+                 "intercept. H1 is induced by the other priors")
+        } else {
+          paste0("H2 is the exact prior of the correlation. H1 and H3 are ",
+                 "induced by the other priors")
+        },
+        " and averaged over 20,000 of the draws. H1 and H3 span four robust ",
+        "SDs either side of their median. Dotted lines mark each null value."
+      )
+    ) +
+    .panel_theme() +
+    # Wider keys keep the dashed false-alarm line recognisable in the legend.
+    ggplot2::theme(legend.key.width = grid::unit(30, "pt"))
+}

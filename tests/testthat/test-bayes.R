@@ -1,0 +1,171 @@
+bayes_data <- function(df) {
+  usdt_data_long(df, task_col = "task",
+                 task_levels      = c(awareness = "A", influence = "I"),
+                 subject_col      = "subj",
+                 condition_col    = "cond",
+                 condition_levels = c(signal = 1, noise = 0),
+                 response_col     = "response",
+                 response_levels  = c(signal = 1, noise = 0))
+}
+
+# Compiling and sampling Stan takes minutes, so these checks run on request,
+# with the backend in USDT_TEST_BACKEND (rstan by default).
+test_backend <- function() Sys.getenv("USDT_TEST_BACKEND", "rstan")
+
+test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
+  skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
+              "set USDT_TEST_STAN=true to fit the Stan model")
+  old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
+  on.exit(options(old), add = TRUE)
+
+  set.seed(2)
+  d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
+  m <- hsdt(d, estimation = "bayesian", chains = 2, iter = 1500, refresh = 0,
+            warmup = 500, seed = 1, backend = test_backend())
+  f <- hsdt(d)
+
+  expect_identical(m$tests$term, f$tests$term)
+  expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
+  expect_true(all(m$tests$rhat < 1.05))
+  expect_identical(usdt_tests(m), m$tests)
+
+  # The latent line meets the H3 table at zero, and every plot draws.
+  origin <- .regression_data(m)$origin
+  expect_equal(origin$fit, m$tests$estimate[3L])
+  for (type in c("regression", "shrinkage", "caterpillar", "roc")) {
+    expect_s3_class(plot(m, type = type), "ggplot")
+  }
+
+  # Reliability lies inside its credible interval, close to the frequentist one.
+  r <- usdt_reliability(m)
+  expect_true(all(r$tasks$conf.low <= r$tasks$reliability &
+                    r$tasks$reliability <= r$tasks$conf.high))
+  expect_equal(r$tasks$reliability, usdt_reliability(f)$tasks$reliability,
+               tolerance = 0.2)
+
+  # The default Bayes factors test the three point nulls and draw.
+  b <- usdt_bf(m, plot = FALSE)
+  expect_identical(b$hypothesis,
+                   c(paste0(.usdt_chars()$delta, "d' = 0"), "rho = 0",
+                     "intercept = 0"))
+  expect_equal(b$BF10, 1 / b$BF01)
+  expect_s3_class(plot(b), "ggplot")
+})
+
+test_that("the latent regression reports the same quantities", {
+  skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
+              "set USDT_TEST_STAN=true to fit the Stan model")
+  old <- options(uSDT.cache_dir = file.path(tempdir(), "usdt-stan"))
+  on.exit(options(old), add = TRUE)
+
+  set.seed(2)
+  d <- bayes_data(make_trials(n_subj = 40, n_trials = 100))
+  # So short a run can leave the correlation with a small effective sample.
+  m <- suppressWarnings(hsdt(
+    d, estimation = "bayesian", latent = "regression", chains = 2,
+    iter = 1500, warmup = 500, refresh = 0, seed = 1,
+    backend = test_backend()))
+  f <- hsdt(d)
+  expect_identical(m$tests$term, f$tests$term)
+  expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
+
+  # The model samples the influence mean under the prior of the intercept,
+  # which then has an exact prior like the correlation, and a slope compared
+  # with zero is tested on the correlation.
+  table <- brms::prior_summary(m$fit)
+  expect_true(any(startsWith(table$prior, "target += normal_lpdf(b_dI[1]")))
+  draws <- unclass(posterior::as_draws_matrix(m$fit))
+  slope <- draws[, "cor_subj__dA_Intercept__dI_Intercept"] *
+    draws[, "sd_subj__dI_Intercept"] / draws[, "sd_subj__dA_Intercept"]
+  expect_equal(m$tests$estimate[3L], mean(draws[, "b_dI_Intercept"] -
+                                            slope * draws[, "b_dA_Intercept"]))
+  set.seed(3)
+  b <- usdt_bf(m, c("intercept = 0", "rho = 0", "slope = 0", "diff = 0"),
+               plot = FALSE)
+  induced <- vapply(attr(b, "curves"), `[[`, TRUE, "induced")
+  expect_identical(induced, c(FALSE, FALSE, FALSE, TRUE))
+  expect_match(b$test[3L], "on rho = 0", fixed = TRUE)
+})
+
+test_that("brms variables are found whatever the order of the correlation", {
+  variables <- c("b_awareness", "b_taskA:cond", "b_taskI:cond",
+                 "sd_subj__awareness",
+                 "sd_subj__taskA:cond", "sd_subj__taskI:cond",
+                 "cor_subj__taskI:cond__taskA:cond", "lp__")
+  expect_identical(
+    .brms_variables(variables, "taskA:cond", "taskI:cond"),
+    c("b_taskA:cond", "b_taskI:cond", "sd_subj__taskA:cond",
+      "sd_subj__taskI:cond", "cor_subj__taskI:cond__taskA:cond"))
+  expect_error(.brms_variables(variables, "d_A", "d_I"), "not found")
+  expect_error(.brms_variables(variables, "taskA:cond", "awareness"),
+               "no group-level term")
+})
+
+test_that("aggregated counts keep every trial and response", {
+  counts <- usdt_aggregate(vadillo_awareness, response = "judged.old",
+                           by = c("subj", "condition", "set.size"))
+  expect_identical(sum(counts$n), nrow(vadillo_awareness))
+  expect_identical(sum(counts$y), as.integer(sum(vadillo_awareness$judged.old)))
+  expect_error(usdt_aggregate(vadillo_awareness, "condition", "subj"), "binary")
+})
+
+test_that("a brms model is tested from its posterior", {
+  skip_if_not(identical(Sys.getenv("USDT_TEST_STAN"), "true"),
+              "set USDT_TEST_STAN=true to fit the brms model")
+
+  set.seed(3)
+  df <- make_trials(n_subj = 30, n_trials = 60)
+  df$cond_A <- (df$cond - 0.5) * (df$task == "A")
+  df$cond_I <- (df$cond - 0.5) * (df$task == "I")
+  df$awareness <- as.integer(df$task == "A")
+  df$influence <- as.integer(df$task == "I")
+  counts <- usdt_aggregate(df, "response",
+                           c("subj", "awareness", "influence", "cond_A",
+                             "cond_I"))
+  fit <- suppressWarnings(brms::brm(
+    y | trials(n) ~ 0 + awareness + influence + cond_A + cond_I +
+      (0 + awareness + influence | subj) + (0 + cond_A + cond_I | subj),
+    data = counts, family = binomial("probit"),
+    prior = brms::prior(normal(0, 1), class = b), chains = 2, iter = 1000,
+    seed = 1, refresh = 0, silent = 2, backend = test_backend()))
+
+  tests <- usdt_tests(fit, awareness = "cond_A", influence = "cond_I")
+  expect_identical(tests$hypothesis, c("H1", "H2", "H3", "H3"))
+  expect_identical(latent_cor(fit, "cond_A", "cond_I")$p.value,
+                   tests$p.value[2L])
+
+  # Its priors are read from the model, so it also gets Bayes factors.
+  b <- usdt_bf(fit, awareness = "cond_A", influence = "cond_I", plot = FALSE)
+  expect_true(all(is.finite(b$log_BF10)))
+  expect_equal(b$estimate, tests$estimate[c(1L, 2L, 3L)])
+})
+
+test_that("chains run in background sessions and report their results", {
+  skip_on_cran()
+  settings <- list(chains = 3L, cores = 2L, iter = 10L, refresh = 0L)
+  out <- .run_chains(settings, function(chain) {
+    callr::r_bg(function(k) {
+      cat("Chain", k, "Iteration: 10 / 10\n")
+      k
+    }, args = list(k = chain))
+  })
+  expect_identical(out, list(1L, 2L, 3L))
+
+  # Chains 1 and 2 start together, and the error names whichever of them is
+  # found dead first, which depends on how fast each session stops.
+  expect_error(.run_chains(settings, function(chain) {
+    callr::r_bg(function() stop("no draws"))
+  }), "chain [12] failed: no draws")
+})
+
+test_that("the default cores leave two free, up to four, and two under check", {
+  old <- Sys.getenv("_R_CHECK_LIMIT_CORES_", NA)
+  on.exit(if (is.na(old)) Sys.unsetenv("_R_CHECK_LIMIT_CORES_") else
+    Sys.setenv(`_R_CHECK_LIMIT_CORES_` = old), add = TRUE)
+  Sys.setenv(`_R_CHECK_LIMIT_CORES_` = "TRUE")
+  expect_lte(.default_cores(), 2L)
+  Sys.setenv(`_R_CHECK_LIMIT_CORES_` = "")
+  expect_true(.default_cores() %in% 1:4)
+  s <- .bayes_settings(list())
+  expect_identical(c(s$chains, s$iter - s$warmup, s$refresh), c(4L, 5000L, 60L))
+})

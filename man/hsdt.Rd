@@ -8,10 +8,14 @@
 \usage{
 hsdt(
   data,
-  estimation = c("frequentist"),
+  estimation = c("frequentist", "bayesian"),
   fix_criteria = c("auto", "none"),
   level = 0.95,
   optimizer = "bobyqa",
+  priors = usdt_priors(),
+  unequal_variances = FALSE,
+  latent = c("correlation", "regression"),
+  backend = getOption("brms.backend", "rstan"),
   ...
 )
 
@@ -23,21 +27,50 @@ hsdt(
 \item{data}{A \code{usdt_data} object from \code{\link[=usdt_data_tasks]{usdt_data_tasks()}} or
 \code{\link[=usdt_data_long]{usdt_data_long()}}.}
 
-\item{estimation}{Estimation framework. Currently only \code{"frequentist"}
-(maximum likelihood via Laplace approximation) is supported.}
+\item{estimation}{Estimation framework: \code{"frequentist"} (maximum likelihood
+via Laplace approximation with lme4) or \code{"bayesian"} (Hamiltonian Monte
+Carlo with Stan, through brms).}
 
 \item{fix_criteria}{How to handle response criteria. \code{"auto"} fixes to zero
-any criterion that is zero by design (such as a task split at the median
-under deviation coding). \code{"none"} estimates all criteria.}
+a dichotomized task's criterion when its mean absolute descriptive subject
+criterion is below 0.02. \code{"none"} estimates all criteria.}
 
-\item{level}{Confidence level for Wald intervals (default is 0.95).}
+\item{level}{Confidence level for Wald intervals, or credible level for the
+posterior intervals of a Bayesian fit (default is 0.95).}
 
 \item{optimizer}{Primary optimizer passed to \code{\link[lme4:glmerControl]{lme4::glmerControl()}}.
 Alternative optimizers are automatically evaluated if the default fails to
-converge or produces a singular fit.}
+converge or produces a singular fit. Frequentist estimation only.}
 
-\item{...}{Additional arguments passed to \code{\link[lme4:glmer]{lme4::glmer()}}. Model formula,
-family, and data inputs remain managed by the package.}
+\item{priors}{A \code{usdt_priors} object from \code{\link[=usdt_priors]{usdt_priors()}}. Bayesian
+estimation only.}
+
+\item{unequal_variances}{Logical. Estimate the standard deviation of the
+signal distribution of each task instead of fixing it to that of the noise
+distribution. Bayesian estimation only.}
+
+\item{latent}{How the Bayesian model writes the relation between the two
+latent sensitivities, which decides where it places the prior on the
+location of the influence sensitivity: on its mean, by their latent
+correlation (\code{"correlation"}, the default), or on the intercept of the
+latent regression of the influence on the awareness sensitivity
+(\code{"regression"}). Both keep the priors on the awareness mean, the
+standard deviations and the correlation. Bayesian estimation only.}
+
+\item{backend}{Stan interface brms uses for Bayesian estimation: \code{"rstan"}
+(available from CRAN) or \code{"cmdstanr"} (installed from the Stan R-universe
+together with CmdStan). As in brms, the default is the \code{brms.backend}
+option, or \code{"rstan"} when it is not set. Bayesian estimation only.}
+
+\item{...}{For frequentist estimation, additional arguments passed to
+\code{\link[lme4:glmer]{lme4::glmer()}}. The model formula, family and data remain managed by the
+package. For Bayesian estimation, sampling options: \code{chains} (default 4),
+\code{iter} (iterations per chain including warmup, default 6000), \code{warmup}
+(default 1000, so each chain keeps 5000 draws), \code{cores} (chains run at
+once, default \code{min(parallel::detectCores() - 2, 4)}, at least 1), \code{seed},
+\code{control = list(adapt_delta, max_treedepth)} (default 0.95 and 10) and
+\code{refresh} (iterations between progress updates of each chain, default 1\%
+of \code{iter}, and \code{0} hides the progress bar).}
 
 \item{object}{An \code{hsdt} object.}
 
@@ -46,52 +79,99 @@ family, and data inputs remain managed by the package.}
 \value{
 An object of class \code{hsdt} containing:
 \itemize{
-\item \verb{$fit}: The underlying \code{glmerMod} object from \code{lme4}.
+\item \verb{$fit}: The underlying fit: a \code{glmerMod} object from lme4, or a \code{brmsfit}
+object from brms (see \code{\link[brms:prior_summary]{brms::prior_summary()}} and \code{\link[brms:pp_check]{brms::pp_check()}}).
 \item \verb{$tests}: Summary table for hypotheses H1, H2, and H3.
-\item \verb{$pars}: Model parameter estimates on the SDT scale.
-\item \verb{$design}: Summary of the model specification and formula.
-\item \verb{$diagnostics}: Convergence flags and singular fit indicators.
+\item \verb{$design}: Summary of the model specification.
+\item \verb{$diagnostics}: Convergence diagnostics.
 }
+
+A frequentist fit also contains \verb{$pars}, the parameter estimates and their
+joint covariance. A Bayesian fit also contains \verb{$priors}. Its posterior
+draws are those of \verb{$fit}, where \code{b_dA_Intercept} and \code{b_dI_Intercept} are
+the mean \eqn{d'} of the awareness and influence tasks,
+\code{sd_subj__dA_Intercept} and \code{sd_subj__dI_Intercept} their SDs,
+\code{cor_subj__dA_Intercept__dI_Intercept} their correlation, \code{b_cA_Intercept}
+and \code{b_cI_Intercept} the mean of an estimated criterion (on the classical
+scale), and \code{b_sA_Intercept} and \code{b_sI_Intercept} the signal SDs under
+unequal variances.
 }
 \description{
-Fits a bivariate hierarchical SDT model using \code{\link[lme4:glmer]{lme4::glmer()}} and evaluates
-the core unconscious processing hypotheses. The model estimates task-specific
-sensitivities (\eqn{d'}) and response criteria (\eqn{c}) as fixed effects,
-while estimating their variation and correlation across participants via
-random effects.
+Models paired awareness and influence sensitivities and criteria, their
+population means and between-subject variation. Frequentist estimation uses
+\code{\link[lme4:glmer]{lme4::glmer()}}. Bayesian estimation uses brms and Stan.
 }
 \details{
-The model fits trial counts with a binomial probit link, directly mapping
-coefficients to standard Signal Detection Theory parameters. Fixed effects
-capture population sensitivities and criteria, while random effects estimate
-participant variation and the latent correlation between direct and indirect
-sensitivity.
-
 Hypotheses evaluated by default:
 \itemize{
 \item \strong{H1:} Mean sensitivity difference between tasks.
 \item \strong{H2:} Latent correlation of sensitivities across participants.
-\item \strong{H3:} Latent regression of indirect on direct sensitivity. Its intercept
-reflects expected indirect performance when direct awareness is zero
-(\eqn{d'_{\mathrm{Direct}} = 0}).
+\item \strong{H3:} Latent regression of influence on awareness sensitivity. Its
+intercept reflects expected influence performance when awareness
+sensitivity is zero (\eqn{d'_{\mathrm{Awareness}} = 0}).
 }
 
 When sample sizes or trial counts are low, variance components can reach
 singular boundaries. In these cases, the function issues a warning, and
-parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}.
+parametric bootstrap intervals can be calculated using \code{\link[=usdt_boot]{usdt_boot()}}, or the
+model can be fitted with \code{estimation = "bayesian"}.
 }
+\section{Bayesian estimation}{
+The Bayesian model places its priors on the mean, standard deviation and
+correlation of the two sensitivities and on the criteria. See
+\code{\link[=usdt_priors]{usdt_priors()}}. The slope and intercept of the latent regression are
+derived from them draw by draw. The hypothesis table reports the posterior
+mean and standard deviation, a central credible interval and a two-sided
+posterior p-value, \eqn{2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}}.
+The p-value falls below \code{1 - level} exactly when zero lies outside the
+credible interval, so with the default \code{level = 0.95} a p-value below .05
+means that the 95\% credible interval excludes zero.
+
+With \code{latent = "regression"}, the prior of the influence mean
+moves to the intercept \eqn{\beta_0} of the latent regression, and the
+influence mean follows as
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The
+intercept tested by H3 then has its specified prior, and the correlation
+(H2) keeps its own. The difference between the means (H1) has an induced,
+heavy-tailed prior instead, and because the data fix \eqn{\mu_I}, the
+intercept prior also informs the posterior of \eqn{\rho}. See
+\code{\link[=usdt_priors]{usdt_priors()}} and \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. The fit samples the same
+parameters and reports the same hypotheses either way. Near-zero awareness
+SDs can produce difficult posterior geometry and divergences. A prior with
+less weight near zero may help, if substantively justified. Inspect its
+implications with \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}.
+
+With \code{unequal_variances = TRUE}, the noise distribution of each task is
+\eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so
+\eqn{d} is the distance between their means in units of the noise standard
+deviation, and H1-H3 compare these \eqn{d}. When \eqn{\sigma_s} differs
+between the tasks, \eqn{d} no longer measures the same discriminability in
+both: the measure comparable with an equal-variance \eqn{d'} is
+\eqn{d_a = d \sqrt{2 / (1 + \sigma_s^2)}}, and the mean \eqn{d_a} of a task
+is its mean \eqn{d} times that factor, which can be computed from the draws
+of \code{b_dA_Intercept} and \code{b_sA_Intercept} (and their influence counterparts)
+in \verb{$fit}. The correlation (H2) is the same on either scale.
+
+The model is a brms model of the aggregated counts, with one prior per
+parameter and task. It is compiled the first time it is used with a given
+set of priors, which needs a C++ toolchain, and stays in a per-user cache
+directory for later sessions. Inspect the reported divergences, tree-depth
+warnings, R-hat and effective sample sizes before interpreting results.
+}
+
 \examples{
 # Contextual cuing data from Vadillo et al. (2025)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 m <- hsdt(d)
@@ -99,10 +179,17 @@ m <- hsdt(d)
 # Full summary table with SDT parameters and hypothesis tests
 summary(m)
 
-# Inspect the model formula (indirect criterion omitted by default)
+# Inspect the model formula (influence criterion omitted by default)
 m$design$formula
+
+\donttest{
+# Bayesian estimation. The first call compiles the model.
+mb <- hsdt(d, estimation = "bayesian", seed = 1)
+summary(mb)
+}
 
 }
 \seealso{
-\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}, \code{\link[=usdt_tests]{usdt_tests()}}, \code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
+\code{\link[=usdt_data_tasks]{usdt_data_tasks()}}, \code{\link[=usdt_priors]{usdt_priors()}}, \code{\link[=usdt_tests]{usdt_tests()}},
+\code{\link[=usdt_boot]{usdt_boot()}}, \code{\link[=plot.hsdt]{plot.hsdt()}}
 }

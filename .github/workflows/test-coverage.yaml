@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      USDT_TEST_STAN: "true"
+      USDT_TEST_BACKEND: rstan
 
     steps:
       - uses: actions/checkout@v6

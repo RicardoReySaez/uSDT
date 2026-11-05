@@ -28,6 +28,7 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
   expect_equal(m$tests$estimate[1L], f$tests$estimate[1L], tolerance = 0.05)
   expect_true(all(m$tests$rhat < 1.05))
   expect_identical(usdt_tests(m), m$tests)
+  expect_output(summary(m), "brms")
 
   # The latent line meets the H3 table at zero, and every plot draws.
   origin <- .regression_data(m)$origin
@@ -42,6 +43,7 @@ test_that("the Bayesian fit reproduces the frequentist group-level estimates", {
                     r$tasks$reliability <= r$tasks$conf.high))
   expect_equal(r$tasks$reliability, usdt_reliability(f)$tasks$reliability,
                tolerance = 0.2)
+  expect_output(print(r), "credible intervals")
 
   # The default Bayes factors test the three point nulls and draw.
   b <- usdt_bf(m, plot = FALSE)
@@ -107,6 +109,17 @@ test_that("aggregated counts keep every trial and response", {
   expect_identical(sum(counts$n), nrow(vadillo_awareness))
   expect_identical(sum(counts$y), as.integer(sum(vadillo_awareness$judged.old)))
   expect_error(usdt_aggregate(vadillo_awareness, "condition", "subj"), "binary")
+})
+
+test_that("aggregating trials preserves binomial estimates and uncertainty", {
+  counts <- usdt_aggregate(vadillo_awareness, "judged.old",
+                           c("condition", "set.size"))
+  trials <- stats::glm(judged.old ~ condition * set.size,
+                       data = vadillo_awareness, family = binomial("probit"))
+  aggregated <- stats::glm(cbind(y, n - y) ~ condition * set.size,
+                           data = counts, family = binomial("probit"))
+  expect_equal(coef(aggregated), coef(trials), tolerance = 1e-7)
+  expect_equal(vcov(aggregated), vcov(trials), tolerance = 1e-6)
 })
 
 test_that("a brms model is tested from its posterior", {

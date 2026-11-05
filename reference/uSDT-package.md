@@ -1,8 +1,8 @@
 # uSDT: Hierarchical Signal Detection Theory for Unconscious Processing
 
-Fits hierarchical signal detection theory models to paired direct and
-indirect measures. This is the design used to test whether a stimulus is
-processed without awareness.
+Fits hierarchical signal detection theory models to paired awareness and
+influence measures. This is the design used to test whether a stimulus
+is processed without awareness.
 
 ## The workflow
 
@@ -17,13 +17,19 @@ processed without awareness.
     gives descriptive estimates for each subject.
 
 3.  [`hsdt()`](https://ricardoreysaez.github.io/uSDT/reference/hsdt.md)
-    fits the model and tests the three hypotheses.
+    fits the model and tests the three hypotheses, by maximum likelihood
+    with 'lme4' or, with `estimation = "bayesian"`, with 'brms' under
+    the priors of
+    [`usdt_priors()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_priors.md).
 
 4.  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) and
     [`usdt_reliability()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_reliability.md)
-    help to interpret the fit, and
+    help to interpret the fit,
     [`usdt_boot()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_boot.md)
-    adds intervals by simulation when the model needs them.
+    adds intervals by simulation when the maximum likelihood model needs
+    them, and
+    [`usdt_bf()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_bf.md)
+    weighs each hypothesis of a Bayesian fit with Bayes factors.
 
 ## The three hypotheses
 
@@ -37,17 +43,19 @@ processed without awareness.
 
 - H3:
 
-  The regression of the indirect sensitivity on the direct one. Its
-  intercept is the sensitivity expected in the indirect task from a
-  subject whose direct sensitivity is zero, which is the test for
+  The regression of the influence sensitivity on the awareness one. Its
+  intercept is the sensitivity expected in the influence task from a
+  subject whose awareness sensitivity is zero, which is the test for
   unconscious processing.
 
-## Confidence intervals
+## Intervals
 
-H1 and the regression of H3 use Wald intervals. The correlation of H2
-uses a Fisher-z interval, so its limits stay between -1 and 1. When the
-model reaches a boundary and an interval becomes unreliable, the package
-reports it as unavailable and explains why.
+In a maximum likelihood fit, H1 and the regression of H3 use Wald
+intervals. The correlation of H2 uses a Fisher-z interval, so its limits
+stay between -1 and 1. When the model reaches a boundary and an interval
+becomes unreliable, the package reports it as unavailable and explains
+why. A Bayesian fit reports central credible intervals from the
+posterior draws, which need no such approximation.
 
 ## See also
 

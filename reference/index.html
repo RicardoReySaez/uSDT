@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">uSDT</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/uSDT-tutorial.html">Fitting a hierarchical SDT model</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-bayesian.html">Bayesian estimation with uSDT</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-power.html">Planning a uSDT study</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -43,7 +45,7 @@
     <div class="section level2">
       <h2 id="prepare-the-data">Prepare the data<a class="anchor" aria-label="anchor" href="#prepare-the-data"></a></h2>
 
-      <div class="section-desc"><p>Build paired task data and dichotomize continuous responses.</p></div>
+      <div class="section-desc"><p>Build paired task data, dichotomize continuous responses and count trials for custom binomial models.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -63,6 +65,13 @@
 
         </dt>
         <dd>Dichotomize response times into binary choices</dd>
+
+        <dt>
+
+          <code><a href="usdt_aggregate.html">usdt_aggregate()</a></code>
+
+        </dt>
+        <dd>Count binary responses by group</dd>
       </dl></div><div class="section level2">
       <h2 id="estimate-descriptive-sdt-measures">Estimate descriptive SDT measures<a class="anchor" aria-label="anchor" href="#estimate-descriptive-sdt-measures"></a></h2>
 
@@ -96,9 +105,32 @@
         </dt>
         <dd>Fit a hierarchical signal detection theory model</dd>
       </dl></div><div class="section level2">
+      <h2 id="specify-the-bayesian-priors">Specify the Bayesian priors<a class="anchor" aria-label="anchor" href="#specify-the-bayesian-priors"></a></h2>
+
+      <div class="section-desc"><p>Choose the prior distributions of the Bayesian model and check what they imply.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="usdt_priors.html">usdt_priors()</a></code> <code><a href="usdt_priors.html">print(<i>&lt;usdt_priors&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Priors for the Bayesian hierarchical SDT model</dd>
+
+        <dt>
+
+          <code><a href="plot.usdt_priors.html">plot(<i>&lt;usdt_priors&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Prior predictive check for the Bayesian hierarchical SDT model</dd>
+      </dl></div><div class="section level2">
       <h2 id="test-hypotheses-and-bootstrap-uncertainty">Test hypotheses and bootstrap uncertainty<a class="anchor" aria-label="anchor" href="#test-hypotheses-and-bootstrap-uncertainty"></a></h2>
 
-      <div class="section-desc"><p>sensitivity_diff() compares mean sensitivities; latent_cor() estimates their latent correlation; latent_regression() estimates the intercept and slope. usdt_tests() collects all three hypotheses. usdt_boot() adds parametric bootstrap inference to a fitted uSDT model.</p></div>
+      <div class="section-desc"><p>sensitivity_diff() compares mean sensitivities. Latent_cor() estimates their latent correlation. Latent_regression() estimates the intercept and slope. usdt_tests() collects all three hypotheses. usdt_boot() adds parametric bootstrap inference to a fitted uSDT model. usdt_equivalence() tests equivalence, non-inferiority and minimal-effect hypotheses about the same quantities.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -118,6 +150,80 @@
 
         </dt>
         <dd>Parametric bootstrap intervals for hierarchical SDT models</dd>
+
+        <dt>
+
+          <code><a href="usdt_equivalence.html">usdt_equivalence()</a></code> <code><a href="usdt_equivalence.html">print(<i>&lt;usdt_equivalence&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Equivalence, non-inferiority and minimal-effect tests</dd>
+      </dl></div><div class="section level2">
+      <h2 id="bayes-factors">Bayes factors<a class="anchor" aria-label="anchor" href="#bayes-factors"></a></h2>
+
+      <div class="section-desc"><p>Test point, directional and interval hypotheses about the difference, correlation and latent regression of a Bayesian fit, and plot their prior and posterior.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="usdt_bf.html">usdt_bf()</a></code> <code><a href="usdt_bf.html">print(<i>&lt;usdt_bf&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Bayes factors for the hypotheses of a Bayesian hierarchical SDT model</dd>
+
+        <dt>
+
+          <code><a href="plot.usdt_bf.html">plot(<i>&lt;usdt_bf&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot the prior and posterior of tested quantities</dd>
+      </dl></div><div class="section level2">
+      <h2 id="plan-a-study">Plan a study<a class="anchor" aria-label="anchor" href="#plan-a-study"></a></h2>
+
+      <div class="section-desc"><p>Describe the population a planned study samples from, in either parameterization of the model or from the estimates of a pilot study. Compute the power of the three hypotheses for a number of subjects and of trials per task. Choose the subjects and trials at the lowest cost and find the smallest effect a design detects.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="usdt_population.html">usdt_population()</a></code> <code><a href="usdt_population.html">print(<i>&lt;usdt_population&gt;</i>)</a></code> <code><a href="usdt_population.html">update(<i>&lt;usdt_population&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Population values for planning a uSDT study</dd>
+
+        <dt>
+
+          <code><a href="usdt_power.html">usdt_power()</a></code> <code><a href="usdt_power.html">print(<i>&lt;usdt_power&gt;</i>)</a></code> <code><a href="usdt_power.html">summary(<i>&lt;usdt_power&gt;</i>)</a></code> <code><a href="usdt_power.html">print(<i>&lt;summary.usdt_power&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Power of a planned uSDT study</dd>
+
+        <dt>
+
+          <code><a href="usdt_plan.html">usdt_plan()</a></code> <code><a href="usdt_plan.html">print(<i>&lt;usdt_plan&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plan the subjects and trials of a uSDT study</dd>
+
+        <dt>
+
+          <code><a href="usdt_mdes.html">usdt_mdes()</a></code> <code><a href="usdt_mdes.html">print(<i>&lt;usdt_mdes&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Smallest effect a uSDT study detects</dd>
+
+        <dt>
+
+          <code><a href="plot_power.html">plot(<i>&lt;usdt_population&gt;</i>)</a></code> <code><a href="plot_power.html">plot(<i>&lt;usdt_power&gt;</i>)</a></code> <code><a href="plot_power.html">plot(<i>&lt;usdt_mdes&gt;</i>)</a></code> <code><a href="plot_power.html">plot(<i>&lt;usdt_plan&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Plot a population, its power, its smallest effects or a plan</dd>
       </dl></div><div class="section level2">
       <h2 id="visualize-the-fit-and-estimate-reliability">Visualize the fit and estimate reliability<a class="anchor" aria-label="anchor" href="#visualize-the-fit-and-estimate-reliability"></a></h2>
 
@@ -140,7 +246,7 @@
           <code><a href="usdt_reliability.html">usdt_reliability()</a></code> <code><a href="usdt_reliability.html">summary(<i>&lt;usdt_reliability&gt;</i>)</a></code> <code><a href="usdt_reliability.html">print(<i>&lt;usdt_reliability&gt;</i>)</a></code>
 
         </dt>
-        <dd>Reliability of direct and indirect task measures</dd>
+        <dd>Reliability of awareness and influence task measures</dd>
       </dl></div><div class="section level2">
       <h2 id="example-datasets">Example datasets<a class="anchor" aria-label="anchor" href="#example-datasets"></a></h2>
 

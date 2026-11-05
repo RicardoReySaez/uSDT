@@ -1,8 +1,8 @@
 # Awareness data from a probabilistic cuing experiment
 
-Trial-level direct-awareness data from Experiment 2 of Vadillo et al.
-(2025). The object reproduces the source CSV file without filtering or
-recoding and can be used as the `direct` input to
+Trial-level awareness data from Experiment 2 of Vadillo et al. (2025).
+The object reproduces the source CSV file without filtering or recoding
+and can be used as the `awareness` input to
 [`usdt_data_tasks()`](https://ricardoreysaez.github.io/uSDT/reference/usdt_data.md).
 
 ## Usage

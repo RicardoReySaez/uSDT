@@ -34,7 +34,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">uSDT</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,6 +48,8 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/uSDT-tutorial.html">Fitting a hierarchical SDT model</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-bayesian.html">Bayesian estimation with uSDT</a></li>
+    <li><a class="dropdown-item" href="../articles/uSDT-power.html">Planning a uSDT study</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -91,44 +93,23 @@
 <div class="section level2">
 <h2 id="what-is-usdt-for">What is uSDT for?<a class="anchor" aria-label="anchor" href="#what-is-usdt-for"></a>
 </h2>
-<p>In many cognitive experiments, we want to know whether a stimulus or
-pattern influences behavior even when participants are not aware of it.
-To test this, researchers often collect two paired measures from the
-same participants: a <strong>direct task</strong> (asking directly
-whether they noticed the masked stimulus or statistical regularity) and
-an <strong>indirect task</strong> (measuring its behavioral effect, such
-as priming or faster response times). The <code>uSDT</code> package
-brings these paired data together into a hierarchical Signal Detection
-Theory (SDT) framework, helping you test key hypotheses about
-unconscious processing within a single unified model.</p>
-<p>In this tutorial, you will walk through three straightforward
-steps:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Prepare your data:</strong> Use
-<code><a href="../reference/usdt_data.html">usdt_data_tasks()</a></code> or <code><a href="../reference/usdt_data.html">usdt_data_long()</a></code> to get
-your paired measures ready for modeling.</li>
-<li>
-<strong>Fit the model:</strong> Run <code><a href="../reference/hsdt.html">hsdt()</a></code> to fit the
-hierarchical SDT model. This model estimates overall task sensitivities,
-subject-specific sensitivity values, and tests three key hypotheses
-about unconscious processing.</li>
-<li>
-<strong>Inspect the results:</strong> Visualize key model estimates
-with <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, quantify reliability at both the group and
-subject-specific levels with <code><a href="../reference/usdt_reliability.html">usdt_reliability()</a></code>, or add
-parametric bootstrap inference with <code><a href="../reference/usdt_boot.html">usdt_boot()</a></code> if
-needed.</li>
-</ol>
+<p>uSDT models paired <strong>awareness</strong> and
+<strong>influence</strong> measures from the same participants. It
+estimates their mean sensitivities, between-subject variation and latent
+association. The latent regression estimates influence sensitivity at
+zero awareness sensitivity. Interpreting this as unconscious processing
+requires a suitable model and an adequate awareness measure.</p>
+<p>Prepare the data with <code><a href="../reference/usdt_data.html">usdt_data_tasks()</a></code>, fit with
+<code><a href="../reference/hsdt.html">hsdt()</a></code>, then inspect the tests, plots and reliability.</p>
 </div>
 <div class="section level2">
 <h2 id="the-data">The data<a class="anchor" aria-label="anchor" href="#the-data"></a>
 </h2>
-<p>To illustrate the workflow, <code>uSDT</code> includes trial-level
-data from a contextual cuing experiment (Experiment 2 in <a href="https://doi.org/10.1037/xlm0001410" class="external-link">Vadillo, Malejka, &amp;
-Shanks, 2025</a>). The direct task (<code>vadillo_awareness</code>) is
-an explicit recognition test where participants judged whether a search
-display was repeated (<code>old</code>) or novel (<code>new</code>):</p>
+<p>The package includes Experiment 2 of <a href="https://doi.org/10.1037/xlm0001410" class="external-link">Vadillo, Malejka, and Shanks
+(2025)</a>. <code>vadillo_awareness</code> contains old/new recognition
+judgements. <code>vadillo_cuing</code> contains search response times.
+Contextual cuing predicts faster responses to repeated
+(<code>old</code>) displays.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">vadillo_awareness</span><span class="op">)</span></span></code></pre></div>
 <pre><code>  subj               file trial pattId judgm judged.old condition    offset
@@ -145,10 +126,6 @@ display was repeated (<code>old</code>) or novel (<code>new</code>):</p>
 4   b/w set size 8
 5 color set size 8
 6   b/w set size 8</code></pre>
-<p>The indirect task (<code>vadillo_cuing</code>) measures the visual
-search itself through response times. Contextual cuing occurs if
-participants find targets faster in repeated (<code>old</code>) displays
-than in <code>new</code> ones:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">vadillo_cuing</span><span class="op">)</span></span></code></pre></div>
 <pre><code>    experiment subj               file trial block epoch pattId acc       rt
@@ -165,98 +142,53 @@ than in <code>new</code> ones:</p>
 4       new    offset   b/w  set size 8
 5       old no offset color  set size 8
 6       old    offset   b/w  set size 8</code></pre>
-<p>Both datasets share the subject identifier column (<code>subj</code>)
-and condition labels (<code>old</code> / <code>new</code>). In your own
-data, the column names and condition labels do not need to match between
-tasks, but <strong>participants must share the same subject IDs across
-both datasets</strong>.</p>
+<p>Subject IDs link participants across tasks. Individual trials need
+not be paired. Column names and condition labels may differ between
+tasks.</p>
+<p>This example uses all supplied trials, including search errors,
+across blocks and display conditions. It demonstrates the package
+workflow using the source data. Define exclusions and select the
+relevant trials before dichotomizing. The package does not remove errors
+or RT outliers automatically.</p>
 </div>
 <div class="section level2">
 <h2 id="preparing-the-data">Preparing the data<a class="anchor" aria-label="anchor" href="#preparing-the-data"></a>
 </h2>
 <p><a href="../reference/usdt_data.html"><code>usdt_data_tasks()</code></a>
-combines the two tasks into a single paired dataset. You specify the
-subject, condition, and response columns, and map their levels to signal
-and noise roles.</p>
-<p>Whenever an argument is shared across both tasks, you can pass
-<strong>a single value</strong> (like
-<code>subject_col = "subj"</code>). When tasks differ, provide <strong>a
-list per task</strong> using
-<code>list(direct = ..., indirect = ...)</code>:</p>
+takes one data frame per task. Give shared arguments once and
+task-specific arguments as
+<code>list(awareness = ..., influence = ...)</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_usdt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/usdt_data.html">usdt_data_tasks</a></span><span class="op">(</span></span>
-<span>  <span class="co"># One data frame per task</span></span>
-<span>  direct   <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span>
-<span>  indirect <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span>
-<span></span>
-<span>  <span class="co"># Shared subject column</span></span>
-<span>  subject_col <span class="op">=</span> <span class="st">"subj"</span>,</span>
-<span></span>
-<span>  <span class="co"># Condition mapping (shared column name and labels here)</span></span>
+<span>  awareness <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span>
+<span>  influence <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span>
+<span>  subject_col      <span class="op">=</span> <span class="st">"subj"</span>,</span>
 <span>  condition_col    <span class="op">=</span> <span class="st">"condition"</span>,</span>
 <span>  condition_levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"old"</span>, noise <span class="op">=</span> <span class="st">"new"</span><span class="op">)</span>,</span>
-<span></span>
-<span>  <span class="co"># Response columns differ: judgements vs continuous response times</span></span>
-<span>  response_col <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="st">"judged.old"</span>, indirect <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span>
-<span></span>
-<span>  <span class="co"># How responses map to signal vs noise</span></span>
-<span>  response_levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    direct   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>    indirect <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span></span>
+<span>  response_col     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="st">"judged.old"</span>, influence <span class="op">=</span> <span class="st">"rt"</span><span class="op">)</span>,</span>
+<span>  response_levels  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    awareness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="fl">1</span>, noise <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>    influence <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>signal <span class="op">=</span> <span class="st">"faster"</span>, noise <span class="op">=</span> <span class="st">"slower"</span><span class="op">)</span></span>
 <span>  <span class="op">)</span>,</span>
-<span></span>
-<span>  <span class="co"># Dichotomize continuous response times using a median split</span></span>
-<span>  dichotomize <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>direct <span class="op">=</span> <span class="cn">FALSE</span>, indirect <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>  </span>
-<span>  <span class="co"># Contrast coding scheme across conditions (deviation by-default)</span></span>
-<span>  coding <span class="op">=</span> <span class="st">"deviation"</span></span>
+<span>  dichotomize <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="cn">FALSE</span>, influence <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="condition-coding-deviation-vs-treatment">Condition coding: deviation vs treatment<a class="anchor" aria-label="anchor" href="#condition-coding-deviation-vs-treatment"></a>
-</h3>
-<p>The <code>coding</code> argument only affects what the response
-criterion (also called “bias parameter”) represents in the model. Task
-sensitivity (<span class="math inline">d'</span>) remains identical
-under both schemes:</p>
-<ul>
-<li>
-<strong><code>"deviation"</code> (default):</strong> Codes signal as
-<span class="math inline">+0.5</span> and noise as <span class="math inline">-0.5</span>. The intercept reflects the overall
-response bias centered between both stimulus distributions.</li>
-<li>
-<strong><code>"treatment"</code>:</strong> Codes noise as <span class="math inline">0</span> and signal as <span class="math inline">1</span>. The intercept reflects the criterion
-relative only to the baseline (noise) condition.</li>
-</ul>
-<p>By default, <code>uSDT</code> uses deviation coding.</p>
-</div>
-<div class="section level3">
-<h3 id="how-the-median-split-works">How the median split works<a class="anchor" aria-label="anchor" href="#how-the-median-split-works"></a>
-</h3>
-<p>Setting
-<code>dichotomize = list(direct = FALSE, indirect = TRUE)</code>
-converts continuous RTs into binary responses via a median split
-computed within each subject across all trials, following the approach
-proposed by <a href="https://doi.org/10.1037/xge0001065" class="external-link">Meyen et
-al. (2022)</a>. In this case:</p>
-<ul>
-<li>RTs below the subject’s median count as <code>"faster"</code>
-(signal responses).</li>
-<li>A <code>"hit"</code> is an old display searched faster than the
-median, while a <code>"false alarm"</code> is a new display searched
-faster than the median.</li>
-</ul>
-<p>By design, splitting exactly at the median balances fast and slow
-responses across trials. <strong>Under deviation coding</strong>, this
-balance centers the indirect decision criterion at zero (<span class="math inline">c \approx 0</span>). Because of this,
-<code><a href="../reference/hsdt.html">hsdt()</a></code> fixes the indirect criterion to zero by default
-whenever the mean absolute subject criterion is below 0.02 (you can
-override this with <code>fix_criteria = "none"</code>).</p>
-</div>
-<div class="section level3">
-<h3 id="inspecting-the-prepared-data">Inspecting the prepared data<a class="anchor" aria-label="anchor" href="#inspecting-the-prepared-data"></a>
-</h3>
-<p>Printing the object gives a quick sanity check before fitting the
-model:</p>
+<p>The median split is computed <strong>within subject, pooling
+conditions</strong> (Meyen et al., 2022). RTs below the median become
+signal responses. Ties become noise responses by default. A hit is an
+old display searched faster than the median. A false alarm is a new
+display searched faster than the median. The resulting <span class="math inline">d'</span> measures discrimination by this binary
+classifier.</p>
+<p>With balanced signal/noise trials and an exact half split, the
+classical criterion is zero under the default deviation coding. Ties,
+odd trial counts or unequal condition counts can change this.
+<code><a href="../reference/hsdt.html">hsdt()</a></code> fixes a dichotomized task’s criterion to zero when
+its mean absolute subject criterion is below 0.02.
+<code>fix_criteria = "none"</code> estimates all criteria.</p>
+<p><code>coding = "deviation"</code> codes signal/noise as <span class="math inline">+0.5/-0.5</span>, so the probit intercept is <span class="math inline">-c</span>. Treatment coding uses <span class="math inline">1/0</span>, giving the intercept <span class="math inline">z(FAR)=-\lambda</span>, where <span class="math inline">\lambda=c+d'/2</span>. Both define sensitivity
+as <span class="math inline">d'=z(HR)-z(FAR)</span>. They specify
+different random-effects models when criteria and sensitivities are
+constrained to independent blocks, so fitted sensitivities need not be
+identical.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data_usdt</span></span></code></pre></div>
 <pre><code>── Data summary ──────────────────────────────────────────────────────────────── 
@@ -270,55 +202,37 @@ model:</p>
 ── Variable mapping ────────────────────────────────────────────────────────────
 
   Variable       Task       Column          Signal        Noise
-  subject        Direct     subj            -             -
-                 Indirect   subj            -             -
-  condition      Direct     condition       old           new
-                 Indirect   condition       old           new
-  response       Direct     judged.old      1             0
-                 Indirect   rt              faster        slower  [Meyen split]
+  subject        Awareness  subj            -             -
+                 Influence  subj            -             -
+  condition      Awareness  condition       old           new
+                 Influence  condition       old           new
+  response       Awareness  judged.old      1             0
+                 Influence  rt              faster        slower  [Meyen split]
 
 ── Descriptives: median [min, max] across subjects ─────────────────────────────
 
   Task       Trials/cell                  HR                 FAR   d' (method-of-moments)
-  Direct              32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
-  Indirect           192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
+  Awareness           32    .56 [ .28,  .88]    .47 [ .12,  .78]    0.24 [-0.58,  1.38]
+  Influence          192    .53 [ .44,  .60]    .47 [ .40,  .56]    0.13 [-0.31,  0.53]
 
   No cells at floor or ceiling.</code></pre>
-<p>Take a moment to inspect the three sections of this summary:</p>
-<ul>
-<li>
-<strong>Data summary:</strong> Confirms subject overlap (e.g., all
-104 participants completed both tasks) and shows how raw trials were
-aggregated into 4 condition-by-response cells per subject. It also
-reminds you of the chosen <code>coding</code>.</li>
-<li>
-<strong>Variable mapping:</strong> Verifies that your column names
-and signal/noise assignments match your experimental expectations
-(including the <code>[Meyen split]</code> flag on the indirect
-RTs).</li>
-<li>
-<strong>Descriptives:</strong> Reports the median and range of hit
-rates (HR), false alarm rates (FAR), and descriptive <span class="math inline">d'</span> across subjects. It also warns if any
-participants hit floor or ceiling rates, which helps catch data issues
-early.</li>
-</ul>
-</div>
+<p>Check subject overlap, role mappings, trial counts and extreme rates.
+The model uses two binomial rows per task and subject (signal and
+noise), four rows per subject here. Extreme rates are fitted directly.
+Descriptive <span class="math inline">d'</span> values use the
+Hautus correction where needed.</p>
+<p>For a single long-format frame, use <a href="../reference/usdt_data.html"><code>usdt_data_long()</code></a>
+with <code>task_col</code> and
+<code>task_levels = c(awareness = "A", influence = "I")</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="fitting-the-model">Fitting the model<a class="anchor" aria-label="anchor" href="#fitting-the-model"></a>
 </h2>
-<p>Once the data are prepared, <a href="../reference/hsdt.html"><code>hsdt()</code></a> fits the
-hierarchical SDT model via a binomial probit generalized linear mixed
-model (implemented with <code>lme4</code>). The model estimates the
-average sensitivity (<span class="math inline">d'</span>) for each
-task along with between-subjects individual differences. You can inspect
-the parameter estimates, random-effects, and hypothesis tests using
-<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>:</p>
+<p><a href="../reference/hsdt.html"><code>hsdt()</code></a> fits a
+binomial probit mixed model by maximum likelihood with the Laplace
+approximation in lme4.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Fit hierarchical SDT model</span></span>
-<span><span class="va">fit_uSDT</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">data_usdt</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Check model results</span></span>
+<code class="sourceCode R"><span><span class="va">fit_uSDT</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">data_usdt</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_uSDT</span><span class="op">)</span></span></code></pre></div>
 <pre><code>── Model summary ─────────────────────────────────────────────────────────────── 
 
@@ -326,298 +240,246 @@ the parameter estimates, random-effects, and hypothesis tests using
   Observations:   416 aggregated rows (46,592 trials)
   Family:         binomial (probit)
   Coding:         deviation
-  Criteria:       Direct estimated, Indirect fixed to 0 (Meyen split, mean |c| = 0.0000)
-  Estimation:     lme4::glmer (bobyqa)
+  Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
+  Estimation:     lme4::glmer (Nelder_Mead), tried bobyqa -&gt; Nelder_Mead
   Convergence:    TRUE
 
 ── Fixed effects ───────────────────────────────────────────────────────────────
 
   Parameter      Task       Estimate       SE  95% CI                   z   p-value
-  criterion      Direct      -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
-  d'             Direct       0.2354   0.0335  [  0.170,  0.301]     7.03     &lt;.001
-  d'             Indirect     0.1283   0.0153  [  0.098,  0.158]     8.41     &lt;.001
+  criterion      Awareness   -0.0357   0.0289  [ -0.092,  0.021]    -1.24      .215
+  d'             Awareness    0.2354   0.0335  [  0.170,  0.301]     7.03     &lt;.001
+  d'             Influence    0.1283   0.0153  [  0.098,  0.158]     8.41     &lt;.001
 
 ── Random effects ──────────────────────────────────────────────────────────────
 
   Parameter      Task       Estimate       SE  95% CI            
-  sd(criterion)  Direct       0.2473   0.0246  [  0.203,  0.301]
-  sd(d')         Direct       0.1219   0.0666  [  0.042,  0.356]
-  sd(d')         Indirect     0.0883   0.0190  [  0.058,  0.135]
-  cor(d')        both         0.4912   0.5190  [ -0.666,  0.954]
+  sd(criterion)  Awareness    0.2473   0.0246  [  0.204,  0.301]
+  sd(d')         Awareness    0.1219   0.0666  [  0.042,  0.356]
+  sd(d')         Influence    0.0883   0.0190  [  0.058,  0.135]
+  cor(d')        both         0.4910   0.5188  [ -0.665,  0.954]
 
 ── Hypotheses ──────────────────────────────────────────────────────────────────
 
-H1: Group-level sensitivity difference (Δd' = Indirect d' - Direct d')
+H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
   Parameter       Estimate       SE  95% CI                   z   p-value
-  Δd' (I - D)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
+  Δd' (I - A)     -0.1071   0.0354  [ -0.176, -0.038]    -3.03      .002
 
 H2: Correlation between sensitivities across tasks
   Parameter       Estimate       SE  95% CI                   z   p-value
-  rho               0.4912   0.5190  [ -0.666,  0.954]     1.01      .313
+  rho               0.4910   0.5188  [ -0.665,  0.954]     1.01      .313
 
-H3: Latent regression of Indirect d' on Direct d'
+H3: Latent regression of Influence d' on Awareness d'
   Parameter       Estimate       SE  95% CI                   z   p-value
-  Intercept         0.0445   0.1160  [ -0.183,  0.272]     0.38      .701
-  Slope             0.3561   0.4870  [ -0.599,  1.311]     1.01      .313
+  Intercept         0.0445   0.1159  [ -0.183,  0.272]     0.38      .701
+  Slope             0.3558   0.4865  [ -0.598,  1.309]     1.01      .313
 
 ── Notes ───────────────────────────────────────────────────────────────────────
 
   Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.</code></pre>
+<p>Fixed sensitivity effects are task means. Random effects describe
+subject departures. <code>sd(d')</code> measures between-subject
+variation and <code>cor(d')</code> the latent correlation. Subject
+estimates combine the fixed effects with conditional random-effect
+modes. Inspect convergence and singularity before interpreting the
+tests.</p>
 <div class="section level3">
-<h3 id="understanding-fixed-and-random-effects">Understanding fixed and random effects<a class="anchor" aria-label="anchor" href="#understanding-fixed-and-random-effects"></a>
+<h3 id="the-three-hypotheses">The three hypotheses<a class="anchor" aria-label="anchor" href="#the-three-hypotheses"></a>
 </h3>
-<p>The summary breaks the model into two primary structural components
-before presenting hypothesis tests:</p>
+<p>The default tests are two-sided against zero, without multiplicity
+adjustment.</p>
 <ul>
 <li>
-<strong>Fixed effects (group-level means):</strong> The fixed
-estimates describe average task performance across all participants.
-Here, mean sensitivity is reliably above zero in both the direct task
-(<code>d' = 0.24</code>, <span class="math inline">p &lt; .001</span>)
-and the indirect task (<code>d' = 0.13</code>, <span class="math inline">p &lt; .001</span>), indicating above-chance
-recognition and a significant contextual cuing effect overall. The
-direct criterion (<code>-0.04</code>, <span class="math inline">p =
-.215</span>) shows no substantial group-level response bias. As
-determined during data preparation, the indirect criterion is fixed to
-zero and therefore omitted from estimation.</li>
+<strong>H1, mean difference:</strong> <span class="math inline">\Delta d'=\mu_I-\mu_A</span> (influence minus
+awareness). Here it is -0.11, 95% CI [-0.18, -0.04]. The interval is
+below zero, favouring awareness sensitivity. An influence advantage
+would require a positive difference. Its interpretation also depends on
+how the tasks measure conscious information.</li>
 <li>
-<strong>Random effects (individual differences):</strong> These
-parameters capture between-subject variability around the group means.
-The standard deviations (<code>sd(d')</code>) reflect individual
-variability in sensitivity for both tasks. The correlation parameter
-(<code>cor(d') = 0.49</code>) estimates the latent association between
-direct and indirect sensitivity across participants, though its wide
-confidence interval indicates considerable uncertainty around this
-estimate.</li>
+<strong>H2, latent correlation:</strong> <span class="math inline">\rho=</span> 0.49, 95% CI [-0.67, 0.95]. This
+describes the association between latent subject sensitivities. The wide
+interval provides little precision. A nonsignificant test does not
+establish independence.</li>
+<li>
+<strong>H3, latent regression:</strong> the slope is 0.36 and the
+intercept is 0.04, 95% CI [-0.18, 0.27]. The intercept is expected
+influence sensitivity at <strong>latent awareness sensitivity
+zero</strong>, not the mean of participants selected for low observed
+scores. Its interval includes zero, leaving both zero and positive
+influence sensitivity compatible with these data.</li>
 </ul>
+<p>Writing the awareness variance as <span class="math inline">\tau_A^2</span> and the covariance as <span class="math inline">\tau_{AI}</span>,</p>
+<p><span class="math display">
+E(d'_I\mid d'_A=x)=\beta_0+\beta_1 x,\qquad
+\beta_1=\tau_{AI}/\tau_A^2,\qquad
+\beta_0=\mu_I-\beta_1\mu_A.
+</span></p>
+<p>A positive intercept requires an adequate awareness measure and a
+suitable latent model to support an unconscious-processing
+interpretation. It may involve extrapolation to zero. The analytical
+tests of H2 and the H3 slope share a covariance test, so they provide
+the same test of association.</p>
 </div>
 <div class="section level3">
-<h3 id="testing-unconscious-processing-the-three-hypotheses">Testing unconscious processing: The three hypotheses<a class="anchor" aria-label="anchor" href="#testing-unconscious-processing-the-three-hypotheses"></a>
+<h3 id="equivalence-and-one-sided-tests">Equivalence and one-sided tests<a class="anchor" aria-label="anchor" href="#equivalence-and-one-sided-tests"></a>
 </h3>
-<p>The bottom section of the model output tests three complementary
-questions often raised in the unconscious processing literature. You can
-inspect these results directly in the main summary or extract them as a
-standalone table with <code>fit_uSDT$tests</code>.</p>
-<div class="section level4">
-<h4 id="h1-group-level-sensitivity-difference-delta-d">H1: Group-level sensitivity difference (<span class="math inline">\Delta d'</span>)<a class="anchor" aria-label="anchor" href="#h1-group-level-sensitivity-difference-delta-d"></a>
-</h4>
-<p>The first hypothesis asks whether the two tasks differ in their
-average sensitivity. In unconscious perception paradigms, finding that
-indirect sensitivity clearly exceeds direct sensitivity (<span class="math inline">\Delta d' &gt; 0</span>) is sometimes taken as
-an indirect-task advantage—suggesting that the indirect measure picks up
-signal that conscious report misses.</p>
-<p>In our sample, the difference is negative and significantly different
-from zero (<span class="math inline">\Delta d' = -0.11</span>, 95%
-CI <span class="math inline">[-0.18, -0.04]</span>, <span class="math inline">p = .002</span>). Direct recognition was
-significantly stronger than indirect contextual cuing, so we find no
-evidence of an indirect-task advantage.</p>
-</div>
-<div class="section level4">
-<h4 id="h2-latent-correlation-between-tasks-rho">H2: Latent correlation between tasks (<span class="math inline">\rho</span>)<a class="anchor" aria-label="anchor" href="#h2-latent-correlation-between-tasks-rho"></a>
-</h4>
-<p>The second test examines individual differences: do participants with
-stronger conscious recognition also display larger cuing effects? In
-some theoretical accounts, an indirect effect that operates
-independently of conscious awareness would predict a weak or near-zero
-correlation between both measures.</p>
-<p>Here, the estimated latent correlation is positive (<span class="math inline">\rho = 0.49</span>), but it comes with considerable
-estimation uncertainty (95% CI <span class="math inline">[-0.67,
-0.95]</span>, <span class="math inline">p = .313</span>). Because the
-confidence interval is so wide, failing to reach significance here
-simply reflects high measurement noise around the correlation, rather
-than positive evidence that the two processes are dissociated. We will
-see this more clearly later when evaluating task-specific
-reliability.</p>
-</div>
-<div class="section level4">
-<h4 id="h3-latent-regression-indirect-d-on-direct-d">H3: Latent regression (Indirect <span class="math inline">d'</span> on Direct <span class="math inline">d'</span>)<a class="anchor" aria-label="anchor" href="#h3-latent-regression-indirect-d-on-direct-d"></a>
-</h4>
-<p>The third test evaluates what happens at the boundary of awareness
-via a latent regression. Specifically, the intercept (<span class="math inline">\beta_0</span>) estimates what level of indirect
-sensitivity we would expect when direct sensitivity is exactly zero
-(<span class="math inline">d'_{\text{Direct}} = 0</span>). If this
-intercept is significantly different from zero and positive, it suggests
-that participants would still show a behavioral cuing effect even
-without any conscious awareness of the stimuli.</p>
-<p>In this experiment, the regression slope is positive (<span class="math inline">\beta_1 = 0.36</span>, <span class="math inline">p =
-.313</span>), and the estimated intercept is slightly above zero (<span class="math inline">\beta_0 = 0.04</span>). However, its confidence
-interval easily covers zero (<span class="math inline">[-0.18,
-0.27]</span>, <span class="math inline">p = .701</span>), showing no
-evidence of unconscious processing in the absence of awareness.</p>
-</div>
+<p><a href="../reference/usdt_equivalence.html"><code>usdt_equivalence()</code></a>
+tests specified bounds. Choose them from theory or previous studies.
+These only illustrate the syntax.</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/usdt_equivalence.html">usdt_equivalence</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"diff in [-0.2, 0.2]"</span>, <span class="st">"intercept &lt; 0.2"</span>,</span>
+<span>                            <span class="st">"rho in [-0.3, 0.3]"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code> uSDT hypothesis ─ Equivalence test (TOST)
+════════════════════════════════════════════════════════════════════════════════
+  Hypothesis (H1)             : Δd' in [-0.2, 0.2]
+  Hypothesis (H0)             : Δd' out [-0.2, 0.2]
+  Estimate                    : -0.107
+  Standard error              : 0.035
+  90% CI, Wald                : [-0.165, -0.049]
+  p-value, lower bound        : .004
+  p-value, upper bound        : &lt;.001
+  p-value                     : .004
+  Decision (alpha = 0.05)     : H0 rejected, in favour of H1
+────────────────────────────────────────────────────────────────────────────────
+
+ uSDT hypothesis ─ One-sided test
+════════════════════════════════════════════════════════════════════════════════
+  Hypothesis (H1)             : intercept &lt; 0.2
+  Hypothesis (H0)             : intercept &gt;= 0.2
+  Estimate                    : 0.045
+  Standard error              : 0.116
+  90% CI, Wald                : [-0.146, 0.235]
+  p-value                     : .090
+  Decision (alpha = 0.05)     : H0 not rejected
+────────────────────────────────────────────────────────────────────────────────
+
+ uSDT hypothesis ─ Equivalence test (TOST)
+════════════════════════════════════════════════════════════════════════════════
+  Hypothesis (H1)             : rho in [-0.3, 0.3]
+  Hypothesis (H0)             : rho out [-0.3, 0.3]
+  Estimate                    : 0.491
+  Standard error              : 0.519
+  90% CI, Fisher-z            : [-0.528, 0.930]
+  p-value, lower bound        : .108
+  p-value, upper bound        : .631
+  p-value                     : .631
+  Decision (alpha = 0.05)     : H0 not rejected
+────────────────────────────────────────────────────────────────────────────────</code></pre>
+<p>At <span class="math inline">\alpha=.05</span>, equivalence and
+one-sided tests report 90% intervals. Here the sensitivity difference is
+equivalent within <span class="math inline">\pm0.2</span> despite being
+different from zero. The intercept and correlation tests do not
+establish their proposed bounds. Correlation tests use the Fisher-<span class="math inline">z</span> scale, so their p-values can differ from
+the covariance test in <code><a href="../reference/usdt_hypotheses.html">usdt_tests()</a></code>.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="reliability-of-individual-differences">Reliability of individual differences<a class="anchor" aria-label="anchor" href="#reliability-of-individual-differences"></a>
 </h2>
-<p>Evaluating unconscious processing through individual differences is
-delicate because measurement error does not just add noise, it
-systematically biases theoretical conclusions when ignored.</p>
-<p>It is widely know that low reliability attenuates correlations toward
-zero (<a href="https://doi.org/10.2307/1412159" class="external-link">Spearman, 1904</a>),
-making direct and indirect tasks appear falsely independent. It also
-flattens the regression slope and artificially inflates the intercept,
-creating the illusion that indirect processing persists without
-awareness. In practice, measurement error actively conspires to produce
-evidence of unconscious processing. <strong>Fortunately, hierarchical
-SDT models test these hypotheses at the latent level, naturally
-accounting for measurement error regardless of the specific reliability
-values.</strong></p>
-<p>Even though <code><a href="../reference/hsdt.html">hsdt()</a></code> protects the tests against this bias,
-estimating reliability remains useful for understanding how well
-individual differences were measured. <a href="../reference/usdt_reliability.html"><code>usdt_reliability()</code></a>
-estimates the reliability of each experimental effect treated as an
-individual-differences dimension:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/usdt_reliability.html">usdt_reliability</a></span><span class="op">(</span><span class="va">fit_uSDT</span><span class="op">)</span></span></code></pre></div>
+<p><a href="../reference/usdt_reliability.html"><code>usdt_reliability()</code></a>
+estimates <span class="math inline">\tau^2/(\tau^2+\overline v)</span>
+for each task: between-subject sensitivity variance divided by total
+variance, with measurement variance <span class="math inline">\overline
+v</span> from binomial-probit information at the fitted
+probabilities.</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">reliability</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/usdt_reliability.html">usdt_reliability</a></span><span class="op">(</span><span class="va">fit_uSDT</span><span class="op">)</span></span>
+<span><span class="va">reliability</span></span></code></pre></div>
 <pre><code>── Reliability summary ───────────────────────────────────────────────────────── 
 
   Task         Subjects Group-level estimate   By-subject estimate median [min, max]
-  Direct            104                 .129   .130 [.119, .131]
-  Indirect          104                 .323   .323 [.322, .323]</code></pre>
-<p>In this sample, the group-level reliability is low for both the
-direct task (<code>.13</code>) and the indirect task (<code>.32</code>).
-Because individual differences in both measures carry substantial trial
-noise, the model cannot estimate between-task associations with
-precision. This modest reliability directly explains the wide confidence
-intervals we observed earlier for the latent correlation (<span class="math inline">\rho</span>) and the regression intercept.</p>
-<p>In addition to the overall group summary, you can inspect
-subject-specific reliability estimates. The <code>$subjects</code>
-element returns a data frame with individual values:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/usdt_reliability.html">usdt_reliability</a></span><span class="op">(</span><span class="va">fit_uSDT</span><span class="op">)</span><span class="op">$</span><span class="va">subjects</span><span class="op">)</span>, digits <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
-<pre><code>    task subj dprime variance reliability
-1 Direct 2001  0.271   0.0990       0.130
-2 Direct 2002  0.249   0.1043       0.125
-3 Direct 2003  0.217   0.1002       0.129
-4 Direct 2004  0.318   0.0991       0.130
-5 Direct 2005  0.144   0.1004       0.129
-6 Direct 2006  0.173   0.0993       0.130</code></pre>
+  Awareness         104                 .129   .130 [.119, .131]
+  Influence         104                 .323   .323 [.322, .323]</code></pre>
+<p>Reliability is about .13 for awareness and .32 for influence. Low
+reliability can reflect little between-subject variation, substantial
+trial noise, or both. It limits precision for individual differences
+even when the mean effect is clear. The latent model accounts for trial
+noise under its assumptions. It does not guarantee unbiased or precise
+estimates in every sample.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">reliability</span><span class="op">$</span><span class="va">subjects</span><span class="op">)</span></span></code></pre></div>
+<pre><code>       task subj    dprime   variance reliability
+1 Awareness 2001 0.2707158 0.09899329   0.1305303
+2 Awareness 2002 0.2485344 0.10427183   0.1247468
+3 Awareness 2003 0.2172227 0.10017561   0.1291888
+4 Awareness 2004 0.3175901 0.09908306   0.1304275
+5 Awareness 2005 0.1444059 0.10037191   0.1289687
+6 Awareness 2006 0.1733233 0.09926175   0.1302232</code></pre>
 </div>
 <div class="section level2">
 <h2 id="visualizing-the-model">Visualizing the model<a class="anchor" aria-label="anchor" href="#visualizing-the-model"></a>
 </h2>
 <div class="section level3">
-<h3 id="the-latent-regression">The latent regression<a class="anchor" aria-label="anchor" href="#the-latent-regression"></a>
+<h3 id="latent-regression-and-shrinkage">Latent regression and shrinkage<a class="anchor" aria-label="anchor" href="#latent-regression-and-shrinkage"></a>
 </h3>
-<p>To make the consequences of measurement error intuitive,
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> compares a standard regression on observed
-sensitivities against the model’s latent regression side by side:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-regression-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
-<p>The contrast between the two panels illustrates the core problem:</p>
-<ul>
-<li>
-<strong>Observed estimates (left panel):</strong> Regressing raw
-indirect <span class="math inline">d'</span> on raw direct <span class="math inline">d'</span> ignores measurement error.
-Unreliability severely flattens the slope (<span class="math inline">b_1
-= 0.043</span>) and artificially pushes the intercept upward (<span class="math inline">b_0 = 0.118, p &lt; .001</span>). An applied
-researcher relying on standard regression would mistakenly conclude that
-there is compelling evidence for unconscious processing at <span class="math inline">d'_{\text{Direct}} = 0</span>.</li>
-<li>
-<strong>Model-estimated sensitivities (right panel):</strong> The
-hierarchical model corrects for trial-level noise. Grey segments show
-shrinkage from raw <span class="math inline">d'</span> to
-model-implied <span class="math inline">d'</span> values (green
-points). Accounting for unreliability steepens the latent slope (<span class="math inline">b_1 = 0.356</span>) and pulls the intercept down to
-near zero (<span class="math inline">b_0 = 0.044, p = .701</span>,
-marked at the vertical dotted line).</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="shrinkage">Shrinkage<a class="anchor" aria-label="anchor" href="#shrinkage"></a>
-</h3>
-<p>To inspect how the model pulls individual estimates toward the group
-distribution, set <code>type = "shrinkage"</code>, where grey circles
-show raw <span class="math inline">d'</span>, while green points
-show the model-implied <span class="math inline">d'</span>
-estimates.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<p>The left panel regresses observed influence <span class="math inline">d'</span> on observed awareness <span class="math inline">d'</span>. Measurement error in the predictor
+can flatten the slope. The right panel draws the latent regression
+implied by the fitted covariance, with segments connecting observed
+pairs to their conditional model estimates. The line is not fitted
+through those partially pooled points. Its band is a pointwise
+confidence interval for the regression mean.</p>
+<p>Use <code>nrow = 2</code> to stack the panels and
+<code>caption = FALSE</code> to hide the caption. The shrinkage plot
+isolates the movement of the subject estimates:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"shrinkage"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-shrinkage-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="subject-intervals">Subject intervals<a class="anchor" aria-label="anchor" href="#subject-intervals"></a>
 </h3>
-<p>To look at individual sensitivities relative to zero across tasks,
-use a caterpillar plot:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"caterpillar"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-caterpillar-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
-<p>The left panels show observed <span class="math inline">d'</span>
-values and their 95% confidence intervals, whereas the right panels show
-model-implied <span class="math inline">d'</span> values and their
-95% confidence intervals. Green intervals exclude zero, whereas brown
-intervals cross the dotted vertical line.</p>
-<p>In the raw data, noisy trial estimates leave most individual
-intervals crossing zero (91% in direct, 79% in indirect). Pooling
-information in the hierarchical model shrinks extreme point estimates
-toward the group mean and tightens their uncertainty, reducing the share
-of intervals crossing zero.</p>
+<p>Observed intervals use Miller standard errors and a normal
+approximation. Model intervals include uncertainty in the means,
+variance components and subject effects when the joint covariance is
+available. The percentages describe intervals containing zero. They do
+not classify participants as aware or unaware.</p>
 </div>
 <div class="section level3">
 <h3 id="roc-curves">ROC curves<a class="anchor" aria-label="anchor" href="#roc-curves"></a>
 </h3>
-<p>To view task performance within standard Signal Detection Theory
-space, set <code>type = "roc"</code>:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"roc"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-roc-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
-<p>The plot draws model-implied, equal-variance ROC curves for each task
-based on the group-level parameter estimates. The circular markers
-indicate the operating point determined by the fitted response criterion
-(<span class="math inline">c</span>), accompanied by their 95% Wald
-bands and Area Under the Curve (AUC) values. You can also inspect
-individual participants by supplying a <code>subject_id</code>:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<p>These equal-variance SDT curves describe a subject whose random
+effects are set to zero. Points mark fitted criteria and bands transform
+the sensitivity intervals. Binary responses identify one operating point
+per task. The full curves follow from the model.</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, type <span class="op">=</span> <span class="st">"roc"</span>, subject_id <span class="op">=</span> <span class="fl">2040</span><span class="op">)</span></span></code></pre></div>
 <p><img src="uSDT-tutorial_files/figure-html/plot-roc-subject-1.png" class="r-plt" alt="" width="100%" style="display: block; margin: auto;"></p>
-<p>The solid curves and points reflect that participant’s partially
-pooled estimates, while the dashed lines keep the population curves in
-the background for visual reference.</p>
+<p>Subject curves use partially pooled estimates, with population curves
+dashed behind them. Their bands condition on the fitted population
+parameters.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="where-to-go-from-here">Where to go from here<a class="anchor" aria-label="anchor" href="#where-to-go-from-here"></a>
+<h2 id="further-analyses">Further analyses<a class="anchor" aria-label="anchor" href="#further-analyses"></a>
 </h2>
-<div class="section level3">
-<h3 id="parametric-bootstrap-inference">Parametric bootstrap inference<a class="anchor" aria-label="anchor" href="#parametric-bootstrap-inference"></a>
-</h3>
-<p>Analytical standard errors and Wald intervals can become unreliable
-when variance components approach zero or correlations sit near
-boundaries (<span class="math inline">\pm 1</span>). For more robust
-inference, <a href="../reference/usdt_boot.html"><code>usdt_boot()</code></a>
-implements a parametric bootstrap that simulates new data from the
-fitted model and refits each replicate.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<p><a href="../reference/usdt_boot.html"><code>usdt_boot()</code></a>
+adds parametric bootstrap inference to a frequentist fit:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/usdt_boot.html">usdt_boot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, nsim <span class="op">=</span> <span class="fl">1000</span>, ncores <span class="op">=</span> <span class="fl">4</span>, seed <span class="op">=</span> <span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_boot</span><span class="op">)</span></span>
 <span><span class="va">fit_boot</span><span class="op">$</span><span class="va">tests</span></span></code></pre></div>
-<p>A few practical considerations when bootstrapping:</p>
-<ul>
-<li>
-<strong>Convergence and filtering:</strong> The function
-automatically discards non-converged refits, tracking diagnostic flags
-in the output. A minimum of 500 valid bootstrap replicates is
-recommended for trustworthy confidence intervals.</li>
-<li>
-<strong>Dichotomized designs:</strong> The simulation generates
-binary trial responses at the original cell sizes without repeating
-upstream steps like response-time median splits.</li>
-<li>
-<strong>Information limits:</strong> While bootstrapping resolves
-boundary issues in Wald approximations, it remains conditional on the
-model and cannot compensate for an inherently underpowered design.</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="long-format-datasets">Long-format datasets<a class="anchor" aria-label="anchor" href="#long-format-datasets"></a>
-</h3>
-<p>If your direct and indirect data already reside in a single data
-frame with a task column, you can prepare them directly using <a href="../reference/usdt_data.html"><code>usdt_data_long()</code></a> by
-specifying <code>task_col</code> and <code>task_levels</code>.</p>
-</div>
+<p>At least 500 usable replicates are required before bootstrap
+inference replaces the analytical results. Converged boundary refits are
+retained when all hypothesis estimates are finite. Inspect failures and
+retained boundary counts in <code>fit_boot$boot</code>. The bootstrap
+simulates binary responses at the original cell sizes. It does not
+repeat the RT median split or resolve a lack of information in the
+design. Read the returned <code>$tests</code> table to retain bootstrap
+results. <code><a href="../reference/usdt_hypotheses.html">usdt_tests()</a></code> recomputes analytical tests.</p>
+<p><a href="uSDT-bayesian.html">Bayesian estimation</a> covers priors,
+posterior summaries and Bayes factors with
+<code>hsdt(estimation = "bayesian")</code>. <a href="uSDT-power.html">Planning a study</a> covers power, sample sizes
+and detectable effects. For covariates, see the custom lme4 and brms
+examples in <a href="../reference/usdt_hypotheses.html"><code>usdt_tests()</code></a>.</p>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
@@ -626,9 +488,6 @@ specifying <code>task_col</code> and <code>task_levels</code>.</p>
 V. H. (2022). Advancing research on unconscious priming: When can
 scientists claim an indirect task advantage? <em>Journal of Experimental
 Psychology: General</em>, 151(1), 65-81. <a href="https://doi.org/10.1037/xge0001065" class="external-link uri">https://doi.org/10.1037/xge0001065</a></p>
-<p>Spearman, C. (1904). The proof and measurement of association between
-two things. <em>The American Journal of Psychology, 15</em>(1), 72–101.
-<a href="https://doi.org/10.2307/1412159" class="external-link uri">https://doi.org/10.2307/1412159</a></p>
 <p>Vadillo, M. A., Malejka, S., &amp; Shanks, D. R. (2025). Mapping the
 reliability multiverse of contextual cuing. <em>Journal of Experimental
 Psychology: Learning, Memory, and Cognition</em>, 51(6), 910-927. <a href="https://doi.org/10.1037/xlm0001410" class="external-link uri">https://doi.org/10.1037/xlm0001410</a></p>

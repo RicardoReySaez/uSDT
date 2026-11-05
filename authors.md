@@ -20,12 +20,12 @@ Source:
 
 Rey-Sáez R, Garre-Frutos F, Franco-Martínez A, Vadillo M (2026). *uSDT:
 Hierarchical Signal Detection Theory Models for Unconscious Processing*.
-R package version 0.1.0, <https://github.com/RicardoReySaez/uSDT>.
+R package version 0.1.0.9000, <https://github.com/RicardoReySaez/uSDT>.
 
     @Manual{,
       title = {uSDT: Hierarchical Signal Detection Theory Models for Unconscious Processing},
       author = {Ricardo Rey-Sáez and Francisco Garre-Frutos and Alicia Franco-Martínez and Miguel Vadillo},
       year = {2026},
-      note = {R package version 0.1.0},
+      note = {R package version 0.1.0.9000},
       url = {https://github.com/RicardoReySaez/uSDT},
     }

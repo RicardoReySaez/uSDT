@@ -84,8 +84,7 @@ A data frame with one row per subject (or per subject and task for
 
 ## Details
 
-Edge corrections apply only to participants with extreme rates (0 or 1)
-rather than the whole sample, leaving well-defined rates unchanged.
+Edge corrections apply only to participants with extreme rates (0 or 1).
 
 When requested, the sampling variance of \\d'\\ is estimated using the
 asymptotic approximation of Gourevitch and Galanter (1967) and the
@@ -120,32 +119,33 @@ study. *Psicologica*, 38(1), 77–109.
 ``` r
 # 1. From a prepared usdt_data object (both tasks at once)
 d <- usdt_data_tasks(
-  direct   = vadillo_awareness,
-  indirect = vadillo_cuing,
+  awareness = vadillo_awareness,
+  influence = vadillo_cuing,
   subject_col      = "subj",
   condition_col    = "condition",
   condition_levels = c(signal = "old", noise = "new"),
-  response_col     = list(direct = "judged.old", indirect = "rt"),
-  response_levels  = list(direct   = c(signal = 1, noise = 0),
-                          indirect = c(signal = "faster", noise = "slower")),
-  dichotomize      = list(direct = FALSE, indirect = TRUE)
+  response_col     = list(awareness = "judged.old", influence = "rt"),
+  response_levels  = list(awareness = c(signal = 1, noise = 0),
+                          influence = c(signal = "faster",
+                                        noise = "slower")),
+  dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
 head(sdt_moments(d))
-#>     task subj hit miss fa cr      hr     far        zhr        zfar      dprime
-#> 1 Direct 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241  0.31561452
-#> 2 Direct 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007  0.27223968
-#> 3 Direct 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211  0.08143725
-#> 4 Direct 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641  0.97755282
-#> 5 Direct 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216 -0.50071975
-#> 6 Direct 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936 -0.24022695
-#>     criterion corrected
-#> 1 -0.07939485     FALSE
-#> 2 -0.53836991     FALSE
-#> 3 -0.27792074     FALSE
-#> 4  0.00000000     FALSE
-#> 5 -0.32877229     FALSE
-#> 6 -0.19852589     FALSE
+#>        task subj hit miss fa cr      hr     far        zhr        zfar
+#> 1 Awareness 2001  19   13 15 17 0.59375 0.46875 0.23720211 -0.07841241
+#> 2 Awareness 2002  24    8 21 11 0.75000 0.65625 0.67448975  0.40225007
+#> 3 Awareness 2003  20   12 19 13 0.62500 0.59375 0.31863936  0.23720211
+#> 4 Awareness 2004  22   10 10 22 0.68750 0.31250 0.48877641 -0.48877641
+#> 5 Awareness 2005  17   15 23  9 0.53125 0.71875 0.07841241  0.57913216
+#> 6 Awareness 2006  17   15 20 12 0.53125 0.62500 0.07841241  0.31863936
+#>        dprime   criterion corrected
+#> 1  0.31561452 -0.07939485     FALSE
+#> 2  0.27223968 -0.53836991     FALSE
+#> 3  0.08143725 -0.27792074     FALSE
+#> 4  0.97755282  0.00000000     FALSE
+#> 5 -0.50071975 -0.32877229     FALSE
+#> 6 -0.24022695 -0.19852589     FALSE
 
 # 2. From raw trials with sampling variances and standard errors
 head(sdt_moments(vadillo_awareness,

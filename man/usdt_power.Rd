@@ -214,7 +214,7 @@ usdt_power(update(pop, cor_dprime = c(0.1, 0.2)), subjects = 80,
 
 \donttest{
 # Check the design by simulating and analysing 50 studies (under a
-# minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
+# minute). A real check needs more, e.g. nsim = 1000 with ncores = 2.
 sims <- usdt_power(pop, subjects = 80,
                    trials = c(awareness = 64, influence = 200),
                    dichotomize = "influence", method = "simulation",

@@ -170,7 +170,8 @@ strong (< 30), very strong (< 100) and extreme.
 }
 
 \examples{
-\donttest{
+\dontrun{
+# Requires a C++ toolchain and the BH and RcppEigen headers for rstan.
 d <- usdt_data_tasks(
   awareness = vadillo_awareness,
   influence = vadillo_cuing,
@@ -184,7 +185,7 @@ d <- usdt_data_tasks(
   dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
-m <- hsdt(d, estimation = "bayesian", seed = 1)
+m <- hsdt(d, estimation = "bayesian", cores = 2, seed = 1)
 
 # The three point nulls, with their figure
 set.seed(1)

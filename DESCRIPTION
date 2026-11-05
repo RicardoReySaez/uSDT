@@ -1,7 +1,7 @@
 Package: uSDT
 Type: Package
 Title: Hierarchical Signal Detection Theory Models for Unconscious Processing
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: c(
     person("Ricardo", "Rey-Sáez",
            email   = "ricardoreysaez95@gmail.com",
@@ -44,7 +44,8 @@ Imports:
     posterior,
     logspline,
     callr,
-    cli
+    cli,
+    withr (>= 2.5.0)
 Suggests:
     testthat (>= 3.1.7),
     knitr,
@@ -53,6 +54,7 @@ Suggests:
     RcppEigen,
     cmdstanr
 Additional_repositories: https://stan-dev.r-universe.dev
+SystemRequirements: C++17 compiler (for Bayesian model compilation)
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 Config/testthat/edition: 3

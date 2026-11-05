@@ -187,6 +187,15 @@ test_that("the approximation is reproducible and leaves the session's random num
                               trials = 100)$power)
 })
 
+test_that("scoped seeds restore RNG settings even when a calculation fails", {
+  set.seed(41)
+  before <- .Random.seed
+  kind <- RNGkind()
+  expect_error(.with_seed(7, stop("calculation failed")), "calculation failed")
+  expect_identical(.Random.seed, before)
+  expect_identical(RNGkind(), kind)
+})
+
 test_that("scenarios, subjects and trials make a grid", {
   pop <- update(power_population(), cor_dprime = c(0.1, 0.3))
   p <- usdt_power(pop, subjects = c(40, 80),

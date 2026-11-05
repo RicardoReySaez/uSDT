@@ -24,14 +24,8 @@
 # stream of the session afterwards, so the approximate power is reproducible
 # without changing the user's simulations.
 .with_seed <- function(seed, code) {
-  env <- globalenv()
-  had_seed <- exists(".Random.seed", envir = env, inherits = FALSE)
-  if (had_seed) old <- get(".Random.seed", envir = env, inherits = FALSE)
-  on.exit(if (had_seed) assign(".Random.seed", old, envir = env) else
-    rm(".Random.seed", envir = env))
-  set.seed(seed, kind = "Mersenne-Twister", normal.kind = "Inversion",
-           sample.kind = "Rejection")
-  code
+  withr::with_seed(seed, code, .rng_kind = "Mersenne-Twister",
+                   .rng_normal_kind = "Inversion", .rng_sample_kind = "Rejection")
 }
 
 # This function gives the nodes and weights of Gauss-Hermite quadrature for an

@@ -173,7 +173,7 @@
 #'
 #' \donttest{
 #' # Check the design by simulating and analysing 50 studies (under a
-#' # minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
+#' # minute). A real check needs more, e.g. nsim = 1000 with ncores = 2.
 #' sims <- usdt_power(pop, subjects = 80,
 #'                    trials = c(awareness = 64, influence = 200),
 #'                    dichotomize = "influence", method = "simulation",
@@ -254,7 +254,7 @@ usdt_power <- function(population, subjects, trials,
   # A simulation gives every design the same studies' random streams, and may
   # run them on a cluster.
   if (method == "simulation") {
-    streams <- .power_streams(nsim, seed)
+    streams <- .power_seeds(nsim, seed)
     cl <- NULL
     if (ncores > 1L) {
       cl <- .power_cluster(ncores)

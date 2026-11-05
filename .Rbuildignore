@@ -5,7 +5,7 @@
 ^manual-tests$
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^uSDT\.Rcheck$
+^.*\.Rcheck$
 ^.*\.tar\.gz$
 ^Rplots\.pdf$
 ^\.claude$
@@ -18,3 +18,4 @@
 ^vignettes/.*\.Rmd\.orig$
 ^CRAN-SUBMISSION$
 ^codecov\.yml$
+^cran-audit$

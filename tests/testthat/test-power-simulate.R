@@ -59,18 +59,16 @@ test_that("each simulated study is decided as usdt_tests() and usdt_equivalence(
   case <- simulation_case()
   hypotheses <- c("diff = 0", "rho = 0", "intercept > 0.1", "diff in [-0.3, 0.3]")
   tests <- lapply(hypotheses, .parse_hypothesis)
-  streams <- .power_streams(3L, seed = 11)
+  streams <- .power_seeds(3L, seed = 11)
   for (s in streams) {
     out <- .power_replicate(s, case$scenario, 40L, case$cells, case$split,
                             case$labels, tests, alpha = 0.05)
 
     # The same stream gives the same study, analysed here directly.
-    old <- if (exists(".Random.seed", globalenv())) get(".Random.seed", globalenv())
-    assign(".Random.seed", s, envir = globalenv())
-    d <- .simulate_usdt_data(case$scenario, 40L, case$cells, case$split,
-                             case$labels)
-    if (is.null(old)) rm(".Random.seed", envir = globalenv()) else
-      assign(".Random.seed", old, envir = globalenv())
+    d <- withr::with_seed(s,
+      .simulate_usdt_data(case$scenario, 40L, case$cells, case$split, case$labels),
+      .rng_kind = "L'Ecuyer-CMRG", .rng_normal_kind = "Inversion",
+      .rng_sample_kind = "Rejection")
     m <- suppressWarnings(hsdt(d))
     t <- usdt_tests(m)
     e <- suppressWarnings(usdt_equivalence(m, hypotheses[3:4]))

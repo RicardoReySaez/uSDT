@@ -161,7 +161,8 @@
 #' @seealso [hsdt()], [usdt_priors()], [plot.usdt_bf()]
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
+#' # Requires a C++ toolchain and the BH and RcppEigen headers for rstan.
 #' d <- usdt_data_tasks(
 #'   awareness = vadillo_awareness,
 #'   influence = vadillo_cuing,
@@ -175,7 +176,7 @@
 #'   dichotomize      = list(awareness = FALSE, influence = TRUE)
 #' )
 #'
-#' m <- hsdt(d, estimation = "bayesian", seed = 1)
+#' m <- hsdt(d, estimation = "bayesian", cores = 2, seed = 1)
 #'
 #' # The three point nulls, with their figure
 #' set.seed(1)
@@ -807,8 +808,8 @@ FacetBf <- ggplot2::ggproto("FacetBf", ggplot2::FacetWrap,
     for (row in sort(unique(rows), decreasing = TRUE)) {
       here <- which(rows == row)
       heights <- do.call(grid::unit.c, lapply(titles[here], grid::grobHeight))
-      table <- gtable::gtable_add_rows(table, max(heights), pos = row)
-      table <- gtable::gtable_add_grob(
+      table <- gtable_add_rows(table, max(heights), pos = row)
+      table <- gtable_add_grob(
         table, titles[here], t = row + 1L, l = table$layout$l[axes[here]],
         clip = "off",
         name = sprintf("usdt-xlab-%d-%d", layout$COL[here], layout$ROW[here]))

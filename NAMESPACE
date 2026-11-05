@@ -48,6 +48,10 @@ export(usdt_power)
 export(usdt_priors)
 export(usdt_reliability)
 export(usdt_tests)
+importFrom(gtable,
+  gtable_add_grob,
+  gtable_add_rows
+)
 importFrom(rlang,.data)
 importFrom(stats,
   aggregate,

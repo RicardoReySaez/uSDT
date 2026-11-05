@@ -91,7 +91,6 @@
 #' latent_cor(m)         # H2
 #' latent_regression(m)  # H3
 #'
-#' \donttest{
 #' # 2. Custom model with covariates via glmer()
 #' # Controlling for display set size across both tasks
 #' trials <- rbind(
@@ -129,15 +128,16 @@
 #'
 #' # Evaluate hypotheses conditional on set size
 #' usdt_tests(fit, awareness = "taskA:cond", influence = "taskI:cond")
-#' }
 #'
-#' \donttest{
-#' # 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
+#' \dontrun{
+#' # 3. The same model fitted with brms. Compiling needs a C++ toolchain
+#' # and the BH and RcppEigen headers for rstan.
 #' fit_b <- brms::brm(
 #'   y | trials(n) ~ 0 + awareness + task:size + task:cond +
 #'     (0 + awareness | subj) + (0 + task:cond | subj),
 #'   data = counts, family = binomial("probit"),
-#'   prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
+#'   prior = brms::prior(normal(0, 1), class = b),
+#'   chains = 2, cores = 2, seed = 1, refresh = 0
 #' )
 #'
 #' # The same term names. The tests now summarise the posterior

@@ -53,4 +53,5 @@
 #' @importFrom stats getCall model.frame quantile reshape update vcov family
 #' @importFrom utils head tail modifyList
 #' @importFrom rlang .data
+#' @importFrom gtable gtable_add_rows gtable_add_grob
 NULL

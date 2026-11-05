@@ -1,4 +1,9 @@
-# uSDT (development version)
+# uSDT 0.2.0
+
+* Scoped random seeds preserve the session's RNG state and generator settings.
+  Simulated studies use distinct seeds and reproduce across core counts.
+* Bayesian examples document their compiler requirements and use at most two
+  cores. Long bootstrap and simulation examples remain in `\donttest{}`.
 
 ## Breaking changes
 

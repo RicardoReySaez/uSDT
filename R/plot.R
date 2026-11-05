@@ -617,7 +617,7 @@ makeContent.usdt_caption <- function(x) {
     "An open circle marks the intercept of each panel at zero. ", band_note,
     " P-values test the intercept and slope against zero",
     if (bayes) " (two-sided posterior p-values in the latent panel)" else "",
-    "; p < .05 indicates significance."
+    ". P < .05 indicates significance."
   )
 
   plot +
@@ -1348,7 +1348,7 @@ element_grob.usdt_rule <- function(element, ...) {
     " under ", variance, "-variance SDT",
     if (band) sprintf(", with %.0f%% %s bands", 100 * object$level,
                       curves$interval[1L]),
-    "; points mark the fitted criteria.",
+    ". Points mark the fitted criteria.",
     if (!is.null(reference)) " Dashed lines show the population curves."
   )
 

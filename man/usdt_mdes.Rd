@@ -29,7 +29,7 @@ usdt_mdes(
 \item{trials}{Number of trials per subject in each task, signal and noise
 trials together: one value for both tasks, or one for each as
 \code{c(awareness = , influence = )} or \code{list(awareness = , influence = )}.
-Several values give one design each; a value shared by both tasks keeps
+Several values give one design each. A value shared by both tasks keeps
 them equal, and values given for each task are crossed.}
 
 \item{hypothesis}{Character vector of hypotheses, written as in
@@ -57,8 +57,8 @@ tested quantity: \code{"mu_A"}, \code{"mu_I"}, \code{"sigma_A"}, \code{"sigma_I"
 \code{"intercept"}, \code{"criterion_A"}, \code{"criterion_I"}, \code{"sd_criterion_A"} or
 \code{"sd_criterion_I"}. Needs \code{range}.}
 
-\item{range}{With \code{vary}, the interval of values to search, \code{c(from, to)};
-the result is the value nearest to \code{from} that reaches the power.}
+\item{range}{With \code{vary}, the interval of values to search, \code{c(from, to)}.
+The result is the value nearest to \code{from} that reaches the power.}
 
 \item{x}{A \code{usdt_mdes} object.}
 
@@ -87,14 +87,14 @@ that the design can establish.
 \details{
 Moving a quantity keeps the other values of the population fixed as its
 parameterization says (see \code{\link[=usdt_population]{usdt_population()}}): the difference moves the
-influence mean with the awareness mean fixed; the intercept moves the
-influence mean with the means and SDs and the correlation fixed; the
+influence mean with the awareness mean fixed. The intercept moves the
+influence mean with the means and SDs and the correlation fixed. The
 correlation (and the slope, through it) keeps both means under the
 correlation parameterization and the intercept under the latent regression.
 The search runs from the value of H0 (or the nearest bound) outwards, in the
 direction of H1, and the power along the way comes from the same draws of
 the sample mean and covariance as in \code{\link[=usdt_power]{usdt_power()}}, so it can level off
-below the target when fits on the boundary are frequent; the result is
+below the target when fits on the boundary are frequent. The result is
 then \code{NA}.
 }
 \examples{

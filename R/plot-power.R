@@ -25,7 +25,7 @@
 #'   smallest detectable effect and the population value marked.
 #' * A `usdt_plan` with subjects and trials free shows the cost of the cheapest
 #'   closed-form design for each number of trials (a line for one free task,
-#'   a map for two), with the chosen design marked; with one value free, it
+#'   a map for two), with the chosen design marked. With one value free, it
 #'   shows the approximate power (or the expected interval width) along it.
 #'
 #' @param x A `usdt_population`, `usdt_power`, `usdt_mdes` or `usdt_plan`
@@ -148,7 +148,7 @@ plot.usdt_population <- function(x, trials = NULL, signal = 0.5,
   note <- paste0(
     "Ellipses hold 50% and 90% of the subjects' true d'. The line is the ",
     "latent regression of influence on awareness d' (H3), and the open circle ",
-    "its intercept at an awareness d' of zero; the filled point is the mean. ",
+    "its intercept at an awareness d' of zero. The filled point is the mean. ",
     if (length(notes)) paste0(
       "The dashed ellipse holds 90% of the d' that the trials measure (",
       notes, "): the measurement error widens it and weakens the observed ",
@@ -206,7 +206,7 @@ plot.usdt_power <- function(x, caption = TRUE, ...) {
                           " studies per design, with 95% Wilson intervals. ")
     else "Approximate power, as in usdt_power(). ",
     "The dashed line marks a power of 0.80",
-    if (any(d$in_null)) paste0("; a hypothesis whose population lies in H0 ",
+    if (any(d$in_null)) paste0(". A hypothesis whose population lies in H0 ",
                                "shows its type I error rate") else "",
     if (any(d$estimable < 0.99, na.rm = TRUE))
       ". Fits on the boundary count as failures to reject" else "",
@@ -358,9 +358,9 @@ plot.usdt_plan <- function(x, caption = TRUE, ...) {
           x = axis_title(trials_free), y = "Cost",
           caption = paste0(
             "The grey line is the cost of the cheapest design with each ",
-            "number of trials in the closed form; the green points, that of ",
-            "the designs the search checked with the draws of usdt_power(); ",
-            "the circle, the chosen design. The closed form is optimistic ",
+            "number of trials in the closed form. The green points show the cost ",
+            "of designs checked with the draws of usdt_power(). ",
+            "The circle marks the chosen design. The closed form is optimistic ",
             "where boundary fits are frequent.")) +
         .usdt_theme() + .hide_caption(caption))
     }
@@ -387,7 +387,7 @@ plot.usdt_plan <- function(x, caption = TRUE, ...) {
         x = axis_title("awareness"), y = axis_title("influence"),
         caption = paste0(
           "Cost of the cheapest design with each number of trials in the ",
-          "closed form, relative to the cheapest of the panel; the steps ",
+          "closed form, relative to the cheapest of the panel. The steps ",
           "come from whole numbers of subjects. Dark points are the designs ",
           "the search checked with the draws of usdt_power(), and the circle ",
           "the chosen one, which can lie away from the closed-form minimum ",
@@ -425,7 +425,7 @@ plot.usdt_plan <- function(x, caption = TRUE, ...) {
       caption = paste0(
         if (st$mode == "precision")
           "Expected width of the interval of usdt_tests() at the population values"
-        else paste0("Approximate power, as in usdt_power(); the dashed line ",
+        else paste0("Approximate power, as in usdt_power(). The dashed line ",
                     "is the power to reach"),
         ". The point is the chosen design.")) +
     .usdt_theme() + .hide_caption(caption)

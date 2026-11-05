@@ -67,8 +67,7 @@ calculate sampling variances, standard errors, and expected values for
 \eqn{d'}.
 }
 \details{
-Edge corrections apply only to participants with extreme rates (0 or 1)
-rather than the whole sample, leaving well-defined rates unchanged.
+Edge corrections apply only to participants with extreme rates (0 or 1).
 
 When requested, the sampling variance of \eqn{d'} is estimated using the
 asymptotic approximation of Gourevitch and Galanter (1967) and the

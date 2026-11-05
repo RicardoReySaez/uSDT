@@ -56,20 +56,13 @@ pval <- function(p) sub("^0", "", formatC(p, format = "f", digits = 3))
 library(uSDT)
 ```
 
-The [tutorial](uSDT-tutorial.html) fits the hierarchical SDT model by maximum
-likelihood. This article fits the same model to the same contextual cuing data
-in a Bayesian framework. The data, the model and the three hypotheses do not
-change. What changes is that you place **priors** on the parameters, the model
-is fitted with [brms](https://paulbuerkner.com/brms/), which draws from the
-**posterior** with Stan, and you can weigh each hypothesis with **Bayes
-factors**.
+This article fits the [tutorial's model and data](uSDT-tutorial.html) with
+brms and Stan, then summarises the posterior and computes Bayes factors.
 
-uSDT installs `brms`, which fits the model with a Stan backend: `rstan`
-(which also needs `BH` and `RcppEigen`) or `cmdstanr`. As in brms, the backend is the
-`brms.backend` option, rstan when it is not set; this article was built with
-`options(brms.backend = "cmdstanr")`. The model is compiled the first time
-you fit it with a given set of priors, which needs a C++ toolchain and takes
-a minute or so, and it is cached for later sessions.
+Bayesian fitting needs a C++ toolchain and either rstan (with `BH` and
+`RcppEigen`) or cmdstanr with CmdStan. The `brms.backend` option selects the
+backend. The default is rstan and this article uses cmdstanr. Compiled models
+are cached for later sessions.
 
 ## The data
 
@@ -111,10 +104,9 @@ priors
 - **Intercept:** used only by the latent regression parameterization, at the
   end of this article, in place of the prior of the influence mean.
 
-Any Stan distribution that covers the values of its parameter works: one on
-the whole real line for a mean, such as `student_t(5, 0, 1)` or
-`skew_normal(0, 1, 2)`, and for a standard deviation also one on the positive
-values, such as `gamma(2, 4)` or `lognormal(-1, 0.5)`.
+Supported families are listed in [`usdt_priors()`](../reference/usdt_priors.html).
+Means need full real-line support. SDs need positive support or truncation at
+zero.
 
 The model only uses the priors of the parameters it estimates. Here the
 median split fixes the influence criterion at zero and both tasks have equal
@@ -165,20 +157,11 @@ the model with brms:
 fit_bayes <- hsdt(data_usdt, estimation = "bayesian", seed = 2026)
 ```
 
-By default, four chains keep 5,000 draws each after 1,000 warmup iterations,
-and up to four of them run at once, leaving two cores of your machine free.
-In the console, a progress bar shows the warmup and sampling phases while they
-run. When they finish, the model reports its convergence checks:
-
-- **Divergent transitions and maximum tree depth:** signs that the sampler
-  could not explore the posterior well.
-- **R-hat:** values above 1.01 suggest that the chains have not mixed.
-- **Effective sample size:** values below 400 suggest too few independent
-  draws for stable summaries.
-
-Here all four checks pass. Sampling options such as `chains`, `iter`,
-`warmup`, `cores`, `seed` and `control` go through `...`, and `backend`
-chooses rstan or cmdstanr.
+Defaults are four chains, each with 1,000 warmup iterations and 5,000 kept
+draws. Inspect divergences, tree-depth warnings, R-hat and effective sample
+size before interpreting the fit. Sampling options include `chains`, `iter`
+(including warmup), `warmup`, `cores`, `seed` and `control`. `backend` selects
+the Stan interface.
 
 The summary has the same structure as the frequentist one:
 
@@ -194,20 +177,16 @@ tests <- fit_bayes$tests
 means <- brms::fixef(fit_bayes$fit)
 ```
 
-Each estimate is now the **posterior mean**, with its **posterior standard
-deviation** and a 95% **credible interval** (CrI), and R-hat and effective
-sample size are reported for every parameter. The fixed and random effects
-closely match the frequentist ones: $d' = `r fmt(means["dA_Intercept", "Estimate"])`$
+Estimates are posterior means, with posterior SDs and central 95% credible
+intervals (CrIs). Mean sensitivities are $d' = `r fmt(means["dA_Intercept", "Estimate"])`$
 in the awareness task and $d' = `r fmt(means["dI_Intercept", "Estimate"])`$ in
 the influence task.
 
 ### The brms fit
 
-`fit_bayes$fit` is the `brmsfit` itself, so every brms function works on it,
-from `pp_check()` to `loo()`. The model has one non-linear parameter per
-quantity: `dA` and `dI` are the $d'$ of each task, `cA` the awareness criterion
-(on the classical scale), and each has one prior of its own, so the prior
-table of brms lists them task by task:
+`fit_bayes$fit` is a `brmsfit`. Its non-linear parameters include `dA` and
+`dI` (sensitivities) and `cA` (the classical awareness criterion). Inspect
+their priors with:
 
 ```{r}
 #| label: brms-priors
@@ -215,14 +194,22 @@ prior_table <- brms::prior_summary(fit_bayes$fit)
 prior_table[prior_table$source == "user", ]
 ```
 
-The criteria vary over `subj_c`, a copy of the subject column, so that brms
-gives them a correlation prior of their own when both are estimated.
+Criteria use a separate subject block, `subj_c`. Check model adequacy with
+posterior predictive comparisons as well as sampler diagnostics:
+
+```{r}
+#| label: posterior-check
+#| eval: false
+brms::pp_check(fit_bayes$fit)
+```
 
 ## The three hypotheses
 
 The p-value of each hypothesis is now the **two-sided posterior p-value**,
 $2 \min\{P(\theta > 0 \mid y), P(\theta < 0 \mid y)\}$. It falls below .05
-exactly when the 95% credible interval excludes zero.
+when the central 95% credible interval excludes zero (up to finite-draw
+rounding). This is posterior sign uncertainty, not a frequentist p-value or
+a Bayes factor.
 
 - **H1 ($\Delta d'$):** awareness of the repeated patterns is again stronger
   than their influence on search
@@ -238,8 +225,7 @@ exactly when the 95% credible interval excludes zero.
   sensitivity barely varies across subjects
   ($\text{sd}(d') = `r fmt(brms::VarCorr(fit_bayes$fit)$subj$sd["dA_Intercept", "Estimate"])`$),
   so the slope $\rho \, \sigma_I / \sigma_A$ can take very large values. With
-  posteriors like this one, read the credible interval rather than the mean
-  and standard deviation.
+  posteriors like this one, emphasise the credible interval.
 
 ## Bayes factors
 
@@ -258,12 +244,9 @@ bf <- usdt_bf(fit_bayes)
 bf
 ```
 
-A point statement such as `"rho = 0"` is the null hypothesis H0, against the
-alternative $\rho \neq 0$; an inequality or a region, as further below, is the
-alternative H1, against its complement. Each report gives both
-$\log \text{BF}_{10}$ and $\log \text{BF}_{01}$, and each panel of the plot
-gives the Bayes factor of the hypothesis in its title, here
-$\text{BF}_{01}$, so a positive value favours the null:
+A point statement names H0. An inequality or region names H1. Reports give
+both log Bayes factors. Each plot panel reports evidence for the hypothesis
+in its title: BF01 for a point null, BF10 for a direction or region.
 
 - **$\Delta d' = 0$:** the evidence for a difference is `r bf$evidence[1]`
   ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[1])`$,
@@ -275,15 +258,14 @@ $\text{BF}_{01}$, so a positive value favours the null:
   ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[2])`$).
 - **Intercept $\beta_0 = 0$:** there is `r bf$evidence[3]` evidence for the
   null ($\log \text{BF}_{01} = `r fmt(-bf$log_BF10[3])`$,
-  $\text{BF}_{01} = `r fmt(bf$BF01[3], 1)`$). The data favour no influence
-  sensitivity in participants without awareness sensitivity, which the credible
-  interval alone could not tell.
+  $\text{BF}_{01} = `r fmt(bf$BF01[3], 1)`$) under these priors. This compares
+  the zero latent intercept with its specified alternative. It does not
+  identify individual participants without awareness.
 
-In the plot, the solid curve is the posterior and the dashed curve the prior.
-For a point null, $\text{BF}_{01}$ is the ratio of the posterior to the prior
-height at the dotted line. Each panel names its quantity on the x axis, with
-the intercept and slope of the latent regression as $\beta_0$ and $\beta_1$.
-The y axis has no values, because each panel has a density scale of its own.
+Solid curves show posteriors and dashed curves priors. For a point null,
+BF01 is posterior density divided by prior density at the dotted line.
+Use `usdt_bf(..., plot = FALSE)` to compute without drawing, then `plot(bf)`
+to draw later. `caption = FALSE` hides the caption.
 
 You can also test directional hypotheses and regions, such as a region of
 practical equivalence around zero:
@@ -313,9 +295,9 @@ Bayes factor is `r bf_other$evidence[2]`
 posterior mean lies just outside it. Read interval Bayes factors together
 with the posterior probability.
 
-Bayes factors depend on the priors: a wider prior puts less density at the
-null value and favours the null. Report them with the priors you used, and
-check that other reasonable priors lead to the same conclusion.
+Bayes factors depend on the priors. Report the priors and check sensitivity
+to other defensible choices by refitting. Changing prior width need not have
+the same effect for every hypothesis.
 
 ## Visualizing the posterior
 
@@ -359,16 +341,10 @@ intercept $\beta_0$ of the latent regression, the last row of
 $\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A$, and the priors of
 the awareness mean, the standard deviations and the correlation do not change.
 
-The influence mean now divides by $\sigma_A$, which matters in these data,
-where the awareness sensitivity barely varies across subjects. Where $\sigma_A$
-nearly vanishes, the intercept prior pins $\rho$ near zero, because any other
-correlation would need an intercept far from zero, and the sampler cannot
-always follow so narrow a region: with the default half-Student-$t$ prior,
-which allows $\sigma_A$ near zero, the fit can leave a few divergent
-transitions that a higher `adapt_delta` does not remove. A prior on
-$\sigma_A$ that vanishes at zero avoids them. We use `gamma(2, 4)`, of a scale
-similar to the default, and keep the default for $\sigma_I$. The prior check
-shows what changes:
+When $\sigma_A$ approaches zero, the ratio $\sigma_I/\sigma_A$ can produce
+difficult posterior geometry. A prior that gives less weight near zero can
+help, if substantively justified. Here we use `gamma(2, 4)` for $\sigma_A$
+and retain the default for $\sigma_I$:
 
 ```{r}
 #| label: prior-check-regression
@@ -378,15 +354,11 @@ priors_reg <- usdt_priors(sd_dprime = list(awareness = "gamma(2, 4)",
 plot(priors_reg, data = data_usdt, latent = "regression")
 ```
 
-The intercept (H3) now has the prior you give it, by default `normal(0, 1)`,
-a weakly informative prior that leaves the estimate to the data, and the
-correlation (H2) keeps its uniform prior. The price is paid by the difference
-(H1): $\Delta d' = \beta_0 + (\rho \, \sigma_I / \sigma_A - 1) \, \mu_A$ has
-an induced prior, with the heavy tails the intercept had before. So does the
-influence mean, which is why the influence rates of a new subject now pile up
-near 0 and 1. Choose this parameterization when you have a view about the
-intercept, which is the test of unconscious processing, rather than about
-the difference between the means.
+H3 now has the specified intercept prior (default `normal(0, 1)`), while H1
+has the induced prior
+$\Delta d' = \beta_0 + (\rho\,\sigma_I/\sigma_A-1)\mu_A$.
+Inspect both the hypothesis and predictive implications: this choice changes
+the prior model, even though it reports the same quantities.
 
 ```{r}
 #| label: fit-regression
@@ -414,15 +386,10 @@ as before. The intercept, with a prior of its own and $\sigma_A$ kept away
 from zero, has the 95% credible interval `r cri(tests_reg[3, ])`, against
 `r cri(tests[3, ])` when its prior was induced by the others.
 
-The intercept and the correlation are independent a priori, but not a
-posteriori. The data fix the influence mean, the sum of $\beta_0$ and
-$\rho \, (\sigma_I / \sigma_A) \, \mu_A$, so a correlation that would need an
-intercept far from zero loses weight, all the more when $\sigma_A$ is small.
-The 95% credible interval of $\rho$ is now `r cri(tests_reg[2, ])`, against
-`r cri(tests[2, ])` before, a change that comes from both the intercept prior
-and the prior on $\sigma_A$; a narrower intercept prior would narrow it
-further. The Bayes factors of the correlation therefore depend on the
-intercept prior as well:
+The interval of $\rho$ is now `r cri(tests_reg[2, ])`, against
+`r cri(tests[2, ])` before. Both the intercept prior and the SD prior changed.
+This comparison does not isolate either one's effect. The intercept prior
+also affects the correlation posterior and Bayes factor:
 
 ```{r}
 #| label: bf-regression
@@ -450,6 +417,24 @@ reliability of the awareness task could be anywhere between
 `r fmt(reliability$tasks$conf.low[1])` and
 `r pval(reliability$tasks$conf.high[1])`.
 
+### Unequal signal and noise variances
+
+`unequal_variances = TRUE` is available for Bayesian fits:
+
+```{r}
+#| label: unequal-variances
+#| eval: false
+fit_uv <- hsdt(data_usdt, estimation = "bayesian",
+               unequal_variances = TRUE, seed = 2026)
+```
+
+With one binary operating point per task, signal SDs are weakly identified,
+so check prior sensitivity. H1–H3 then use the separation $d$ in noise-SD
+units. To compare discriminability across different signal SDs, transform
+each draw to $d_a=d\sqrt{2/(1+\sigma_s^2)}$. See
+[`hsdt()`](../reference/hsdt.html). The equal-variance tutorial does not
+fit this extension.
+
 ### Custom models fitted with brms
 
 When you need covariates, you can fit your own model with `brms` and test it
@@ -461,6 +446,21 @@ the families of `usdt_priors()`:
 ```{r}
 #| label: brms
 #| eval: false
+trials <- rbind(
+  data.frame(vadillo_awareness[c("subj", "condition", "set.size")],
+             task = "A", resp = vadillo_awareness$judged.old),
+  data.frame(vadillo_cuing[c("subj", "condition", "set.size")],
+             task = "I", resp = meyen_split(vadillo_cuing$rt,
+                                            by = vadillo_cuing$subj))
+)
+trials <- within(trials, {
+  cond <- ifelse(condition == "old", 0.5, -0.5)
+  size <- ifelse(set.size == "set size 16", 0.5, -0.5)
+  awareness <- as.integer(task == "A")
+})
+counts <- usdt_aggregate(trials, response = "resp",
+                         by = c("subj", "task", "cond", "size", "awareness"))
+
 fit_brms <- brms::brm(
   y | trials(n) ~ 0 + awareness + task:size + task:cond +
     (0 + awareness | subj) + (0 + task:cond | subj),

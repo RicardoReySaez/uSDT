@@ -36,7 +36,7 @@ template:
     heading_font: { google: "Source Serif 4" }
     code_font:    { google: "JetBrains Mono" }
 
-    # Light mode. The background is a warm off-white rather than pure white:
+    # Light mode. The background is a warm off-white:
     # it lowers the contrast of large text blocks without dulling the code.
     body-bg: "#FCFCFB"
     body-color: "#23272B"
@@ -103,8 +103,8 @@ reference:
 
 - title: Test hypotheses and bootstrap uncertainty
   desc: >
-    sensitivity_diff() compares mean sensitivities; latent_cor() estimates
-    their latent correlation; latent_regression() estimates the intercept
+    sensitivity_diff() compares mean sensitivities. Latent_cor() estimates
+    their latent correlation. Latent_regression() estimates the intercept
     and slope. usdt_tests() collects all three hypotheses. usdt_boot()
     adds parametric bootstrap inference to a fitted uSDT model.
     usdt_equivalence() tests equivalence, non-inferiority and
@@ -126,9 +126,9 @@ reference:
 - title: Plan a study
   desc: >
     Describe the population a planned study samples from, in either
-    parameterization of the model or from the estimates of a pilot study;
-    compute the power of the three hypotheses for a number of subjects and
-    of trials per task; choose the subjects and trials at the lowest cost;
+    parameterization of the model or from the estimates of a pilot study.
+    Compute the power of the three hypotheses for a number of subjects and
+    of trials per task. Choose the subjects and trials at the lowest cost
     and find the smallest effect a design detects.
   contents:
   - usdt_population

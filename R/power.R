@@ -16,13 +16,13 @@
 #' @param population A `usdt_population` object from [usdt_population()]. With
 #'   several scenarios, the power of each. It can also be a `usdt_plan` from
 #'   [usdt_plan()], whose designs, hypotheses and settings are then used, so
-#'   that `usdt_power(plan, method = "simulation")` checks a plan; `subjects`
+#'   that `usdt_power(plan, method = "simulation")` checks a plan. `subjects`
 #'   and `trials` are then left out.
 #' @param subjects Number of subjects. Several values give one design each.
 #' @param trials Number of trials per subject in each task, signal and noise
 #'   trials together: one value for both tasks, or one for each as
 #'   `c(awareness = , influence = )` or `list(awareness = , influence = )`.
-#'   Several values give one design each; a value shared by both tasks keeps
+#'   Several values give one design each. A value shared by both tasks keeps
 #'   them equal, and values given for each task are crossed.
 #' @param hypothesis Character vector of hypotheses, written as in
 #'   [usdt_equivalence()]: `"<quantity> <op> <value>"` with the quantity
@@ -38,11 +38,11 @@
 #'   [usdt_data_tasks()]: `"none"`, `"influence"`, `"awareness"`, `"both"`, or
 #'   one logical value for each task. The split fixes the criterion of a task at
 #'   zero, so its criterion values in `population` are not used.
-#' @param combine `"each"` reports the power of each hypothesis; `"all"` also
+#' @param combine `"each"` reports the power of each hypothesis. `"all"` also
 #'   reports the probability that every one of them rejects H0 in the same
 #'   study.
 #' @param method `"approximate"` (the default) computes power from the sampling
-#'   distribution of the estimates, in seconds; `"simulation"` simulates whole
+#'   distribution of the estimates, in seconds. `"simulation"` simulates whole
 #'   studies and analyses each one with [hsdt()], which takes minutes. See
 #'   Details.
 #' @param nsim Number of simulated studies for each scenario and design
@@ -130,7 +130,7 @@
 #' With `method = "simulation"`, each study draws its subjects from the
 #' population and their trials from their d' and criteria. A task split at
 #' the median draws one latent score per trial and is split with
-#' [meyen_split()], as response times would be; any other task draws binomial
+#' [meyen_split()], as response times would be. Any other task draws binomial
 #' counts. The study is then analysed by [hsdt()] with the confidence level
 #' `1 - alpha`, and each hypothesis is decided as in the approximation. A fit
 #' that fails, or that cannot estimate the quantity, counts as a failure to
@@ -139,7 +139,7 @@
 #' the same streams, which makes the differences between designs less noisy
 #' than their Monte Carlo errors suggest. The simulation also accepts a
 #' population with unequal variances (`sd_signal` other than 1), whose studies
-#' are then analysed with the equal-variance model; `se` and the reliabilities
+#' are then analysed with the equal-variance model. `se` and the reliabilities
 #' are then `NA`.
 #'
 #' A simulation is slow, about a second per study with 100 subjects, so it is

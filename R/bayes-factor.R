@@ -21,7 +21,7 @@
 #'   or `intercept` and the operator is `=`, `<` or `>` (`<=` and `>=` are read
 #'   as `<` and `>`), or `"<quantity> in [a, b]"` and `"<quantity> out [a, b]"`
 #'   for a region and its complement. A point statement is the null hypothesis
-#'   H0, and H1 its negation; an inequality or a region is the alternative H1,
+#'   H0, and H1 its negation. An inequality or a region is the alternative H1,
 #'   and H0 its complement. The default tests the three point nulls.
 #' @param awareness,influence For a brms model, the population-level terms of
 #'   the awareness and influence sensitivities, as in [usdt_tests()]. Ignored
@@ -51,7 +51,7 @@
 #' \eqn{\theta} is fixed at \eqn{c} with the fitted model, in which it is free.
 #' When the first is nested in the second and keeps the conditional prior of
 #' the other parameters, the Bayes factor is the ratio of the posterior and
-#' prior densities at \eqn{c} (Dickey & Lientz, 1970; Wagenmakers et al.,
+#' prior densities at \eqn{c} (Dickey & Lientz, 1970, Wagenmakers et al.,
 #' 2010):
 #' \deqn{\mathrm{BF}_{01} = p(\theta = c \mid y) / p(\theta = c).}
 #' The posterior density comes from a logspline fit to the posterior draws.
@@ -110,7 +110,7 @@
 #' factors of `rho` and `slope` then depend on the intercept prior as well.
 #'
 #' These averages work for any family of [usdt_priors()]. The prior draws use
-#' the random number generator; call [set.seed()] first for reproducible
+#' the random number generator. Call [set.seed()] first for reproducible
 #' results.
 #'
 #' # Custom brms models
@@ -121,12 +121,12 @@
 #' have:
 #' * a proper prior on each sensitivity term, from the families of
 #'   [usdt_priors()], e.g. `prior(normal(0, 1), class = b)`. The flat default
-#'   of brms is improper, and a Bayes factor needs a proper prior;
+#'   of brms is improper, and a Bayes factor needs a proper prior.
 #' * an LKJ(\eqn{\eta}) prior on the correlations of the group-level term that
 #'   holds both sensitivities. One correlation of a \eqn{K \times K} LKJ matrix
 #'   has the marginal of a \eqn{2 \times 2} LKJ(\eqn{\eta - 1 + K/2}), so a
 #'   block with other terms besides the two sensitivities still has an exact
-#'   prior for `rho`;
+#'   prior for `rho`.
 #' * for `intercept` and `slope`, priors on the two SDs from the families of
 #'   [usdt_priors()], truncated at zero as brms does. The brms default,
 #'   `student_t(3, 0, 2.5)`, qualifies.
@@ -764,7 +764,7 @@ plot.usdt_bf <- function(x, caption = TRUE, ...) {
         "Posterior (solid) and prior (dashed) densities of each tested ",
         "quantity. A point hypothesis is the null (H0), and BF01 is the ",
         "ratio of the posterior to the prior height at the dotted line ",
-        "(Savage-Dickey); a directional or interval hypothesis is the ",
+        "(Savage-Dickey). A directional or interval hypothesis is the ",
         "alternative (H1), and the shaded area is its posterior probability.",
         .bf_caption(curves)
       )

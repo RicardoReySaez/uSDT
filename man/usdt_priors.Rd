@@ -64,13 +64,13 @@ families that cover the values its parameter can take:
 \item means of \eqn{d'} and of the criterion can take any real value, so their
 prior must be defined on the whole real line: \code{normal}, \code{std_normal},
 \code{student_t}, \code{cauchy}, \code{double_exponential}, \code{logistic}, \code{gumbel},
-\code{skew_normal}, \code{exp_mod_normal} or \code{skew_double_exponential};
+\code{skew_normal}, \code{exp_mod_normal} or \code{skew_double_exponential}.
 \item standard deviations take any of those, truncated at zero (with location
 0, a \code{student_t} is a half-Student-\eqn{t}), or a family on the positive
 values: \code{lognormal}, \code{exponential}, \code{gamma}, \code{inv_gamma}, \code{weibull},
 \code{frechet}, \code{rayleigh}, \code{chi_square}, \code{inv_chi_square},
 \code{scaled_inv_chi_square}, \code{loglogistic}, or \code{pareto_type_2} with
-\code{mu <= 0};
+\code{mu <= 0}.
 \item correlations take \code{"lkj(eta)"}, the LKJ prior on a correlation matrix and
 the only correlation prior brms accepts. On a 2 x 2 matrix the
 correlation follows a beta(eta, eta) distribution stretched from
@@ -89,7 +89,7 @@ scale: \code{normal(0, 1)} for the mean \eqn{d'}, \code{normal(0, 0.5)} for the 
 criterion, \code{student_t(4, 0, 0.5)} for every between-subject standard
 deviation and a uniform \code{lkj(1)} for every correlation. With them, the hit
 and false-alarm rates of a new subject spread over \eqn{(0, 1)} without
-piling up at either end; see \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. With the same prior for
+piling up at either end. See \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}. With the same prior for
 both means, the prior of the difference between them (H1) is symmetric
 around zero, and every \code{lkj} prior is centred at zero (H2).
 
@@ -106,14 +106,14 @@ to the intercept \eqn{\beta_0} of the latent regression, so that both the
 intercept (H3) and the correlation (H2) have the priors you give them. It
 keeps the priors of the awareness mean, of both standard deviations and of
 the correlation, and the influence mean follows from them as
-\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}; \code{dprime}
+\eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. \code{dprime}
 then applies to the awareness task only. The intercept takes \code{normal(0, 1)}
-by default, a weakly informative prior that leaves the estimate to the data.
+by default. Inspect its implications with \code{\link[=plot.usdt_priors]{plot.usdt_priors()}}.
 Two things follow:
 \itemize{
 \item the difference between the means (H1) has an induced prior,
 \eqn{\beta_0 + (\rho \sigma_I / \sigma_A - 1) \mu_A}, with the heavy tails
-the intercept has under the correlation parameterization;
+the intercept has under the correlation parameterization.
 \item the intercept and the correlation are independent a priori but not a
 posteriori. The data fix the influence mean, the sum of \eqn{\beta_0} and
 \eqn{\rho (\sigma_I / \sigma_A) \mu_A}, so a narrow intercept prior also
@@ -133,7 +133,7 @@ usdt_priors(dprime = list(awareness = "normal(0, 1)",
 # A correlation prior that concentrates near zero
 usdt_priors(cor_dprime = "lkj(2)")
 
-# Standard deviations of d' expected around 0.3 rather than near zero
+# Standard deviations of d' expected around 0.3
 usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
 
 # Any family that covers the positive values, e.g. a gamma distribution

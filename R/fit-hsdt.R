@@ -7,11 +7,9 @@
 
 #' Fit a hierarchical signal detection theory model
 #'
-#' Fits a bivariate hierarchical SDT model and evaluates the core unconscious
-#' processing hypotheses. The model estimates task-specific sensitivities
-#' (\eqn{d'}) and response criteria (\eqn{c}) for the population, and their
-#' variation and correlation across participants. The frequentist estimation
-#' uses [lme4::glmer()]; the Bayesian estimation uses brms, which runs Stan.
+#' Models paired awareness and influence sensitivities and criteria, their
+#' population means and between-subject variation. Frequentist estimation uses
+#' [lme4::glmer()]. Bayesian estimation uses brms and Stan.
 #'
 #' @param data A `usdt_data` object from [usdt_data_tasks()] or
 #'   [usdt_data_long()].
@@ -19,8 +17,8 @@
 #'   via Laplace approximation with lme4) or `"bayesian"` (Hamiltonian Monte
 #'   Carlo with Stan, through brms).
 #' @param fix_criteria How to handle response criteria. `"auto"` fixes to zero
-#'   any criterion that is zero by design (such as a task split at the median
-#'   under deviation coding). `"none"` estimates all criteria.
+#'   a dichotomized task's criterion when its mean absolute descriptive subject
+#'   criterion is below 0.02. `"none"` estimates all criteria.
 #' @param level Confidence level for Wald intervals, or credible level for the
 #'   posterior intervals of a Bayesian fit (default is 0.95).
 #' @param optimizer Primary optimizer passed to [lme4::glmerControl()].
@@ -43,25 +41,24 @@
 #'   together with CmdStan). As in brms, the default is the `brms.backend`
 #'   option, or `"rstan"` when it is not set. Bayesian estimation only.
 #' @param ... For frequentist estimation, additional arguments passed to
-#'   [lme4::glmer()]; the model formula, family and data remain managed by the
+#'   [lme4::glmer()]. The model formula, family and data remain managed by the
 #'   package. For Bayesian estimation, sampling options: `chains` (default 4),
 #'   `iter` (iterations per chain including warmup, default 6000), `warmup`
 #'   (default 1000, so each chain keeps 5000 draws), `cores` (chains run at
-#'   once; default `min(parallel::detectCores() - 2, 4)`, at least 1), `seed`,
+#'   once, default `min(parallel::detectCores() - 2, 4)`, at least 1), `seed`,
 #'   `control = list(adapt_delta, max_treedepth)` (default 0.95 and 10) and
-#'   `refresh` (iterations between progress updates of each chain; default 1%
+#'   `refresh` (iterations between progress updates of each chain, default 1%
 #'   of `iter`, and `0` hides the progress bar).
 #'
 #' @return An object of class `hsdt` containing:
 #' * `$fit`: The underlying fit: a `glmerMod` object from lme4, or a `brmsfit`
-#'   object from brms, which every brms function accepts (e.g.
-#'   [brms::prior_summary()], [brms::pp_check()] or [brms::loo()]).
+#'   object from brms (see [brms::prior_summary()] and [brms::pp_check()]).
 #' * `$tests`: Summary table for hypotheses H1, H2, and H3.
 #' * `$design`: Summary of the model specification.
 #' * `$diagnostics`: Convergence diagnostics.
 #'
 #' A frequentist fit also contains `$pars`, the parameter estimates and their
-#' joint covariance. A Bayesian fit also contains `$priors`; its posterior
+#' joint covariance. A Bayesian fit also contains `$priors`. Its posterior
 #' draws are those of `$fit`, where `b_dA_Intercept` and `b_dI_Intercept` are
 #' the mean \eqn{d'} of the awareness and influence tasks,
 #' `sd_subj__dA_Intercept` and `sd_subj__dI_Intercept` their SDs,
@@ -71,12 +68,6 @@
 #' unequal variances.
 #'
 #' @details
-#' The model fits trial counts with a binomial probit link, directly mapping
-#' coefficients to standard Signal Detection Theory parameters. Fixed effects
-#' capture population sensitivities and criteria, while random effects estimate
-#' participant variation and the latent correlation between awareness and
-#' influence sensitivity.
-#'
 #' Hypotheses evaluated by default:
 #' * **H1:** Mean sensitivity difference between tasks.
 #' * **H2:** Latent correlation of sensitivities across participants.
@@ -92,7 +83,7 @@
 #' # Bayesian estimation
 #'
 #' The Bayesian model places its priors on the mean, standard deviation and
-#' correlation of the two sensitivities and on the criteria; see
+#' correlation of the two sensitivities and on the criteria. See
 #' [usdt_priors()]. The slope and intercept of the latent regression are
 #' derived from them draw by draw. The hypothesis table reports the posterior
 #' mean and standard deviation, a central credible interval and a two-sided
@@ -105,20 +96,15 @@
 #' moves to the intercept \eqn{\beta_0} of the latent regression, and the
 #' influence mean follows as
 #' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. The
-#' intercept tested by H3 then has the prior you give it rather than a
-#' heavy-tailed one induced by the other priors, and the correlation (H2)
-#' keeps its own. The difference between the means (H1) has an induced,
+#' intercept tested by H3 then has its specified prior, and the correlation
+#' (H2) keeps its own. The difference between the means (H1) has an induced,
 #' heavy-tailed prior instead, and because the data fix \eqn{\mu_I}, the
-#' intercept prior also informs the posterior of \eqn{\rho}; see
+#' intercept prior also informs the posterior of \eqn{\rho}. See
 #' [usdt_priors()] and [plot.usdt_priors()]. The fit samples the same
-#' parameters and reports the same hypotheses either way. When the awareness
-#' sensitivity barely varies across subjects, this parameterization can leave
-#' a few divergent transitions where \eqn{\sigma_A} nearly vanishes: there the
-#' intercept prior pins \eqn{\rho} near zero, a region too narrow for the
-#' sampler to follow. Raising `adapt_delta` does not remove them reliably; a
-#' prior on the awareness standard deviation that vanishes at zero, such as
-#' `usdt_priors(sd_dprime = list(awareness = "gamma(2, 4)", influence = ...))`,
-#' does.
+#' parameters and reports the same hypotheses either way. Near-zero awareness
+#' SDs can produce difficult posterior geometry and divergences. A prior with
+#' less weight near zero may help, if substantively justified. Inspect its
+#' implications with [plot.usdt_priors()].
 #'
 #' With `unequal_variances = TRUE`, the noise distribution of each task is
 #' \eqn{N(-d/2, 1)} and the signal distribution \eqn{N(d/2, \sigma_s^2)}, so
@@ -134,11 +120,8 @@
 #' The model is a brms model of the aggregated counts, with one prior per
 #' parameter and task. It is compiled the first time it is used with a given
 #' set of priors, which needs a C++ toolchain, and stays in a per-user cache
-#' directory for later sessions. The default sampling settings keep 20,000
-#' posterior draws, from four chains that run in parallel behind a progress
-#' bar. A summary after the bar, and a warning when something fails, report
-#' divergent transitions, transitions at the maximum tree depth, an R-hat above
-#' 1.01 or an effective sample size below 400.
+#' directory for later sessions. Inspect the reported divergences, tree-depth
+#' warnings, R-hat and effective sample sizes before interpreting results.
 #'
 #' @seealso [usdt_data_tasks()], [usdt_priors()], [usdt_tests()],
 #'   [usdt_boot()], [plot.hsdt()]

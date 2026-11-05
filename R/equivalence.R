@@ -43,7 +43,7 @@
 #' @details
 #' # The tests
 #'
-#' A point statement names the null hypothesis H0; an inequality or a region
+#' A point statement names the null hypothesis H0. An inequality or a region
 #' names the alternative H1, as in [usdt_bf()]. Each test rejects H0 at level
 #' `alpha`:
 #'
@@ -51,8 +51,8 @@
 #' * `q > c` and `q < c`: one-sided tests. With a margin on the unfavourable
 #'   side of the reference value, `diff > -0.2` is a non-inferiority test and
 #'   `diff < 0.2` a non-superiority test.
-#' * `q in [a, b]`: an equivalence test by two one-sided tests (TOST;
-#'   Schuirmann, 1987; Lakens et al., 2018). H0, \eqn{q \le a} or
+#' * `q in [a, b]`: an equivalence test by two one-sided tests (TOST,
+#'   Schuirmann, 1987. Lakens et al., 2018). H0, \eqn{q \le a} or
 #'   \eqn{q \ge b}, is rejected when both one-sided tests reject their part of
 #'   it, so `p.value` is the larger of `p.lower` and `p.upper`.
 #' * `q out [a, b]`: a minimal-effect test. H0, \eqn{a \le q \le b}, is

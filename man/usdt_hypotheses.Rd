@@ -64,9 +64,9 @@ awareness sensitivity is zero (\eqn{d'_{\mathrm{Awareness}} = 0}), testing
 for unconscious processing.
 }
 
-Because both the correlation (H2) and regression slope (H3) are zero if and
-only if the covariance between sensitivities is zero, they evaluate the same
-association and share identical test statistics.
+With positive sensitivity variances, H2 and the H3 slope share the same
+zero-covariance null. The analytical frequentist output uses the same
+covariance test for both. The correlation interval uses Fisher-\eqn{z}.
 }
 
 \section{Custom models with covariates}{
@@ -116,7 +116,7 @@ trials <- rbind(
                                             by = vadillo_cuing$subj))
 )
 
-# Deviation contrasts (-0.5 vs 0.5); `awareness` flags the awareness task
+# Deviation contrasts (-0.5 vs 0.5). `awareness` flags the awareness task
 trials <- within(trials, {
   cond   <- ifelse(condition == "old", 0.5, -0.5)
   size   <- ifelse(set.size == "set size 16", 0.5, -0.5)
@@ -154,7 +154,7 @@ fit_b <- brms::brm(
   prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
 )
 
-# The same term names; the tests now summarise the posterior
+# The same term names. The tests now summarise the posterior
 usdt_tests(fit_b, awareness = "taskA:cond", influence = "taskI:cond")
 
 # With a proper prior on the sensitivities, also Bayes factors

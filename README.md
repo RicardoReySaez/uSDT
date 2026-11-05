@@ -8,16 +8,11 @@
 [![Codecov test coverage](https://codecov.io/gh/RicardoReySaez/uSDT/graph/badge.svg)](https://app.codecov.io/gh/RicardoReySaez/uSDT)
 <!-- badges: end -->
 
-`uSDT` estimates hierarchical signal detection theory (SDT) models for
-research on unconscious processing. It jointly models sensitivity in paired
-awareness and influence measures, allowing researchers to compare both
-sensitivities, estimate their latent association, and test influence sensitivity
-when awareness sensitivity is zero. The model can be fitted by maximum likelihood
-with `lme4` or in a Bayesian framework with `brms`, where Bayes factors weigh the
-evidence for and against each hypothesis. It also plans studies: the power of
-the three hypotheses for a number of subjects and of trials per task, the
-cheapest design that reaches a given power, and the smallest effect a design
-detects.
+`uSDT` fits hierarchical signal detection theory models to paired awareness
+and influence measures. It compares mean sensitivities, estimates their latent
+association and tests influence sensitivity at zero awareness sensitivity.
+Development features include Bayesian estimation with brms and Bayes factors,
+and study planning for power, precision, cost and detectable effects.
 
 ## Documentation
 
@@ -34,11 +29,8 @@ CRAN. It contains:
   changes in each release.
 
 The development version from GitHub has its own website at
-**<https://ricardoreysaez.github.io/uSDT/dev/>**. It also documents the
-Bayesian estimation, which is not on CRAN yet:
+**<https://ricardoreysaez.github.io/uSDT/dev/>**, with two additional tutorials:
 
-<!-- When the Bayesian estimation reaches CRAN, move this article to the list
-above and remove "dev/" from its link. -->
 - [Bayesian estimation](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html),
   the same analysis with priors, posterior summaries and Bayes factors.
 - [Planning a uSDT study](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html),
@@ -57,15 +49,15 @@ Or install the development version from GitHub:
 
 ```r
 # install.packages("pak")
-pak::pak("RicardoReySaez/uSDT")
+pak::pak("RicardoReySaez/uSDT@dev")
 ```
 
-uSDT installs `brms` for Bayesian estimation, which also needs a C++ toolchain
-to compile the model once for each set of priors. With the default `rstan`
-backend, compiling needs `BH` and `RcppEigen` too; the `cmdstanr` backend needs
-CmdStan instead.
+The development version installs `brms`. Bayesian fitting also needs a C++
+toolchain and either rstan with `BH` and `RcppEigen`, or cmdstanr with CmdStan.
 
 ## Example: Vadillo et al. data
+
+The examples below use the development API.
 
 The package includes the two trial-level data frames from Experiment 2 of
 Vadillo et al. (2025): `vadillo_awareness` for the awareness task and
@@ -100,10 +92,8 @@ summary(fit_bayes)
 usdt_bf(fit_bayes)
 ```
 
-Every column, level and format argument takes either one value for both tasks
-or one per task as `list(awareness = ..., influence = ...)`, so the two tasks may
-differ in the columns they use, in the values those columns take, and in the
-format they arrive in.
+Column, level and format arguments take a shared value or task-specific values
+as `list(awareness = ..., influence = ...)`.
 
 The source data are from Vadillo, Malejka, and Shanks (2025), *Mapping the
 reliability multiverse of contextual cuing*,

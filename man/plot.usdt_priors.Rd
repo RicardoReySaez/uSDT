@@ -45,7 +45,7 @@ the data you expect and to see the prior that the model induces on the
 latent intercept.
 }
 \details{
-The plot simulates 100,000 draws from the priors in R; no model is fitted
+The plot simulates 100,000 draws from the priors in R. No model is fitted
 and Stan is not needed.
 
 The rates panel shows the hit and false-alarm rates of one new subject drawn

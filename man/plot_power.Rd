@@ -63,7 +63,7 @@ hypothesis.
 smallest detectable effect and the population value marked.
 \item A \code{usdt_plan} with subjects and trials free shows the cost of the cheapest
 closed-form design for each number of trials (a line for one free task,
-a map for two), with the chosen design marked; with one value free, it
+a map for two), with the chosen design marked. With one value free, it
 shows the approximate power (or the expected interval width) along it.
 }
 }

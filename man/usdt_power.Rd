@@ -33,7 +33,7 @@ usdt_power(
 \item{population}{A \code{usdt_population} object from \code{\link[=usdt_population]{usdt_population()}}. With
 several scenarios, the power of each. It can also be a \code{usdt_plan} from
 \code{\link[=usdt_plan]{usdt_plan()}}, whose designs, hypotheses and settings are then used, so
-that \code{usdt_power(plan, method = "simulation")} checks a plan; \code{subjects}
+that \code{usdt_power(plan, method = "simulation")} checks a plan. \code{subjects}
 and \code{trials} are then left out.}
 
 \item{subjects}{Number of subjects. Several values give one design each.}
@@ -41,7 +41,7 @@ and \code{trials} are then left out.}
 \item{trials}{Number of trials per subject in each task, signal and noise
 trials together: one value for both tasks, or one for each as
 \code{c(awareness = , influence = )} or \code{list(awareness = , influence = )}.
-Several values give one design each; a value shared by both tasks keeps
+Several values give one design each. A value shared by both tasks keeps
 them equal, and values given for each task are crossed.}
 
 \item{hypothesis}{Character vector of hypotheses, written as in
@@ -62,12 +62,12 @@ of signal and of noise trials.}
 one logical value for each task. The split fixes the criterion of a task at
 zero, so its criterion values in \code{population} are not used.}
 
-\item{combine}{\code{"each"} reports the power of each hypothesis; \code{"all"} also
+\item{combine}{\code{"each"} reports the power of each hypothesis. \code{"all"} also
 reports the probability that every one of them rejects H0 in the same
 study.}
 
 \item{method}{\code{"approximate"} (the default) computes power from the sampling
-distribution of the estimates, in seconds; \code{"simulation"} simulates whole
+distribution of the estimates, in seconds. \code{"simulation"} simulates whole
 studies and analyses each one with \code{\link[=hsdt]{hsdt()}}, which takes minutes. See
 Details.}
 
@@ -173,7 +173,7 @@ optimistic.
 With \code{method = "simulation"}, each study draws its subjects from the
 population and their trials from their d' and criteria. A task split at
 the median draws one latent score per trial and is split with
-\code{\link[=meyen_split]{meyen_split()}}, as response times would be; any other task draws binomial
+\code{\link[=meyen_split]{meyen_split()}}, as response times would be. Any other task draws binomial
 counts. The study is then analysed by \code{\link[=hsdt]{hsdt()}} with the confidence level
 \code{1 - alpha}, and each hypothesis is decided as in the approximation. A fit
 that fails, or that cannot estimate the quantity, counts as a failure to
@@ -182,7 +182,7 @@ so a run gives the same studies whatever \code{ncores}, and every design uses
 the same streams, which makes the differences between designs less noisy
 than their Monte Carlo errors suggest. The simulation also accepts a
 population with unequal variances (\code{sd_signal} other than 1), whose studies
-are then analysed with the equal-variance model; \code{se} and the reliabilities
+are then analysed with the equal-variance model. \code{se} and the reliabilities
 are then \code{NA}.
 
 A simulation is slow, about a second per study with 100 subjects, so it is

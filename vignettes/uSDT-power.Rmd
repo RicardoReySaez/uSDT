@@ -39,7 +39,7 @@ if (!isTRUE(l10n_info()[["UTF-8"]])) {
     if (isTRUE(l10n_info()[["UTF-8"]])) break
   }
   # Windows accepts locale names it does not actually have, so trust
-  # l10n_info() rather than the return value, and undo the attempts when none
+  # l10n_info() to verify the locale, and undo the attempts when none
   # of the names produced a UTF-8 session.
   if (!isTRUE(l10n_info()[["UTF-8"]])) {
     invisible(suppressWarnings(Sys.setlocale("LC_CTYPE", old_ctype)))
@@ -56,27 +56,19 @@ library(uSDT)
 
 A study of unconscious processing has three sizes to choose: how many
 subjects, how many trials of the awareness task and how many of the influence
-task. They do not play the same role. The trials of a task decide how
-precisely each subject's sensitivity ($d'$) is measured, its *reliability*;
-the subjects decide how well the population is described. And the three
-hypotheses do not depend on them in the same way:
+task. Trials affect measurement error in each subject's sensitivity ($d'$).
+Subjects affect the precision of population estimates. The hypotheses depend
+on them in different ways:
 
 - **H1**, the difference between mean sensitivities, gains from both subjects
   and trials, like any comparison of means.
-- **H2**, the correlation between the two sensitivities across subjects, is
-  in practice a correlation between noisy measures: the measurement error of
-  each task attenuates it (Spearman, 1904), so trials matter through the
-  reliability of each task.
-- **H3**, the intercept of the latent regression, the test for unconscious
-  processing, extrapolates the influence sensitivity to an awareness sensitivity of
-  zero. Its precision depends on how well the slope is known, which needs a
-  reliable awareness task.
+- **H2**, the latent correlation between task sensitivities, needs enough
+  trials to separate between-subject variation from measurement error.
+- **H3**, the latent intercept, estimates influence sensitivity at zero
+  awareness sensitivity. Its precision also depends on the slope.
 
-uSDT plans a study the way Franco-Martínez, Vadillo and Rey-Sáez (preprint)
-plan multisite studies: describe the population, compute the power of a
-design, choose the design within what is feasible and affordable, explore
-other assumptions, find the smallest effect the design detects, and check the
-design by simulation. Each step is one function.
+The workflow is to specify a population, compute power, choose a feasible
+design, vary assumptions and check the chosen design by simulation.
 
 ## The population
 
@@ -102,10 +94,9 @@ pilot <- hsdt(d)
 
 [`usdt_population()`](../reference/usdt_population.html) takes the estimates
 of a fit with `from`, and any value given in the call replaces the estimate.
-The pilot's intercept, 0.044, is too small to be the effect a study is
-planned for. A study should be able to detect the smallest effect that would
-matter, say an intercept of 0.1. Giving the intercept writes the population
-in the latent regression parameterization, which keeps the awareness mean, both
+For illustration, we target an intercept of 0.1. Choose the smallest effect of interest from substantive arguments.
+Neither this example nor the pilot determines it. Giving the intercept uses
+the latent regression parameterization, which keeps the awareness mean, both
 standard deviations and the correlation, and moves the influence mean so that
 the intercept is 0.1:
 
@@ -145,22 +136,25 @@ and H3.
 [`usdt_power()`](../reference/usdt_power.html) gives the power of each
 hypothesis for a number of subjects and of trials per task. The hypotheses are
 written as in [`usdt_equivalence()`](../reference/usdt_equivalence.html), so
-they can be two-sided or one-sided, about any value, or equivalence and
-minimal-effect tests. Here, the pilot's own design, with one-sided tests in
-the direction of the population values:
+they can be two-sided, one-sided, equivalence or minimal-effect tests.
+Here we use the pilot's design, testing the correlation two-sided and the
+difference and intercept one-sided:
 
 ```{r}
 #| label: power
 usdt_power(pop, subjects = 104, trials = c(awareness = 64, influence = 384),
            hypothesis = c("diff < 0", "rho = 0", "intercept > 0"),
-           dichotomize = "influence")
+           dichotomize = "influence", combine = "all")
 ```
 
+The `all` row is the probability of rejecting all three nulls in the same
+study. It is not the product of their separate powers. If a population value
+lies in H0, the reported rejection rate is the type I error rate.
+
 The pilot's design would detect an intercept of 0.1 in one study out of three.
-The `Estimable` column explains part of it: in a third of the studies, the fit
-ends on the boundary, with the awareness variance at zero or the correlation at
-1, and [`hsdt()`](../reference/hsdt.html) cannot test the correlation or the
-latent regression. Those studies count as failures to reject.
+The `Estimable` column estimates how often the sensitivity covariance stays
+off the boundary in the approximation. Non-estimable draws count as failures
+to reject H2 and H3.
 
 Several numbers of subjects and of trials give a grid of designs, and `plot()`
 draws power against the subjects:
@@ -179,23 +173,21 @@ they raise the reliability of the awareness task from 0.13 to 0.37.
 
 ### How the power is computed
 
-By default the power is approximate and takes a second. The measurement error
-of each subject's $d'$ has the variance that
+Power uses a sampling-distribution approximation by default. Measurement error
+in each subject's $d'$ has the variance that
 [`usdt_reliability()`](../reference/usdt_reliability.html) reports, which
 falls with the number of trials. The measured $d'$ of $N$ subjects then have a
 known covariance, and their sample mean and covariance a known distribution.
-`usdt_power()` draws them 20,000 times, estimates the population as the fitted
-model would, runs each test with the standard errors it would compute, and
-counts the rejections. A draw whose estimated covariance is not valid is a fit
-on the boundary and does not reject. The probability that the awareness variance
-ends on the boundary is close to $\Phi(-R_A \sqrt{N / 2})$, with $R_A$ the
-reliability of the awareness task: about 0.18 with 104 subjects and $R_A = 0.13$.
+`usdt_power()` draws sample means and covariances 20,000 times, subtracts
+measurement variance, applies approximate tests and counts rejections.
+Invalid sensitivity covariance estimates count as boundary outcomes for H2
+and H3. This approximates the hierarchical analysis. It does not fit a model
+to each draw.
 
 With `method = "simulation"`, `usdt_power()` instead simulates whole studies,
 splits the influence responses at each subject's median as
 [`meyen_split()`](../reference/meyen_split.html) does, fits each one with
-`hsdt()` and tests it. That takes minutes, so it is kept for checking a
-design, below.
+`hsdt()` and tests it. This slower method checks the chosen design below.
 
 ## Choosing subjects and trials
 
@@ -234,15 +226,28 @@ plot(plan)
 ```
 
 The plot shows the cost of the cheapest design for each number of awareness
-trials. The grey line is the closed form that the search starts from; the
+trials. The grey line is the closed form that the search starts from. The
 green points are the designs the search checked with the draws of
-`usdt_power()`; the circle is the chosen one. With an unreliable awareness task
+`usdt_power()`. The circle is the chosen one. With an unreliable awareness task
 the closed form is optimistic, so the search does not trust it and checks a
 lattice of designs and the neighbours of the best.
 
-A fixed number of trials makes the plan choose only the subjects, with no
-cost needed, and `precision` plans for the width of an interval instead of
-power, as in `usdt_plan(pop, precision = c(intercept = 0.2), trials = ...)`.
+### Budget and precision targets
+
+With fixed trials, these calls choose the number of subjects. `budget`
+maximizes power within a cost limit. `precision` targets an expected confidence
+interval width instead of power.
+
+```{r}
+#| label: plan-targets
+usdt_plan(pop, hypothesis = "intercept > 0", budget = 30 * 3600,
+          subjects = c(50, 2000), trials = c(awareness = 128, influence = 384),
+          cost = c(subject = 600, awareness = 5, influence = 2),
+          dichotomize = "influence")
+usdt_plan(pop, precision = c(intercept = 0.2), subjects = c(50, 2000),
+          trials = c(awareness = 128, influence = 384),
+          dichotomize = "influence")
+```
 
 ## Other assumptions
 
@@ -292,8 +297,7 @@ equivalence region the design can establish.
 
 A design chosen with the approximation should be checked by simulating it.
 `usdt_power()` takes the plan and simulates its designs, analysing each study
-with `hsdt()`. One thousand studies of 600 subjects take a few minutes on four
-cores:
+with `hsdt()`. The following is optional and is not run when building the article:
 
 ```{r}
 #| label: check
@@ -318,7 +322,7 @@ The figure compares, for eight designs of two populations, the power of the
 three point nulls from the closed form, from the approximation of
 `usdt_power()` and from 1000 simulated studies analysed with `hsdt()`.
 Population A is a plausible case of unconscious processing, with reliabilities
-from 0.4 to 0.85; the Vadillo population has an awareness reliability of 0.13 with
+from 0.4 to 0.85. The Vadillo population has an awareness reliability of 0.13 with
 64 trials.
 
 ```{r}
@@ -371,7 +375,7 @@ ggplot2::ggplot(long, ggplot2::aes(x = power, y = design)) +
   ggplot2::labs(
     x = "Power", y = NULL,
     caption = paste0(
-      "1000 simulated studies per design; the bars are 95% Wilson intervals ",
+      "1000 simulated studies per design. The bars are 95% Wilson intervals ",
       "of the simulated power. Studies whose fit ends on the boundary count ",
       "as failures to reject the correlation and the intercept.")) +
   ggplot2::theme_classic(base_size = 12) +
@@ -387,20 +391,16 @@ ggplot2::ggplot(long, ggplot2::aes(x = power, y = design)) +
                                          hjust = 0))
 ```
 
-For H1 all three agree. For H2 and H3 they agree while both tasks are
-reasonably reliable, and the closed form drifts away as the awareness task
-becomes unreliable, because it ignores the fits on the boundary. For H2 it is
-optimistic: the studies that would reject the correlation are precisely those
-whose estimated covariance is too large for the estimated variances, and they
-end on the boundary, where the test cannot be run. For H3 in the Vadillo
-population it is pessimistic instead: the studies that stay off the boundary
-are those with a larger estimated awareness variance, and with it a larger
-estimated intercept. The approximation of `usdt_power()` sees those boundary
-fits and follows the simulation much more closely, though it is still
-somewhat optimistic for the Vadillo population, where the fitted model reaches
-the boundary more often than the approximation does. That is why
-`usdt_plan()` searches with the approximation rather than the closed form,
-and why a chosen design is worth simulating.
+For these designs, H1 agrees across methods. For H2 and H3, the closed form
+diverges when awareness reliability is low because it ignores boundary
+outcomes. The sampling-distribution approximation follows the simulation more
+closely, but remains somewhat optimistic for the Vadillo population. Check
+chosen designs by simulation, particularly with low reliability.
+
+The approximation assumes equal signal/noise variances. To check sensitivity
+to unequal variances, set `sd_signal` in `usdt_population()` and use
+`method = "simulation"`. Those studies are still analysed with the
+**equal-variance** frequentist model.
 
 ## Summary
 
@@ -415,21 +415,9 @@ and why a chosen design is worth simulating.
 
 ## References
 
-Franco-Martínez, A., Vadillo, M. A., & Rey-Sáez, R. (preprint). How many
-sites, participants, and trials? A tutorial on multilevel power analysis for
-multisite studies with repeated measures.
-
-Spearman, C. (1904). The proof and measurement of association between two
-things. *The American Journal of Psychology, 15*(1), 72–101.
-<https://doi.org/10.2307/1412159>
-
 Vadillo, M. A., Malejka, S., & Shanks, D. R. (2025). Mapping the reliability
 multiverse of contextual cuing. *Journal of Experimental Psychology: Learning,
 Memory, and Cognition*, 51(6), 910-927. <https://doi.org/10.1037/xlm0001410>
-
-Zimmer, F., Henninger, M., & Debelak, R. (2024). Sample size planning for
-complex study designs: A tutorial for the mlpwr package. *Behavior Research
-Methods*, 56, 5246–5263. <https://doi.org/10.3758/s13428-023-02269-0>
 
 ```{r}
 #| label: cleanup

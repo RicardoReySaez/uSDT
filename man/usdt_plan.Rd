@@ -46,9 +46,9 @@ or one for each as \code{c(awareness = , influence = )} or
 \item{cost}{Cost of a design, which the plan minimises: a named vector with
 the cost of each \code{subject} (a session, recruitment) and of each
 \code{awareness} and \code{influence} trial, in any unit (missing names cost 0), so
-that a design costs \code{subjects * (subject + awareness * trials_awareness + influence * trials_influence)}; or a function of \code{subjects}, \code{awareness}
+that a design costs \code{subjects * (subject + awareness * trials_awareness + influence * trials_influence)}, or a function of \code{subjects}, \code{awareness}
 and \code{influence} that returns the cost of each design. Needed when more
-than one of the subjects and the trials is free; with only one free, the
+than one of the subjects and the trials is free. With only one free, the
 plan minimises it.}
 
 \item{budget}{Largest cost allowed. With a budget, the plan finds the
@@ -61,7 +61,7 @@ of usdt_tests() (level \code{1 - alpha}) should not exceed, by quantity: \code{d
 plan finds the cheapest design whose expected interval is that narrow,
 and \code{hypothesis} and \code{power} are not used.}
 
-\item{combine}{\code{"each"} plans a design for each hypothesis; \code{"all"} plans
+\item{combine}{\code{"each"} plans a design for each hypothesis. \code{"all"} plans
 one design in which every hypothesis rejects H0 in the same study with
 the given power.}
 
@@ -89,12 +89,12 @@ with one row per scenario and hypothesis (or quantity, for a precision
 target) and the columns \code{scenario}, \code{hypothesis}, \code{subjects},
 \code{trials_awareness}, \code{trials_influence}, \code{power} (approximate, as in
 \code{\link[=usdt_power]{usdt_power()}}), \code{estimable}, \code{width} (for a precision target), \code{cost}
-and \code{limit} (the free argument whose limit the design reaches, if any);
-\verb{$frontier}, the smallest number of subjects that reaches the target
-with each number of trials, from the closed form; \verb{$checked}, the
+and \code{limit} (the free argument whose limit the design reaches, if any).
+\verb{$frontier} records the smallest number of subjects that reaches the target
+with each number of trials, from the closed form. \verb{$checked} holds the
 designs the search checked with the draws of the sample mean and
-covariance, with the number of subjects and the cost it gave each; and
-\verb{$settings}. It prints one report per design.
+covariance, with the number of subjects and cost of each. \verb{$settings}
+stores the planning options. It prints one report per design.
 }
 \description{
 Finds the design, the number of subjects and of trials per task, that
@@ -111,7 +111,7 @@ the closed form gives the smallest number of subjects that reaches the
 power, and with it the cost of each design. The cheapest designs are then
 checked with the draws of the sample mean and covariance, which see the
 fits on the boundary, and the number of subjects of each is raised or
-lowered until those draws reach the power; the search stops when the next
+lowered until those draws reach the power. The search stops when the next
 design costs more in the closed form than the best design checked so far.
 A design whose subjects or trials reach the limit of their range, or come
 within 2\% of it, is marked: the range may be too narrow.

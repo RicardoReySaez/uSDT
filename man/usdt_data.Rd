@@ -136,9 +136,10 @@ criterion measured from the point between the two distributions. Under
 \code{"treatment"} coding (0 vs. 1), the intercept is \eqn{z(\mathrm{FAR})}, the
 criterion measured from the noise distribution.
 
-When a task is split at the median, deviation coding sets the group
-criterion to zero in balanced designs, so the model does not need to
-estimate it.
+With balanced signal/noise trials and an exact half split, the classical
+criterion is zero under deviation coding. Ties, odd counts or imbalance can
+change this. \code{\link[=hsdt]{hsdt()}} fixes a dichotomized task's criterion only when its
+mean absolute descriptive subject criterion is below 0.02.
 }
 
 \examples{

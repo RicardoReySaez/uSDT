@@ -30,9 +30,9 @@
 #'   the cost of each `subject` (a session, recruitment) and of each
 #'   `awareness` and `influence` trial, in any unit (missing names cost 0), so
 #'   that a design costs `subjects * (subject + awareness * trials_awareness +
-#'   influence * trials_influence)`; or a function of `subjects`, `awareness`
+#'   influence * trials_influence)`, or a function of `subjects`, `awareness`
 #'   and `influence` that returns the cost of each design. Needed when more
-#'   than one of the subjects and the trials is free; with only one free, the
+#'   than one of the subjects and the trials is free. With only one free, the
 #'   plan minimises it.
 #' @param budget Largest cost allowed. With a budget, the plan finds the
 #'   design with the highest power that costs no more, and `power` is not
@@ -42,7 +42,7 @@
 #'   `rho`, `intercept` or `slope`, e.g. `c(intercept = 0.2)`. With it, the
 #'   plan finds the cheapest design whose expected interval is that narrow,
 #'   and `hypothesis` and `power` are not used.
-#' @param combine `"each"` plans a design for each hypothesis; `"all"` plans
+#' @param combine `"each"` plans a design for each hypothesis. `"all"` plans
 #'   one design in which every hypothesis rejects H0 in the same study with
 #'   the given power.
 #'
@@ -51,12 +51,12 @@
 #'   target) and the columns `scenario`, `hypothesis`, `subjects`,
 #'   `trials_awareness`, `trials_influence`, `power` (approximate, as in
 #'   [usdt_power()]), `estimable`, `width` (for a precision target), `cost`
-#'   and `limit` (the free argument whose limit the design reaches, if any);
-#'   `$frontier`, the smallest number of subjects that reaches the target
-#'   with each number of trials, from the closed form; `$checked`, the
+#'   and `limit` (the free argument whose limit the design reaches, if any).
+#'   `$frontier` records the smallest number of subjects that reaches the target
+#'   with each number of trials, from the closed form. `$checked` holds the
 #'   designs the search checked with the draws of the sample mean and
-#'   covariance, with the number of subjects and the cost it gave each; and
-#'   `$settings`. It prints one report per design.
+#'   covariance, with the number of subjects and cost of each. `$settings`
+#'   stores the planning options. It prints one report per design.
 #'
 #' @details
 #' # How the design is found
@@ -67,7 +67,7 @@
 #' power, and with it the cost of each design. The cheapest designs are then
 #' checked with the draws of the sample mean and covariance, which see the
 #' fits on the boundary, and the number of subjects of each is raised or
-#' lowered until those draws reach the power; the search stops when the next
+#' lowered until those draws reach the power. The search stops when the next
 #' design costs more in the closed form than the best design checked so far.
 #' A design whose subjects or trials reach the limit of their range, or come
 #' within 2% of it, is marked: the range may be too narrow.
@@ -333,8 +333,8 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
 #'   tested quantity: `"mu_A"`, `"mu_I"`, `"sigma_A"`, `"sigma_I"`, `"rho"`,
 #'   `"intercept"`, `"criterion_A"`, `"criterion_I"`, `"sd_criterion_A"` or
 #'   `"sd_criterion_I"`. Needs `range`.
-#' @param range With `vary`, the interval of values to search, `c(from, to)`;
-#'   the result is the value nearest to `from` that reaches the power.
+#' @param range With `vary`, the interval of values to search, `c(from, to)`.
+#'   The result is the value nearest to `from` that reaches the power.
 #'
 #' @return An object of class `usdt_mdes`: a data frame with one row per
 #'   scenario, design and hypothesis, and the columns `scenario`, `subjects`,
@@ -348,14 +348,14 @@ print.usdt_plan <- function(x, digits = 3L, ...) {
 #' @details
 #' Moving a quantity keeps the other values of the population fixed as its
 #' parameterization says (see [usdt_population()]): the difference moves the
-#' influence mean with the awareness mean fixed; the intercept moves the
-#' influence mean with the means and SDs and the correlation fixed; the
+#' influence mean with the awareness mean fixed. The intercept moves the
+#' influence mean with the means and SDs and the correlation fixed. The
 #' correlation (and the slope, through it) keeps both means under the
 #' correlation parameterization and the intercept under the latent regression.
 #' The search runs from the value of H0 (or the nearest bound) outwards, in the
 #' direction of H1, and the power along the way comes from the same draws of
 #' the sample mean and covariance as in [usdt_power()], so it can level off
-#' below the target when fits on the boundary are frequent; the result is
+#' below the target when fits on the boundary are frequent. The result is
 #' then `NA`.
 #'
 #' @seealso [usdt_power()], [usdt_plan()]

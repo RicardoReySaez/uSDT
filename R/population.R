@@ -58,7 +58,7 @@
 #' The parameterization decides what stays fixed when a value changes, in a
 #' scenario or in [update()]. Under the correlation parameterization a new
 #' correlation keeps both means and moves the intercept (unless
-#' \eqn{\mu_A = 0}); under the latent regression it keeps the intercept and
+#' \eqn{\mu_A = 0}). Under the latent regression it keeps the intercept and
 #' moves the influence mean, and with it the difference.
 #'
 #' # Criteria

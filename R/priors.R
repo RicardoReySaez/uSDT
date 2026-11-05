@@ -15,13 +15,13 @@
 #' * means of \eqn{d'} and of the criterion can take any real value, so their
 #'   prior must be defined on the whole real line: `normal`, `std_normal`,
 #'   `student_t`, `cauchy`, `double_exponential`, `logistic`, `gumbel`,
-#'   `skew_normal`, `exp_mod_normal` or `skew_double_exponential`;
+#'   `skew_normal`, `exp_mod_normal` or `skew_double_exponential`.
 #' * standard deviations take any of those, truncated at zero (with location
 #'   0, a `student_t` is a half-Student-\eqn{t}), or a family on the positive
 #'   values: `lognormal`, `exponential`, `gamma`, `inv_gamma`, `weibull`,
 #'   `frechet`, `rayleigh`, `chi_square`, `inv_chi_square`,
 #'   `scaled_inv_chi_square`, `loglogistic`, or `pareto_type_2` with
-#'   `mu <= 0`;
+#'   `mu <= 0`.
 #' * correlations take `"lkj(eta)"`, the LKJ prior on a correlation matrix and
 #'   the only correlation prior brms accepts. On a 2 x 2 matrix the
 #'   correlation follows a beta(eta, eta) distribution stretched from
@@ -58,7 +58,7 @@
 #' criterion, `student_t(4, 0, 0.5)` for every between-subject standard
 #' deviation and a uniform `lkj(1)` for every correlation. With them, the hit
 #' and false-alarm rates of a new subject spread over \eqn{(0, 1)} without
-#' piling up at either end; see [plot.usdt_priors()]. With the same prior for
+#' piling up at either end. See [plot.usdt_priors()]. With the same prior for
 #' both means, the prior of the difference between them (H1) is symmetric
 #' around zero, and every `lkj` prior is centred at zero (H2).
 #'
@@ -75,13 +75,13 @@
 #' intercept (H3) and the correlation (H2) have the priors you give them. It
 #' keeps the priors of the awareness mean, of both standard deviations and of
 #' the correlation, and the influence mean follows from them as
-#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}; `dprime`
+#' \eqn{\mu_I = \beta_0 + \rho \, (\sigma_I / \sigma_A) \, \mu_A}. `dprime`
 #' then applies to the awareness task only. The intercept takes `normal(0, 1)`
-#' by default, a weakly informative prior that leaves the estimate to the data.
+#' by default. Inspect its implications with [plot.usdt_priors()].
 #' Two things follow:
 #' * the difference between the means (H1) has an induced prior,
 #'   \eqn{\beta_0 + (\rho \sigma_I / \sigma_A - 1) \mu_A}, with the heavy tails
-#'   the intercept has under the correlation parameterization;
+#'   the intercept has under the correlation parameterization.
 #' * the intercept and the correlation are independent a priori but not a
 #'   posteriori. The data fix the influence mean, the sum of \eqn{\beta_0} and
 #'   \eqn{\rho (\sigma_I / \sigma_A) \mu_A}, so a narrow intercept prior also
@@ -104,7 +104,7 @@
 #' # A correlation prior that concentrates near zero
 #' usdt_priors(cor_dprime = "lkj(2)")
 #'
-#' # Standard deviations of d' expected around 0.3 rather than near zero
+#' # Standard deviations of d' expected around 0.3
 #' usdt_priors(sd_dprime = "student_t(4, 0.3, 0.2)")
 #'
 #' # Any family that covers the positive values, e.g. a gamma distribution
@@ -512,7 +512,7 @@ print.usdt_priors <- function(x, ...) {
 #' @return A `ggplot` object. Its underlying data frame is stored in `$data`.
 #'
 #' @details
-#' The plot simulates 100,000 draws from the priors in R; no model is fitted
+#' The plot simulates 100,000 draws from the priors in R. No model is fitted
 #' and Stan is not needed.
 #'
 #' The rates panel shows the hit and false-alarm rates of one new subject drawn
@@ -674,7 +674,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
     paste0("Both criteria are fixed ", where, ".")
   } else {
     paste0("The ", fixed, " criterion is fixed ", where,
-           "; the other is estimated.")
+           ". The other is estimated.")
   }
 
   ggplot2::ggplot(curves) +
@@ -717,7 +717,7 @@ plot.usdt_priors <- function(x, data = NULL, unequal_variances = FALSE,
     ggplot2::labs(
       x = NULL, y = NULL,
       caption = paste0(
-        "Prior densities from 100,000 draws of the priors; no responses are ",
+        "Prior densities from 100,000 draws of the priors. No responses are ",
         "used. Rates belong to one new subject per draw. ", criteria, " ",
         if (values$latent == "regression") {
           paste0("H2 and H3 are the exact priors of the correlation and the ",

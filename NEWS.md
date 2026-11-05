@@ -2,185 +2,82 @@
 
 ## Breaking changes
 
-* The two tasks are now called awareness and influence instead of direct and
-  indirect, everywhere in the package. `usdt_data_tasks()` takes the data
-  frames as `awareness` and `influence`, and `usdt_tests()`,
-  `sensitivity_diff()`, `latent_cor()` and `latent_regression()` take the
-  sensitivity terms by those names. Values given per task are named the same
-  way (`list(awareness = ..., influence = ...)`, also in `task_levels` and
-  `labels`), `dichotomize` takes `"awareness"` and `"influence"`, and the
-  default task labels are "Awareness" and "Influence". The abbreviation D
-  becomes A: the model terms are `d_A`, `c_A`, `d_I` and `c_I`, the task codes
-  in the aggregated data are `"A"` and `"I"`, and the columns of the planning
-  results are `trials_awareness`, `trials_influence`, `reliability_awareness`
-  and `reliability_influence`. The old names are no longer accepted.
+* Tasks are now named **awareness** and **influence** throughout the API.
+  Use these names in `usdt_data_tasks()`, task-specific lists, `task_levels`,
+  `labels`, `dichotomize` and sensitivity-term arguments. The old names are
+  no longer accepted.
+* The awareness code is `"A"`, with model terms `d_A` and `c_A`. Planning
+  columns use `trials_awareness`, `trials_influence`,
+  `reliability_awareness` and `reliability_influence`.
 
 ## Bayesian estimation
 
-* `hsdt(estimation = "bayesian")` fits the hierarchical model with brms on
-  the aggregated hit and false-alarm counts, and returns the `brmsfit` in
-  `$fit`. The priors go on the means, standard deviations and correlation of
-  the two sensitivities and on the criteria, one brms prior per parameter and
-  task. The model compiles once per set of priors and version of the backend
-  into a per-user cache, through rstan or cmdstanr. Equal variances are the
-  default; unequal variances are optional. By default four chains keep 5000
-  draws each, and up to four run at once, leaving two cores free. Each chain
-  runs in a background session, so sampling shows a single progress bar and
-  none of Stan's messages, followed by a summary of divergent transitions,
-  tree depth, R-hat and effective sample size. As in brms, the backend
-  defaults to the `brms.backend` option. brms, posterior, logspline, callr and
-  cli are now imported, so the Bayesian estimation needs no optional package
-  apart from `BH` and `RcppEigen` for the rstan backend, or cmdstanr.
-* `hsdt(latent = "regression")` moves the prior of the influence
-  mean sensitivity to the intercept of the latent regression of the influence
-  on the awareness one, so that both the intercept tested by H3 and the
-  correlation tested by H2 have the priors you give them. The difference
-  tested by H1 then has an induced, heavy-tailed prior, and the intercept
-  prior also informs the posterior of the correlation. It samples the same
-  parameters and reports the same hypotheses as the default
-  parameterization.
-* `usdt_priors()` specifies the priors as Stan-style strings, from any Stan
-  distribution that covers the values of its parameter (the whole real line
-  for the means; the positive values, by truncation at zero if needed, for
-  the standard deviations; `lkj(eta)` for the correlations).
-  `plot.usdt_priors()` shows what they imply before any data are fitted.
-* `usdt_tests()`, `sensitivity_diff()`, `latent_cor()` and
-  `latent_regression()` summarise a Bayesian fit with posterior means and
-  standard deviations, central credible intervals and a two-sided posterior
-  p-value that falls below .05 exactly when the 95% interval excludes zero.
-  They also accept custom models fitted with brms (`brmsfit`), named by the
-  same terms as an lme4 model.
-* `usdt_bf()` computes Bayes factors for point (Savage-Dickey), directional
-  and interval hypotheses about the difference, correlation, slope and
-  intercept. A quantity with a prior of its own (the correlation, and under
-  the latent regression the intercept) gets it exactly; the others, induced
-  by the other priors, get Rao-Blackwell averages over 100,000 prior draws,
-  whatever the prior families. A comparison of the slope with zero is tested
-  on the correlation, which has its sign and a prior of its own. Point
-  hypotheses read the posterior density from a logspline fit to the draws,
-  used only if it stays close to the draws; directional and
-  interval ones read the posterior probability as the share of draws in H1.
-  Each hypothesis prints as a report with both log Bayes factors, BF10 and
-  BF01, and `usdt_bf()` draws each prior against its posterior, in one row
-  for up to three hypotheses, unless `plot = FALSE`. A point statement is the
-  null (H0) and an inequality or a region the alternative (H1); each panel
-  title says which, and the panel reports the Bayes factor of that hypothesis
-  against the other, BF01 or BF10. Each panel names its quantity on the x
-  axis, with the intercept and slope as beta_0 and beta_1, and the panels
-  share one unnumbered Density axis, since each has a scale of its own. It
-  also takes custom brms models, whose priors it reads from
-  `prior_summary()`: proper priors from the families of `usdt_priors()` on
-  the sensitivities and an LKJ prior on their correlation give the same
-  priors as a Bayesian `hsdt()` fit.
-* `plot()` draws the four plots of a Bayesian fit with posterior means and
-  credible intervals, and `usdt_reliability()` gives the posterior of each
-  task's reliability.
-* The new article "Bayesian estimation with uSDT" walks through the Bayesian
-  analysis of the tutorial data.
+* `hsdt(estimation = "bayesian")` fits with brms and Stan and returns the
+  `brmsfit` in `$fit`. Both rstan and cmdstanr are supported. Compiled models
+  are cached. Defaults are four chains with 1,000 warmup iterations and 5,000
+  kept draws per chain. Sampling reports divergences, tree depth, R-hat and
+  effective sample sizes.
+* `usdt_priors()` specifies priors for task means, SDs and correlations.
+  `plot()` checks their predictive and hypothesis implications.
+* `hsdt(latent = "regression")` places the influence-location prior on the
+  latent intercept instead of the mean. This changes the induced prior of
+  the mean difference. The intercept prior also affects inference on the
+  correlation.
+* `unequal_variances = TRUE` estimates signal SDs for Bayesian fits.
+* `usdt_tests()` and the individual hypothesis functions accept Bayesian
+  `hsdt` and custom brms fits. They report posterior means, SDs, central
+  credible intervals and two-sided posterior sign p-values.
+* `usdt_bf()` tests point, directional and interval hypotheses about `diff`,
+  `rho`, `intercept` and `slope`. Point nulls use Savage-Dickey density ratios.
+  Directions and regions compare posterior with prior odds. Reports give
+  both log Bayes factors. By default, prior/posterior plots accompany them.
+  Use `plot = FALSE` to suppress drawing and `plot(bf)` to draw later.
+* Bayes factor plots label the tested hypothesis and quantity. A point-null
+  panel reports BF01. A directional or interval panel reports BF10.
+* `plot()` and `usdt_reliability()` support Bayesian fits.
+* The [Bayesian tutorial](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-bayesian.html) covers priors,
+  posterior summaries, Bayes factors and the latent regression prior.
 
 ## Equivalence and one-sided tests
 
-* `usdt_equivalence()` tests equivalence (TOST), non-inferiority and other
-  one-sided, minimal-effect and point hypotheses about the difference,
-  correlation, slope and intercept of a frequentist `hsdt()` fit or a custom
-  glmer model, written as in `usdt_bf()`. Every hypothesis must be stated:
-  the bounds are the smallest effects of interest, so there is no default.
-  Each test reports the interval that decides it, of level `1 - 2 * alpha`
-  for the one-sided and equivalence tests. The bounds, estimate and interval
-  of the correlation are on the correlation scale, and its tests run on the
-  Fisher-z scale. On a boundary fit the correlation, slope and intercept are
-  marked not estimable, and after `usdt_boot()` every test uses the bootstrap
-  replicates. Each hypothesis prints as a report.
+* `usdt_equivalence()` accepts frequentist `hsdt` and custom glmer fits.
+  Hypotheses use the syntax of `usdt_bf()`, with explicit bounds for
+  equivalence (TOST), non-inferiority, one-sided and minimal-effect tests.
+  Reports include the interval used for the decision. Bootstrap replicates
+  are used when available. Unsupported inference is marked not estimable.
 
 ## Study planning
 
-* `usdt_population()` describes the population a planned study samples from:
-  the means, standard deviations and correlation of the two sensitivities and
-  the distribution of the criteria, with the argument names of
-  `usdt_priors()`. The intercept of the latent regression can replace the
-  influence mean, as in `hsdt(latent = "regression")`, and the
-  values can come from a frequentist `hsdt()` fit of a pilot study. Several
-  values in an argument give one scenario each, and `update()` changes them.
-  It is the first piece of the power analysis.
-* `usdt_power()` gives the power of the tests of H1-H3 for a number of
-  subjects and of trials per task, or for a grid of them, from such a
-  population. Hypotheses are written as in `usdt_equivalence()`, so it covers
-  point nulls at any value, one-sided, equivalence (TOST) and minimal-effect
-  tests, and `combine = "all"` adds the power of rejecting all of them in the
-  same study. The power is approximated from the sampling distribution of the
-  subjects' sample mean and covariance of d', whose measurement error is the
-  one `usdt_reliability()` reports. It counts the studies that end on the
-  boundary, where the correlation and the latent regression are not
-  estimable, as failures to reject them, reports how often that happens, and
-  flags a population in H0, where the rejection rate is the type I error
-  rate.
-* `usdt_power(method = "simulation")` checks a design by simulating whole
-  studies and analysing each one with `hsdt()`: a task split at the median
-  draws latent scores per trial and is split with `meyen_split()`, as
-  response times would be. It reports the simulated power with its Monte
-  Carlo error and Wilson interval, and `summary()` the bias, empirical and
-  model standard errors, interval width and coverage of each quantity. Each
-  study has its own random number stream, so `ncores` runs them in parallel
-  with the same results, and the simulation also accepts populations with
-  unequal variances, analysed with the equal-variance model.
-* `usdt_plan()` chooses the design. A range marks what is free and a number
-  what is fixed, so it finds the subjects for given trials, the trials for
-  given subjects, or both together at the lowest `cost`; with a `budget` it
-  finds the most powerful design that costs no more, and with `precision`
-  the cheapest design whose expected interval is narrow enough. It searches
-  every number of trials with the closed form and checks the cheapest
-  designs with the draws of `usdt_power()`, and it marks designs at the limit
-  of a range. `usdt_power(plan, method = "simulation")` checks the chosen
-  designs.
-* `usdt_mdes()` finds the smallest effect a design detects with a given
-  power for each hypothesis, moving the tested quantity with the rest of the
-  population fixed as its parameterization says, or the narrowest
-  equivalence region it can establish; `vary` moves another population
-  value instead, such as the SD of the awareness d'.
-* `plot()` draws each of them: a population as the ellipses of the true d'
-  with the latent regression and its intercept, and, given trials, the wider
-  ellipse of the d' they measure; power against subjects or trials, with the
-  Wilson intervals of a simulation; the power along the values searched for
-  the smallest effect; and a plan as the cost of the cheapest design over
-  the trials, with the designs the search checked and the one it chose, or as
-  the power or interval width along its free value.
-* The new article "Planning a uSDT study" plans a study with the tutorial data
-  as a pilot, and compares the approximation with simulated studies.
+* `usdt_population()` defines population parameters, optionally from a
+  frequentist pilot fit. Multiple values create scenarios. `update()`
+  changes them. A latent intercept can replace the influence mean.
+* `usdt_power()` evaluates designs or grids using a sampling-distribution
+  approximation. It supports the hypotheses of `usdt_equivalence()`.
+  `combine = "all"` adds joint rejection power. Non-estimable outcomes count
+  as failures to reject, and populations in H0 are flagged.
+* `usdt_power(method = "simulation")` simulates and fits whole studies,
+  repeating the median split for dichotomized tasks. It reports Monte Carlo
+  error, Wilson intervals and fitting failures. `summary()` adds bias,
+  standard errors, interval widths and coverage. Results are reproducible
+  across core counts. Unequal-variance populations can be simulated and
+  analysed with the equal-variance model.
+* `usdt_plan()` selects subjects, trials or both to meet a power or precision
+  target at minimum cost, or maximize power within a budget. Ranges identify
+  free values. Single numbers fix them. Check a chosen plan with
+  `usdt_power(plan, method = "simulation")`.
+* `usdt_mdes()` finds detectable effects or equivalence regions. `vary`
+  selects another population parameter to vary.
+* `plot()` supports populations, power curves, plans and detectable effects.
+  The [planning tutorial](https://ricardoreysaez.github.io/uSDT/dev/articles/uSDT-power.html) illustrates the workflow.
 
-## Data preparation
+## Data preparation and plots
 
-* `usdt_aggregate()` counts binary trials into binomial `y`/`n` rows by any
-  grouping columns, so custom lme4 and brms models with covariates fit on
-  counts instead of trials, with the same estimates and much faster.
-
-## Visualization
-
-* Every plot shares one style: panel titles are plain text on the left over a
-  thin grey line instead of the grey box, in the caterpillar, Bayes factor,
-  prior and power plots too. The observed subjects of the regression and
-  shrinkage plots are grey circles with a light, translucent fill, so the
-  overlaps show where they gather, and the shrinkage segments pass under the
-  points.
-* The Bayes factor plot titles each panel "Hypothesis:" and its hypothesis,
-  and writes log BF with a subscript 10. Instead of a legend on top, it names
-  the posterior and the prior on their curves in every panel, placed when the
-  plot is drawn so that they touch no line, point or label at that size;
-  where that fails in any panel, every panel stacks both names in a free
-  corner.
-* Every plot method takes `caption = FALSE` to leave out the caption, which
-  is now a single paragraph.
-* `plot(type = "regression")` takes `nrow = 2` to stack the observed panel
-  above the model one, each as wide as the figure; `nrow = 1`, the default,
-  keeps them side by side as squares.
-* The ROC plot draws its legend inside the square, in the corner the curves
-  keep away from, as a small table whose d' and AUC line up in columns, so
-  the square takes the height of the figure. Only the plot of one subject has
-  a title; the caption names the population curves.
-* The caption under every plot wraps when the plot is drawn, to the width of
-  the plot, so it fills the figure at any size instead of breaking after a
-  fixed number of characters. When a square panel leaves the plot narrower
-  than the figure, the caption takes the narrowest width that keeps it in the
-  lines it reserved, centred under the plot.
+* `usdt_aggregate()` counts binary trials by grouping columns for custom
+  binomial models with covariates.
+* Plots share panel styling and captions that wrap to the figure width.
+  Plot methods accept `caption = FALSE`.
+* Regression plots accept `nrow = 2` to stack the observed and latent panels.
+* ROC legends show sensitivity and AUC inside the panel.
 
 # uSDT 0.1.0
 

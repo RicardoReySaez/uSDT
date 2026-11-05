@@ -25,7 +25,7 @@ or a \code{brmsfit} whose priors meet the conditions in Details.}
 or \code{intercept} and the operator is \code{=}, \code{<} or \code{>} (\code{<=} and \code{>=} are read
 as \code{<} and \code{>}), or \code{"<quantity> in [a, b]"} and \code{"<quantity> out [a, b]"}
 for a region and its complement. A point statement is the null hypothesis
-H0, and H1 its negation; an inequality or a region is the alternative H1,
+H0, and H1 its negation. An inequality or a region is the alternative H1,
 and H0 its complement. The default tests the three point nulls.}
 
 \item{awareness, influence}{For a brms model, the population-level terms of
@@ -72,7 +72,7 @@ A point hypothesis \eqn{\theta = c} compares a model in which
 \eqn{\theta} is fixed at \eqn{c} with the fitted model, in which it is free.
 When the first is nested in the second and keeps the conditional prior of
 the other parameters, the Bayes factor is the ratio of the posterior and
-prior densities at \eqn{c} (Dickey & Lientz, 1970; Wagenmakers et al.,
+prior densities at \eqn{c} (Dickey & Lientz, 1970, Wagenmakers et al.,
 2010):
 \deqn{\mathrm{BF}_{01} = p(\theta = c \mid y) / p(\theta = c).}
 The posterior density comes from a logspline fit to the posterior draws.
@@ -135,7 +135,7 @@ and of \code{rho}, even though their priors are independent of it: the Bayes
 factors of \code{rho} and \code{slope} then depend on the intercept prior as well.
 
 These averages work for any family of \code{\link[=usdt_priors]{usdt_priors()}}. The prior draws use
-the random number generator; call \code{\link[=set.seed]{set.seed()}} first for reproducible
+the random number generator. Call \code{\link[=set.seed]{set.seed()}} first for reproducible
 results.
 }
 
@@ -147,12 +147,12 @@ have:
 \itemize{
 \item a proper prior on each sensitivity term, from the families of
 \code{\link[=usdt_priors]{usdt_priors()}}, e.g. \code{prior(normal(0, 1), class = b)}. The flat default
-of brms is improper, and a Bayes factor needs a proper prior;
+of brms is improper, and a Bayes factor needs a proper prior.
 \item an LKJ(\eqn{\eta}) prior on the correlations of the group-level term that
 holds both sensitivities. One correlation of a \eqn{K \times K} LKJ matrix
 has the marginal of a \eqn{2 \times 2} LKJ(\eqn{\eta - 1 + K/2}), so a
 block with other terms besides the two sensitivities still has an exact
-prior for \code{rho};
+prior for \code{rho}.
 \item for \code{intercept} and \code{slope}, priors on the two SDs from the families of
 \code{\link[=usdt_priors]{usdt_priors()}}, truncated at zero as brms does. The brms default,
 \code{student_t(3, 0, 2.5)}, qualifies.

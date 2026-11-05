@@ -30,8 +30,8 @@
 #' @param level Confidence level for intervals (default is 0.95).
 #' @param type Type of bootstrap interval: `"perc"` (percentile), `"norm"`
 #'   (normal approximation with bias correction), or `"basic"` (empirical basic).
-#'   For correlations, `"norm"` and `"basic"` operate on the Fisher-\eqn{z} scale;
-#'   if the sample correlation lies on the boundary (-1 or 1), these types return
+#'   For correlations, `"norm"` and `"basic"` operate on the Fisher-\eqn{z} scale.
+#'   If the sample correlation lies on the boundary (-1 or 1), these types return
 #'   `NA`, whereas `"perc"` remains available.
 #'
 #' @return An updated `hsdt` object where interval columns in `$tests` are
@@ -44,9 +44,11 @@
 #'   `failures`).
 #'
 #' @details
-#' Replicates are dropped only if the model fails to fit or does not converge.
-#' Singular fits and boundary estimates are intentionally retained because
-#' discarding them artificially narrows intervals in constrained settings.
+#' Refits are retained if they converge and all four hypothesis estimates are
+#' finite, including singular or boundary refits meeting those conditions.
+#' Inspect `$boot$failures` and `$boot$retained`. For dichotomized data, the
+#' bootstrap simulates binary responses, without repeating the median split.
+#' It remains conditional on the fitted model and available information.
 #'
 #' When an attempted run finishes with fewer than 500 usable replicates, the
 #' original Wald intervals are preserved, a warning is issued, and raw

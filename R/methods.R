@@ -213,7 +213,7 @@ summary.hsdt <- function(object, ...) {
   if (is.null(object$boot) || incomplete || length(unavailable)) {
     cat("\n", .rule("Notes"), "\n\n", sep = "")
     if (is.null(object$boot)) {
-      cat("  Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.\n")
+      cat("  Use usdt_boot(fit, nsim = 1000, ncores = 2) for bootstrap CIs.\n")
     }
     if (incomplete) {
       b <- object$boot

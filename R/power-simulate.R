@@ -117,15 +117,8 @@
 # error and (1 - alpha) interval of each quantity from usdt_tests(), and the
 # decision on each hypothesis, as usdt_tests() decides a point null at zero
 # and usdt_equivalence() any other statement.
-.power_replicate <- function(stream, pop, N, cells, split, labels, tests,
-                             alpha) {
-  env <- globalenv()
-  had_seed <- exists(".Random.seed", envir = env, inherits = FALSE)
-  if (had_seed) old <- get(".Random.seed", envir = env, inherits = FALSE)
-  on.exit(if (had_seed) assign(".Random.seed", old, envir = env) else
-    rm(".Random.seed", envir = env))
-  assign(".Random.seed", stream, envir = env)
-
+.power_replicate <- function(seed, pop, N, cells, split, labels, tests,
+                             alpha) .with_seed(seed, {
   q <- .replicate_quantities
   out <- c(fitted = 0, estimable = 0,
            stats::setNames(rep(NA_real_, 4L * length(q)),
@@ -164,26 +157,14 @@
     out[[paste0("reject_", j)]] <- as.numeric(reject)
   }
   out
-}
+}, kind = "L'Ecuyer-CMRG")
 
 # This function gives one random number stream per replicate, so a run gives
 # the same studies whatever the number of cores. The streams follow from
 # `seed`, or from one draw of the session's own stream when it is NULL.
-.power_streams <- function(n, seed) {
-  env <- globalenv()
-  had_seed <- exists(".Random.seed", envir = env, inherits = FALSE)
+.power_seeds <- function(n, seed) {
   if (is.null(seed)) seed <- sample.int(.Machine$integer.max, 1L)
-  if (had_seed) old <- get(".Random.seed", envir = env, inherits = FALSE)
-  on.exit(if (had_seed) assign(".Random.seed", old, envir = env) else
-    rm(".Random.seed", envir = env))
-  set.seed(seed, kind = "L'Ecuyer-CMRG", normal.kind = "Inversion",
-           sample.kind = "Rejection")
-  streams <- vector("list", n)
-  streams[[1L]] <- get(".Random.seed", envir = env)
-  for (i in seq_len(n - 1L)) {
-    streams[[i + 1L]] <- parallel::nextRNGStream(streams[[i]])
-  }
-  streams
+  .with_seed(seed, as.list(sample.int(.Machine$integer.max, n)))
 }
 
 # This function starts the worker processes and loads uSDT in each: the

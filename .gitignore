@@ -12,6 +12,7 @@ Rplots.pdf
 /basis/
 /dev/
 /manual-tests/
+/cran-audit/
 
 # Built pkgdown site: rebuilt by the workflow, never committed.
 /docs/

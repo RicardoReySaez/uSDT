@@ -1,76 +1,41 @@
-# CRAN comments for uSDT 0.1.0
+# CRAN comments for uSDT 0.2.0
 
-## Resubmission
+## Update
 
-This is a resubmission of a new package. In this version I have:
+This updates uSDT 0.1.0 with Bayesian estimation through brms, Bayes factors,
+equivalence tests and study planning. There are no known reverse dependencies
+on CRAN as of 2026-11-05.
 
-* Replaced `\dontrun{}` with `\donttest{}` in the example of `usdt_boot()`.
-* Unwrapped every example that runs in less than five seconds. Only the two
-  blocks described in "Notes on the examples" remain in `\donttest{}`.
-* Removed the code in `usdt_boot()` that created `.Random.seed` in the global
-  environment when it did not exist. The function now changes the random seed
-  only through `set.seed()`, when the user supplies `seed`, which defaults to
-  `NULL`.
-* Changed the order of the authors in `Authors@R`.
+## Previous review
 
-## Test environments
+* The bootstrap example remains in \donttest{} because it refits 500 models.
+* Examples measured below five seconds per help page are unwrapped, including
+  the aggregated lme4 example with covariates.
+* Only examples requiring an external C++ toolchain are in \dontrun{}.
+  Their comments state the compiler and rstan header requirements.
+* Package code no longer assigns or removes .Random.seed directly. Scoped
+  withr seeds restore the user's RNG state and generator settings, including
+  after errors. Tests check reproducibility across one and two cores.
 
-* win-builder, R 4.6.1, Windows Server 2022 x64
-* win-builder, R-devel 2026-09-16 r90549, Windows Server 2022 x64
-* macOS builder, R 4.6.1 Patched 2026-07-27 r90311, macOS 26.6,
-  aarch64-apple-darwin23
-* Local: Windows 11 x64, R 4.5.0, `R CMD check --as-cran`
-* GitHub Actions, defined in `.github/workflows/R-CMD-check.yaml`:
-  * macOS-latest, R release
-  * windows-latest, R release
-  * ubuntu-latest, R devel
-  * ubuntu-latest, R release
-  * ubuntu-latest, R oldrel-1
+## Bayesian requirements
 
-## R CMD check results
+brms and the default rstan backend are available from CRAN. Compiling a
+Bayesian model requires a C++17 toolchain and the BH and RcppEigen headers.
+No model is compiled during package installation. The optional cmdstanr
+backend is in Suggests and its repository is declared in Additional_repositories.
 
-0 errors | 0 warnings | 1 note
+Compiled models use the package-specific tools::R_user_dir() cache. The cache
+is bounded and outdated entries are removed. Tests use a temporary cache.
+The Bayesian vignette is precomputed, with reproducible source in the GitHub
+repository. Rebuilding the packaged vignettes does not require Stan.
 
-The macOS builder reports `Status: OK`. Both win-builder runs report the single
-note below, which the macOS builder does not produce because it does not run
-the CRAN incoming feasibility check.
+## Checks
 
-### NOTE: checking CRAN incoming feasibility
+The validation report and logs are retained with the release candidate.
+The final submission comments will list the completed checks on this tarball.
 
-```
-Maintainer: 'Ricardo Rey-Sáez <ricardoreysaez95@gmail.com>'
+## Data
 
-New submission
-
-Possibly misspelled words in DESCRIPTION:
-  Meyen (26:58)
-  SDT (23:57)
-  al (26:67)
-  et (26:64)
-```
-
-This is the first release of uSDT, so the new submission part is expected.
-
-The four flagged words are spelled correctly:
-
-* Meyen is the surname of the first author of the work cited in the
-  Description, Meyen et al. (2022) <doi:10.1037/xge0001065>.
-* et and al belong to that same citation.
-* SDT is the standard abbreviation of signal detection theory. The
-  Description writes the term out in full before abbreviating it.
-
-## Notes on the examples
-
-The examples of each help page run in less than five seconds, except two
-blocks that stay in `\donttest{}`:
-
-* The second part of `?usdt_hypotheses` fits a trial-level model with
-  `lme4::glmer()`, which takes about 25 seconds.
-* `?usdt_boot` refits the model 500 times by parametric bootstrap, which takes
-  about three minutes. 500 is the fewest replicates `usdt_boot()` accepts.
-
-Both blocks run under `R CMD check --run-donttest`.
-
-## Downstream dependencies
-
-None. This is a new submission, so there are no reverse dependencies to check.
+The example data are unchanged from 0.1.0. Their rights holders have authorised
+redistribution under GPL-3. Source attribution is retained in the help pages
+and inst/COPYRIGHTS.

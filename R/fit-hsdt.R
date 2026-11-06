@@ -149,9 +149,10 @@
 #' # Inspect the model formula (influence criterion omitted by default)
 #' m$design$formula
 #'
-#' \donttest{
-#' # Bayesian estimation. The first call compiles the model.
-#' mb <- hsdt(d, estimation = "bayesian", seed = 1)
+#' \dontrun{
+#' # Requires a C++ toolchain and the BH and RcppEigen headers for rstan.
+#' # The first call compiles the model.
+#' mb <- hsdt(d, estimation = "bayesian", cores = 2, seed = 1)
 #' summary(mb)
 #' }
 #'

@@ -275,10 +275,10 @@ usdt_power(plan, method = "simulation", nsim = 50, seed = 1)
 #>   Reliability  Awareness 0.597, Influence 0.650
 #> 
 #>   Hypothesis  Test              True      SE  Estimable   Power   MC SE
-#>   H1 Δd' = 0  Two-sided test   0.150   0.046      1.000   0.920   0.038
+#>   H1 Δd' = 0  Two-sided test   0.150   0.046      1.000   0.940   0.034
 #> 
 #>   Simulated power: the share of 50 simulated studies, each analysed
-#>   with hsdt(), that reject H0 at alpha = 0.05 (Monte Carlo SE at most 0.038).
+#>   with hsdt(), that reject H0 at alpha = 0.05 (Monte Carlo SE at most 0.034).
 #>   summary() reports the precision of the estimates.
 # }
 ```

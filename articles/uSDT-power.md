@@ -401,7 +401,7 @@ following is optional and is not run when building the article:
 
 ``` r
 
-check <- usdt_power(plan, method = "simulation", nsim = 1000, ncores = 4,
+check <- usdt_power(plan, method = "simulation", nsim = 1000, ncores = 2,
                     seed = 2026)
 check
 summary(check)

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">uSDT</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,14 +44,16 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="usdt-development-version">uSDT (development version)<a class="anchor" aria-label="anchor" href="#usdt-development-version"></a></h2>
-<div class="section level3">
-<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="usdt-020">uSDT 0.2.0<a class="anchor" aria-label="anchor" href="#usdt-020"></a></h2><p class="text-muted">CRAN release: 2026-11-05</p>
+<ul><li>Scoped random seeds preserve the session’s RNG state and generator settings. Simulated studies use distinct seeds and reproduce across core counts.</li>
+<li>Bayesian examples document their compiler requirements and use at most two cores. Long bootstrap and simulation examples remain in <code>\donttest{}</code>.</li>
+</ul><div class="section level3">
+<h3 id="breaking-changes-0-2-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-2-0"></a></h3>
 <ul><li>Tasks are now named <strong>awareness</strong> and <strong>influence</strong> throughout the API. Use these names in <code><a href="../reference/usdt_data.html">usdt_data_tasks()</a></code>, task-specific lists, <code>task_levels</code>, <code>labels</code>, <code>dichotomize</code> and sensitivity-term arguments. The old names are no longer accepted.</li>
 <li>The awareness code is <code>"A"</code>, with model terms <code>d_A</code> and <code>c_A</code>. Planning columns use <code>trials_awareness</code>, <code>trials_influence</code>, <code>reliability_awareness</code> and <code>reliability_influence</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="bayesian-estimation-development-version">Bayesian estimation<a class="anchor" aria-label="anchor" href="#bayesian-estimation-development-version"></a></h3>
+<h3 id="bayesian-estimation-0-2-0">Bayesian estimation<a class="anchor" aria-label="anchor" href="#bayesian-estimation-0-2-0"></a></h3>
 <ul><li>
 <code>hsdt(estimation = "bayesian")</code> fits with brms and Stan and returns the <code>brmsfit</code> in <code>$fit</code>. Both rstan and cmdstanr are supported. Compiled models are cached. Defaults are four chains with 1,000 warmup iterations and 5,000 kept draws per chain. Sampling reports divergences, tree depth, R-hat and effective sample sizes.</li>
 <li>
@@ -70,12 +72,12 @@
 <li>The <a href="https://ricardoreysaez.github.io/uSDT/articles/uSDT-bayesian.html">Bayesian tutorial</a> covers priors, posterior summaries, Bayes factors and the latent regression prior.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="equivalence-and-one-sided-tests-development-version">Equivalence and one-sided tests<a class="anchor" aria-label="anchor" href="#equivalence-and-one-sided-tests-development-version"></a></h3>
+<h3 id="equivalence-and-one-sided-tests-0-2-0">Equivalence and one-sided tests<a class="anchor" aria-label="anchor" href="#equivalence-and-one-sided-tests-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/usdt_equivalence.html">usdt_equivalence()</a></code> accepts frequentist <code>hsdt</code> and custom glmer fits. Hypotheses use the syntax of <code><a href="../reference/usdt_bf.html">usdt_bf()</a></code>, with explicit bounds for equivalence (TOST), non-inferiority, one-sided and minimal-effect tests. Reports include the interval used for the decision. Bootstrap replicates are used when available. Unsupported inference is marked not estimable.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="study-planning-development-version">Study planning<a class="anchor" aria-label="anchor" href="#study-planning-development-version"></a></h3>
+<h3 id="study-planning-0-2-0">Study planning<a class="anchor" aria-label="anchor" href="#study-planning-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/usdt_population.html">usdt_population()</a></code> defines population parameters, optionally from a frequentist pilot fit. Multiple values create scenarios. <code><a href="https://rdrr.io/r/stats/update.html" class="external-link">update()</a></code> changes them. A latent intercept can replace the influence mean.</li>
 <li>
@@ -90,7 +92,7 @@
 <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> supports populations, power curves, plans and detectable effects. The <a href="https://ricardoreysaez.github.io/uSDT/articles/uSDT-power.html">planning tutorial</a> illustrates the workflow.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="data-preparation-and-plots-development-version">Data preparation and plots<a class="anchor" aria-label="anchor" href="#data-preparation-and-plots-development-version"></a></h3>
+<h3 id="data-preparation-and-plots-0-2-0">Data preparation and plots<a class="anchor" aria-label="anchor" href="#data-preparation-and-plots-0-2-0"></a></h3>
 <ul><li>
 <code><a href="../reference/usdt_aggregate.html">usdt_aggregate()</a></code> counts binary trials by grouping columns for custom binomial models with covariates.</li>
 <li>Plots share panel styling and captions that wrap to the figure width. Plot methods accept <code>caption = FALSE</code>.</li>

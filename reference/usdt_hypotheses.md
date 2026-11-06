@@ -153,7 +153,6 @@ latent_regression(m)  # H3
 #> 1     delta     ok   <NA>
 #> 2      Wald     ok   <NA>
 
-# \donttest{
 # 2. Custom model with covariates via glmer()
 # Controlling for display set size across both tasks
 trials <- rbind(
@@ -202,76 +201,23 @@ usdt_tests(fit, awareness = "taskA:cond", influence = "taskI:cond")
 #> 2 0.326844774 -0.46489654  0.8637596  Fisher-z     ok   <NA>
 #> 3 0.314714044 -0.06992556  0.2172184     delta     ok   <NA>
 #> 4 0.326844774 -0.32138239  0.8014138      Wald     ok   <NA>
-# }
 
-# \donttest{
-# 3. The same model fitted with brms. Compiling it needs a C++ toolchain.
+if (FALSE) { # \dontrun{
+# 3. The same model fitted with brms. Compiling needs a C++ toolchain
+# and the BH and RcppEigen headers for rstan.
 fit_b <- brms::brm(
   y | trials(n) ~ 0 + awareness + task:size + task:cond +
     (0 + awareness | subj) + (0 + task:cond | subj),
   data = counts, family = binomial("probit"),
-  prior = brms::prior(normal(0, 1), class = b), seed = 1, refresh = 0
+  prior = brms::prior(normal(0, 1), class = b),
+  chains = 2, cores = 2, seed = 1, refresh = 0
 )
-#> Compiling Stan program...
-#> Start sampling
-#> Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.
-#> Running the chains for more iterations may help. See
-#> https://mc-stan.org/misc/warnings.html#bulk-ess
-#> Warning: Tail Effective Samples Size (ESS) is too low, indicating posterior variances and tail quantiles may be unreliable.
-#> Running the chains for more iterations may help. See
-#> https://mc-stan.org/misc/warnings.html#tail-ess
 
 # The same term names. The tests now summarise the posterior
 usdt_tests(fit_b, awareness = "taskA:cond", influence = "taskI:cond")
-#>   hypothesis                          term    estimate  est.error   conf.low
-#> 1         H1 d'(influence) - d'(awareness) -0.11403474 0.03856358 -0.1887904
-#> 2         H2                   correlation  0.25928434 0.40702225 -0.7085880
-#> 3         H3                     intercept  0.13843497 1.79305979 -0.4160614
-#> 4         H3                         slope -0.01880521 7.04631649 -2.5555180
-#>     conf.high ci_method p.value     rhat  ess_bulk
-#> 1 -0.03896435  quantile  0.0025 1.001837 4293.1610
-#> 2  0.92546160  quantile  0.4725 1.009576  337.8252
-#> 3  0.75631276  quantile  0.3695 1.008695  428.8847
-#> 4  2.22775595  quantile  0.4725 1.008806  426.4601
 
 # With a proper prior on the sensitivities, also Bayes factors
 set.seed(1)
 usdt_bf(fit_b, awareness = "taskA:cond", influence = "taskI:cond")
-
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : Δd' != 0
-#>   Hypothesis (H0)             : Δd' = 0
-#>   Posterior mean              : -0.114
-#>   Posterior SD                : 0.039
-#>   95% CrI                     : [-0.189, -0.039]
-#>   log BF10                    : 0.706
-#>   log BF01                    : -0.706
-#>   Evidence                    : anecdotal for H1
-#> ────────────────────────────────────────────────────────────────────────────────
-#> 
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : rho != 0
-#>   Hypothesis (H0)             : rho = 0
-#>   Posterior mean              : 0.259
-#>   Posterior SD                : 0.407
-#>   95% CrI                     : [-0.709, 0.925]
-#>   log BF10                    : -0.299
-#>   log BF01                    : 0.299
-#>   Evidence                    : anecdotal for H0
-#> ────────────────────────────────────────────────────────────────────────────────
-#> 
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : intercept != 0
-#>   Hypothesis (H0)             : intercept = 0
-#>   Posterior mean              : 0.138
-#>   Posterior SD                : 1.793
-#>   95% CrI                     : [-0.416, 0.756]
-#>   log BF10                    : -1.762
-#>   log BF01                    : 1.762
-#>   Evidence                    : moderate for H0
-#> ────────────────────────────────────────────────────────────────────────────────
-# }
+} # }
 ```

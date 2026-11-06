@@ -308,7 +308,7 @@ usdt_power(update(pop, cor_dprime = c(0.1, 0.2)), subjects = 80,
 
 # \donttest{
 # Check the design by simulating and analysing 50 studies (under a
-# minute). A real check needs more, e.g. nsim = 1000 with ncores = 4.
+# minute). A real check needs more, e.g. nsim = 1000 with ncores = 2.
 sims <- usdt_power(pop, subjects = 80,
                    trials = c(awareness = 64, influence = 200),
                    dichotomize = "influence", method = "simulation",
@@ -320,12 +320,12 @@ sims
 #>   Reliability  Awareness 0.543, Influence 0.738
 #> 
 #>   Hypothesis        Test              True      SE  Estimable   Power   MC SE
-#>   H1 Δd' = 0        Two-sided test   0.150   0.060      1.000   0.700   0.065
-#>   H2 rho = 0        Two-sided test   0.300   0.168      1.000   0.400   0.069
-#>   H3 intercept = 0  Two-sided test   0.261   0.045      1.000   0.980   0.020
+#>   H1 Δd' = 0        Two-sided test   0.150   0.060      1.000   0.780   0.059
+#>   H2 rho = 0        Two-sided test   0.300   0.168      1.000   0.460   0.070
+#>   H3 intercept = 0  Two-sided test   0.261   0.045      1.000   1.000   0.000
 #> 
 #>   Simulated power: the share of 50 simulated studies, each analysed
-#>   with hsdt(), that reject H0 at alpha = 0.05 (Monte Carlo SE at most 0.069).
+#>   with hsdt(), that reject H0 at alpha = 0.05 (Monte Carlo SE at most 0.070).
 #>   summary() reports the precision of the estimates.
 
 # Bias, empirical and model standard errors, interval width and coverage
@@ -334,11 +334,11 @@ summary(sims)
 #> 
 #>   80 subjects; 64 Awareness and 200 Influence trials
 #> 
-#>   Quantity    True   Mean    Bias  Emp. SE  Mean SE  Width  Coverage  Estimated
-#>   Δd'        0.150  0.143  -0.007    0.064    0.059  0.230     0.900         50
-#>   rho        0.300  0.322   0.022    0.186    0.172  0.654     0.940         50
-#>   intercept  0.261  0.255  -0.006    0.052    0.049  0.193     0.980         50
-#>   slope      0.257  0.288   0.031    0.194    0.177  0.695     0.960         50
+#>   Quantity    True   Mean   Bias  Emp. SE  Mean SE  Width  Coverage  Estimated
+#>   Δd'        0.150  0.163  0.013    0.067    0.059  0.231     0.880         50
+#>   rho        0.300  0.345  0.045    0.161    0.168  0.641     0.960         50
+#>   intercept  0.261  0.262  0.000    0.050    0.046  0.182     0.940         50
+#>   slope      0.257  0.299  0.042    0.152    0.162  0.636     0.960         50
 #> 
 #>   Width and coverage are those of the 95% intervals of usdt_tests(),
 #>   over the studies that estimate each quantity.

@@ -230,7 +230,8 @@ Savage-Dickey method. *Cognitive Psychology*, 60(3), 158-189.
 ## Examples
 
 ``` r
-# \donttest{
+if (FALSE) { # \dontrun{
+# Requires a C++ toolchain and the BH and RcppEigen headers for rstan.
 d <- usdt_data_tasks(
   awareness = vadillo_awareness,
   influence = vadillo_cuing,
@@ -244,85 +245,16 @@ d <- usdt_data_tasks(
   dichotomize      = list(awareness = FALSE, influence = TRUE)
 )
 
-m <- hsdt(d, estimation = "bayesian", seed = 1)
-#> ── Fitting the Bayesian hierarchical SDT model ──────────────────────── rstan ──
-#> ℹ 4 chains of 5000 draws after 1000 warmup iterations, 2 at a time.
-#> ✔ Sampled 4 chains in 1m 38s.
-#> ✔ No divergent transitions.
-#> ✔ No transition reached the maximum tree depth (10).
-#> ✔ Largest R-hat 1.002, below 1.01.
-#> ✔ Smallest effective sample size 1605, above 400.
+m <- hsdt(d, estimation = "bayesian", cores = 2, seed = 1)
 
 # The three point nulls, with their figure
 set.seed(1)
 usdt_bf(m)
 
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : Δd' != 0
-#>   Hypothesis (H0)             : Δd' = 0
-#>   Posterior mean              : -0.107
-#>   Posterior SD                : 0.036
-#>   95% CrI                     : [-0.177, -0.036]
-#>   log BF10                    : 0.724
-#>   log BF01                    : -0.724
-#>   Evidence                    : anecdotal for H1
-#> ────────────────────────────────────────────────────────────────────────────────
-#> 
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : rho != 0
-#>   Hypothesis (H0)             : rho = 0
-#>   Posterior mean              : 0.309
-#>   Posterior SD                : 0.447
-#>   95% CrI                     : [-0.726, 0.964]
-#>   log BF10                    : -0.079
-#>   log BF01                    : 0.079
-#>   Evidence                    : anecdotal for H0
-#> ────────────────────────────────────────────────────────────────────────────────
-#> 
-#>  uSDT hypothesis ─ Savage-Dickey density ratio test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : intercept != 0
-#>   Hypothesis (H0)             : intercept = 0
-#>   Posterior mean              : -0.035
-#>   Posterior SD                : 3.693
-#>   95% CrI                     : [-0.980, 0.737]
-#>   log BF10                    : -1.996
-#>   log BF01                    : 1.996
-#>   Evidence                    : moderate for H0
-#> ────────────────────────────────────────────────────────────────────────────────
-
 # Unconscious processing as a directional hypothesis, and a region of
 # practical equivalence for the difference, without the figure
 b <- usdt_bf(m, c("intercept > 0", "diff in [-0.1, 0.1]"), plot = FALSE)
 b
-#>  uSDT hypothesis ─ Directional test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : intercept > 0
-#>   Hypothesis (H0)             : intercept <= 0
-#>   Posterior mean              : -0.035
-#>   Posterior SD                : 3.693
-#>   95% CrI                     : [-0.980, 0.737]
-#>   Posterior probability (H1)  : 0.722
-#>   log BF10                    : 0.955
-#>   log BF01                    : -0.955
-#>   Evidence                    : anecdotal for H1
-#> ────────────────────────────────────────────────────────────────────────────────
-#> 
-#>  uSDT hypothesis ─ Interval test
-#> ════════════════════════════════════════════════════════════════════════════════
-#>   Hypothesis (H1)             : Δd' in [-0.1, 0.1]
-#>   Hypothesis (H0)             : Δd' out [-0.1, 0.1]
-#>   Posterior mean              : -0.107
-#>   Posterior SD                : 0.036
-#>   95% CrI                     : [-0.177, -0.036]
-#>   Posterior probability (H1)  : 0.426
-#>   log BF10                    : 2.520
-#>   log BF01                    : -2.520
-#>   Evidence                    : strong for H1
-#> ────────────────────────────────────────────────────────────────────────────────
 plot(b[1, ])
-
-# }
+} # }
 ```

@@ -10,7 +10,7 @@ and detectable effects.
 ## Documentation
 
 Visit the [documentation](https://ricardoreysaez.github.io/uSDT/) for
-the current GitHub version:
+the package:
 
 - [Getting
   started](https://ricardoreysaez.github.io/uSDT/articles/uSDT-tutorial.html),
@@ -52,7 +52,7 @@ with CmdStan.
 
 ## Example: Vadillo et al. data
 
-The examples below use the development API.
+The examples below require uSDT 0.2.0 or later.
 
 The package includes the two trial-level data frames from Experiment 2
 of Vadillo et al. (2025): `vadillo_awareness` for the awareness task and

@@ -216,7 +216,7 @@ summary(fit_uSDT)
 
     ── Notes ───────────────────────────────────────────────────────────────────────
 
-      Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.
+      Use usdt_boot(fit, nsim = 1000, ncores = 2) for bootstrap CIs.
 
 Fixed sensitivity effects are task means. Random effects describe
 subject departures. `sd(d')` measures between-subject variation and
@@ -429,7 +429,7 @@ adds parametric bootstrap inference to a frequentist fit:
 
 ``` r
 
-fit_boot <- usdt_boot(fit_uSDT, nsim = 1000, ncores = 4, seed = 2026)
+fit_boot <- usdt_boot(fit_uSDT, nsim = 1000, ncores = 2, seed = 2026)
 summary(fit_boot)
 fit_boot$tests
 ```

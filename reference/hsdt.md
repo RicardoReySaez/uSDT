@@ -275,79 +275,18 @@ summary(m)
 #> 
 #> ── Notes ───────────────────────────────────────────────────────────────────────
 #> 
-#>   Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.
+#>   Use usdt_boot(fit, nsim = 1000, ncores = 2) for bootstrap CIs.
 
 # Inspect the model formula (influence criterion omitted by default)
 m$design$formula
 #> cbind(y, n - y) ~ 0 + c_A + d_A + d_I + (0 + c_A | subj) + (0 + 
 #>     d_A + d_I | subj)
-#> <environment: 0x559578facce8>
+#> <environment: 0x55799ea17fd8>
 
-# \donttest{
-# Bayesian estimation. The first call compiles the model.
-mb <- hsdt(d, estimation = "bayesian", seed = 1)
-#> ── Fitting the Bayesian hierarchical SDT model ──────────────────────── rstan ──
-#> ℹ 4 chains of 5000 draws after 1000 warmup iterations, 2 at a time.
-#> ℹ Compiling the Stan model; this happens once per model and set of priors.
-#> ✔ Sampled 4 chains in 3m 7s.
-#> ✔ No divergent transitions.
-#> ✔ No transition reached the maximum tree depth (10).
-#> ✔ Largest R-hat 1.002, below 1.01.
-#> ✔ Smallest effective sample size 1605, above 400.
+if (FALSE) { # \dontrun{
+# Requires a C++ toolchain and the BH and RcppEigen headers for rstan.
+# The first call compiles the model.
+mb <- hsdt(d, estimation = "bayesian", cores = 2, seed = 1)
 summary(mb)
-#> ── Model summary ─────────────────────────────────────────────────────────────── 
-#> 
-#>   Subjects:       104
-#>   Observations:   416 aggregated rows (46,592 trials)
-#>   Family:         binomial (probit), equal variances
-#>   Criteria:       Awareness estimated, Influence fixed to 0 (Meyen split, mean |c| = 0.0000)
-#>   Estimation:     brms via rstan, 4 chains x 5,000 draws (warmup 1,000)
-#>   Diagnostics:    max R-hat 1.002, min ESS 1,605, 0 divergent
-#> 
-#> ── Fixed effects ───────────────────────────────────────────────────────────────
-#> 
-#>   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-#>   criterion      Awareness   -0.0353   0.0290  [ -0.093,  0.021]   1.001   7,298
-#>   d'             Awareness    0.2349   0.0336  [  0.169,  0.301]   1.000  26,871
-#>   d'             Influence    0.1283   0.0153  [  0.098,  0.158]   1.000  21,912
-#> 
-#> ── Random effects ──────────────────────────────────────────────────────────────
-#> 
-#>   Parameter      Task           Mean       SD  95% CrI             R-hat     ESS
-#>   sd(criterion)  Awareness    0.2507   0.0251  [  0.204,  0.303]   1.000   8,756
-#>   sd(d')         Awareness    0.1062   0.0601  [  0.006,  0.225]   1.002   3,878
-#>   sd(d')         Influence    0.0877   0.0210  [  0.044,  0.127]   1.001   7,057
-#>   cor(d')        both         0.3093   0.4471  [ -0.726,  0.964]   1.001   1,605
-#> 
-#> ── Hypotheses ──────────────────────────────────────────────────────────────────
-#> 
-#> H1: Group-level sensitivity difference (Δd' = Influence d' - Awareness d')
-#>   Parameter           Mean       SD  95% CrI            p-value
-#>   Δd' (I - A)     -0.1066   0.0360  [ -0.177, -0.036]     .004
-#> 
-#> H2: Correlation between sensitivities across tasks
-#>   Parameter           Mean       SD  95% CrI            p-value
-#>   rho               0.3093   0.4471  [ -0.726,  0.964]     .467
-#> 
-#> H3: Latent regression of Influence d' on Awareness d'
-#>   Parameter           Mean       SD  95% CrI            p-value
-#>   Intercept        -0.0351   3.6929  [ -0.980,  0.737]     .555
-#>   Slope             0.7159  15.1034  [ -2.601,  4.762]     .467
-#> 
-#> ── Priors ──────────────────────────────────────────────────────────────────────
-#> 
-#>   Parameter    Task       Prior
-#>   mean d'      Awareness  normal(0, 1)
-#>   mean d'      Influence  normal(0, 1)
-#>   sd(d')       Awareness  student_t(4, 0, 0.5)
-#>   sd(d')       Influence  student_t(4, 0, 0.5)
-#>   cor(d')      both       lkj(1)
-#>   mean c       Awareness  normal(0, 0.5)
-#>   sd(c)        Awareness  student_t(4, 0, 0.5)
-#> 
-#> ── Notes ───────────────────────────────────────────────────────────────────────
-#> 
-#>   Mean, SD and CrI are the posterior mean, posterior SD and central
-#>   credible interval. The p-value is the two-sided posterior p-value.
-# }
+} # }
 ```

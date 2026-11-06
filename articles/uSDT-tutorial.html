@@ -34,7 +34,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">uSDT</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -276,7 +276,7 @@ H3: Latent regression of Influence d' on Awareness d'
 
 ── Notes ───────────────────────────────────────────────────────────────────────
 
-  Use usdt_boot(fit, nsim = 1000, ncores = 4) for bootstrap CIs.</code></pre>
+  Use usdt_boot(fit, nsim = 1000, ncores = 2) for bootstrap CIs.</code></pre>
 <p>Fixed sensitivity effects are task means. Random effects describe
 subject departures. <code>sd(d')</code> measures between-subject
 variation and <code>cor(d')</code> the latent correlation. Subject
@@ -464,7 +464,7 @@ parameters.</p>
 <p><a href="../reference/usdt_boot.html"><code>usdt_boot()</code></a>
 adds parametric bootstrap inference to a frequentist fit:</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/usdt_boot.html">usdt_boot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, nsim <span class="op">=</span> <span class="fl">1000</span>, ncores <span class="op">=</span> <span class="fl">4</span>, seed <span class="op">=</span> <span class="fl">2026</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/usdt_boot.html">usdt_boot</a></span><span class="op">(</span><span class="va">fit_uSDT</span>, nsim <span class="op">=</span> <span class="fl">1000</span>, ncores <span class="op">=</span> <span class="fl">2</span>, seed <span class="op">=</span> <span class="fl">2026</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_boot</span><span class="op">)</span></span>
 <span><span class="va">fit_boot</span><span class="op">$</span><span class="va">tests</span></span></code></pre></div>
 <p>At least 500 usable replicates are required before bootstrap

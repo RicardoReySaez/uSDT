@@ -17,7 +17,7 @@ intercept, H3)."><meta property="og:image" content="https://ricardoreysaez.githu
 
     <a class="navbar-brand me-2" href="../index.html">uSDT</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -255,7 +255,8 @@ Savage-Dickey method. <em>Cognitive Psychology</em>, 60(3), 158-189.
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="co"># Requires a C++ toolchain and the BH and RcppEigen headers for rstan.</span></span></span>
 <span class="r-in"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="usdt_data.html">usdt_data_tasks</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  awareness <span class="op">=</span> <span class="va">vadillo_awareness</span>,</span></span>
 <span class="r-in"><span>  influence <span class="op">=</span> <span class="va">vadillo_cuing</span>,</span></span>
@@ -269,87 +270,18 @@ Savage-Dickey method. <em>Cognitive Psychology</em>, 60(3), 158-189.
 <span class="r-in"><span>  dichotomize      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>awareness <span class="op">=</span> <span class="cn">FALSE</span>, influence <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">d</span>, estimation <span class="op">=</span> <span class="st">"bayesian"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ── Fitting the Bayesian hierarchical SDT model ──────────────────────── rstan ──</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> 4 chains of 5000 draws after 1000 warmup iterations, 2 at a time.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Sampled 4 chains in 1m 38s.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> No divergent transitions.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> No transition reached the maximum tree depth (10).</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Largest R-hat 1.002, below 1.01.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Smallest effective sample size 1605, above 400.</span>
+<span class="r-in"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="hsdt.html">hsdt</a></span><span class="op">(</span><span class="va">d</span>, estimation <span class="op">=</span> <span class="st">"bayesian"</span>, cores <span class="op">=</span> <span class="fl">2</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The three point nulls, with their figure</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">usdt_bf</span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="usdt_bf-1.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  uSDT hypothesis ─ Savage-Dickey density ratio test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ════════════════════════════════════════════════════════════════════════════════</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H1)             : Δd' != 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H0)             : Δd' = 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior mean              : -0.107</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior SD                : 0.036</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   95% CrI                     : [-0.177, -0.036]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF10                    : 0.724</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF01                    : -0.724</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Evidence                    : anecdotal for H1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────────────────────</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  uSDT hypothesis ─ Savage-Dickey density ratio test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ════════════════════════════════════════════════════════════════════════════════</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H1)             : rho != 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H0)             : rho = 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior mean              : 0.309</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior SD                : 0.447</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   95% CrI                     : [-0.726, 0.964]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF10                    : -0.079</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF01                    : 0.079</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Evidence                    : anecdotal for H0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────────────────────</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  uSDT hypothesis ─ Savage-Dickey density ratio test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ════════════════════════════════════════════════════════════════════════════════</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H1)             : intercept != 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H0)             : intercept = 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior mean              : -0.035</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior SD                : 3.693</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   95% CrI                     : [-0.980, 0.737]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF10                    : -1.996</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF01                    : 1.996</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Evidence                    : moderate for H0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────────────────────</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Unconscious processing as a directional hypothesis, and a region of</span></span></span>
 <span class="r-in"><span><span class="co"># practical equivalence for the difference, without the figure</span></span></span>
 <span class="r-in"><span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu">usdt_bf</span><span class="op">(</span><span class="va">m</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"intercept &gt; 0"</span>, <span class="st">"diff in [-0.1, 0.1]"</span><span class="op">)</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">b</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  uSDT hypothesis ─ Directional test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ════════════════════════════════════════════════════════════════════════════════</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H1)             : intercept &gt; 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H0)             : intercept &lt;= 0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior mean              : -0.035</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior SD                : 3.693</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   95% CrI                     : [-0.980, 0.737]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior probability (H1)  : 0.722</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF10                    : 0.955</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF01                    : -0.955</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Evidence                    : anecdotal for H1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────────────────────</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  uSDT hypothesis ─ Interval test</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ════════════════════════════════════════════════════════════════════════════════</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H1)             : Δd' in [-0.1, 0.1]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Hypothesis (H0)             : Δd' out [-0.1, 0.1]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior mean              : -0.107</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior SD                : 0.036</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   95% CrI                     : [-0.177, -0.036]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Posterior probability (H1)  : 0.426</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF10                    : 2.520</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   log BF01                    : -2.520</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Evidence                    : strong for H1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ────────────────────────────────────────────────────────────────────────────────</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">b</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="usdt_bf-2.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>
